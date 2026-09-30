@@ -492,7 +492,7 @@ GitHub (main branch) ──> Vercel CI/CD Build ──> Production Edge Network
 
 | Student ID | Student Name | Role / Focus Area | Section |
 | :--- | :--- | :--- | :--- |
-| **66013507** | วชิระ เฟื้อแก้ว (*Wachira Fueakaew*) | Hardware & Microcontroller Integration | Sec002 |
-| **66088911** | เศรษฐพงศ์ สงวนสุข (*Satetapongsa Sanguansook*) | Frontend Architecture & UI/UX Systems | Sec002 |
-| **66039252** | นนทพัทธ์ จีนเกิด (*Nontapat Jeengeard*) | CiRA CORE Deep Learning & Computer Vision | Sec002 |
-| **66027138** | ณัฐวัฒน์ ปราณวรกิจ (*Nattawat Pranworakit*) | IoT Network, MQTT & Backend Telemetry | Sec002 |
+| **66013507** | วชิระ เฟื้อแก้ว (*Wachira Fueakaew*) | CiRA CORE Deep Learning & Computer Vision | Sec002 |
+| **66088911** | เศรษฐพงศ์ สงวนสุข (*Satetapongsa Sanguansook*) | FullStacl Architecture & UI/UX Systems | Sec002 |
+| **66039252** | นนทพัทธ์ จีนเกิด (*Nontapat Jeengeard*) | Hardware & Microcontroller Integration | Sec002 |
+| **66027138** | ณัฐวัฒน์ ปราณวรกิจ (*Nattawat Pranworakit*) | IoT Network, MQTT Telemetry | Sec002 |
