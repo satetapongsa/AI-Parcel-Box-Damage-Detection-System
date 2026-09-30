@@ -1,40 +1,54 @@
 @import "tailwindcss";
 
 @layer base {
+  :root {
+    --bg-primary: #07111F;
+    --surface-main: #0F172A;
+    --surface-secondary: #111C2E;
+    --surface-card: #162235;
+    --border-main: #26354A;
+    --accent-primary: #38BDF8;
+    --accent-success: #22C55E;
+    --accent-warning: #F59E0B;
+    --accent-danger: #EF4444;
+    --text-primary: #F8FAFC;
+    --text-secondary: #94A3B8;
+  }
+
   body {
-    background-color: #0b1120;
-    color: #f8fafc;
-    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: #07111F;
+    color: #F8FAFC;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     margin: 0;
     padding: 0;
     min-height: 100vh;
     overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
-/* Custom Industrial Cyber & Vision Overlay Styling */
-.bg-navy-950 { background-color: #070d19; }
-.bg-navy-900 { background-color: #0b1329; }
-.bg-navy-850 { background-color: #0f1a36; }
-.bg-navy-800 { background-color: #152243; }
-.bg-navy-750 { background-color: #1c2d56; }
+/* Custom Design Token Utility Classes */
+.bg-spdi-bg { background-color: #07111F; }
+.bg-spdi-main { background-color: #0F172A; }
+.bg-spdi-secondary { background-color: #111C2E; }
+.bg-spdi-card { background-color: #162235; }
+.border-spdi { border-color: #26354A; }
 
-.border-navy-700 { border-color: #263b6e; }
-.border-navy-800 { border-color: #1a2a4f; }
+.text-spdi-sky { color: #38BDF8; }
+.text-spdi-green { color: #22C55E; }
+.text-spdi-amber { color: #F59E0B; }
+.text-spdi-red { color: #EF4444; }
+.text-spdi-muted { color: #94A3B8; }
 
-/* Grid pattern background for camera / simulation views */
+/* Grid pattern background for machine vision views */
 .bg-grid-pattern {
-  background-image: linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-                    linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-image: linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
   background-size: 24px 24px;
 }
 
-.bg-radar-grid {
-  background-image: radial-gradient(circle, rgba(59, 130, 246, 0.15) 1px, transparent 1px);
-  background-size: 16px 16px;
-}
-
-/* Conveyor belt animated animation */
+/* Conveyor belt animation */
 @keyframes conveyor-move {
   0% { background-position: 0 0; }
   100% { background-position: 40px 0; }
@@ -43,10 +57,10 @@
 .animate-conveyor {
   background-image: repeating-linear-gradient(
     90deg,
-    rgba(255, 255, 255, 0.03),
-    rgba(255, 255, 255, 0.03) 15px,
-    rgba(255, 255, 255, 0.08) 15px,
-    rgba(255, 255, 255, 0.08) 30px
+    rgba(255, 255, 255, 0.02),
+    rgba(255, 255, 255, 0.02) 15px,
+    rgba(255, 255, 255, 0.06) 15px,
+    rgba(255, 255, 255, 0.06) 30px
   );
   animation: conveyor-move 2s linear infinite;
 }
@@ -62,29 +76,25 @@
   animation: scan-beam 2.5s ease-in-out infinite alternate;
 }
 
-/* Pulse ring */
-@keyframes pulse-ring {
-  0% { transform: scale(0.95); opacity: 0.8; }
-  50% { transform: scale(1.05); opacity: 0.4; }
-  100% { transform: scale(0.95); opacity: 0.8; }
-}
-
-.animate-pulse-ring {
-  animation: pulse-ring 2s infinite ease-in-out;
-}
-
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #0b1329;
+  background: #07111F;
 }
 ::-webkit-scrollbar-thumb {
-  background: #263b6e;
+  background: #26354A;
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #3b82f6;
+  background: #38BDF8;
+}
+
+/* Line Clamp Utilities */
+.truncate-1 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

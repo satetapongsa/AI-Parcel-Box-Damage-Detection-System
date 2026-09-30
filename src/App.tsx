@@ -14,18 +14,24 @@ import { ArchitecturePage } from './pages/ArchitecturePage';
 
 export function AppContent() {
   const [activeTab, setActiveTab] = useState<string>('overview');
+  const [isOpenMobile, setIsOpenMobile] = useState<boolean>(false);
 
   return (
     <div className="min-h-screen bg-[#07111F] text-slate-100 flex flex-row overflow-x-hidden font-sans">
       
       {/* Navigation Sidebar */}
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+      <Sidebar 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab}
+        isOpenMobile={isOpenMobile}
+        onCloseMobile={() => setIsOpenMobile(false)}
+      />
 
       {/* Main Right View Panel */}
       <div className="flex-1 flex flex-col min-w-0">
         
         {/* Top Header */}
-        <Header />
+        <Header onToggleMobileMenu={() => setIsOpenMobile(true)} />
 
         {/* Real-time Alert Toast Notification */}
         <Toast />

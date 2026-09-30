@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { Sliders, Save, RotateCcw, Cpu, Camera, Gauge } from 'lucide-react';
+import { Save, RotateCcw, Cpu, Camera, Gauge } from 'lucide-react';
 import { useSimulation } from '../context/SimulationContext';
+import { PageHeader } from '../components/common/PageHeader';
+import { SectionCard } from '../components/common/SectionCard';
 
 export const SettingsPage: React.FC = () => {
   const { settings, updateSettings, resetSettings } = useSimulation();
@@ -37,48 +39,39 @@ export const SettingsPage: React.FC = () => {
   };
 
   return (
-    <div className="p-6 space-y-6 animate-in fade-in duration-300">
+    <div className="p-4 sm:p-6 space-y-6 animate-in fade-in duration-300 max-w-[1920px] mx-auto">
       
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#101A2B] border border-[#26344A] p-5 rounded-xl shadow-md">
-        <div>
-          <h1 className="text-xl font-bold text-white tracking-tight flex items-center space-x-2 font-mono">
-            <Sliders className="w-6 h-6 text-sky-400" />
-            <span>Engineering System Parameters & Control Config</span>
-          </h1>
-          <p className="text-xs text-[#94A3B8] font-mono mt-1">
-            Configure decision thresholds, actuator timing calibration & store-and-forward limits
-          </p>
-        </div>
+      {/* Enterprise Page Header */}
+      <PageHeader
+        title="Engineering System Parameters & Control Config"
+        description="Configure decision thresholds, actuator timing calibration & store-and-forward limits"
+        badge="CONFIG MODE"
+        badgeType="sky"
+        actions={
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={handleReset}
+              className="px-3.5 py-2 rounded-lg bg-[#0F172A] hover:bg-[#162235] text-slate-300 font-mono text-xs font-bold transition-all flex items-center space-x-1.5 border border-[#26354A]"
+            >
+              <RotateCcw className="w-4 h-4 text-amber-400" />
+              <span>Reset Defaults</span>
+            </button>
 
-        <div className="flex items-center space-x-3">
-          <button
-            onClick={handleReset}
-            className="px-3.5 py-2 rounded-lg bg-[#172235] hover:bg-[#26344A] text-slate-300 font-mono text-xs font-bold transition-all flex items-center space-x-1.5 border border-[#26344A]"
-          >
-            <RotateCcw className="w-4 h-4 text-amber-400" />
-            <span>Reset Defaults</span>
-          </button>
-
-          <button
-            onClick={handleSave}
-            className="px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-mono text-xs font-bold transition-all flex items-center space-x-2 shadow-lg"
-          >
-            <Save className="w-4 h-4" />
-            <span>Save Configuration</span>
-          </button>
-        </div>
-      </div>
+            <button
+              onClick={handleSave}
+              className="px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-mono text-xs font-bold transition-all flex items-center space-x-2 shadow"
+            >
+              <Save className="w-4 h-4" />
+              <span>Save Config</span>
+            </button>
+          </div>
+        }
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 font-mono text-xs">
         
         {/* Section 1: AI & Decision Engine Parameters */}
-        <div className="bg-[#101A2B] border border-[#26344A] p-5 rounded-xl shadow-md space-y-4">
-          <h3 className="text-xs font-bold text-white uppercase border-b border-[#26344A] pb-2 flex items-center space-x-2">
-            <Cpu className="w-4 h-4 text-sky-400" />
-            <span>AI Inference & Decision Thresholds</span>
-          </h3>
-
+        <SectionCard title="AI Inference & Decision Thresholds" icon={Cpu}>
           <div className="space-y-4">
             <div>
               <div className="flex justify-between mb-1">
@@ -91,9 +84,9 @@ export const SettingsPage: React.FC = () => {
                 max="99"
                 value={aiConfidenceThreshold}
                 onChange={(e) => setAiConfidenceThreshold(Number(e.target.value))}
-                className="w-full h-2 bg-[#07111F] rounded-lg appearance-none cursor-pointer accent-sky-500"
+                className="w-full h-2 bg-[#0F172A] rounded-lg appearance-none cursor-pointer accent-sky-500"
               />
-              <p className="text-[10px] text-slate-500 mt-1">
+              <p className="text-[10px] text-slate-500 mt-1 font-sans">
                 Damage classified above this confidence level is assigned REJECT.
               </p>
             </div>
@@ -109,22 +102,17 @@ export const SettingsPage: React.FC = () => {
                 max="15"
                 value={weightTolerancePct}
                 onChange={(e) => setWeightTolerancePct(Number(e.target.value))}
-                className="w-full h-2 bg-[#07111F] rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                className="w-full h-2 bg-[#0F172A] rounded-lg appearance-none cursor-pointer accent-emerald-500"
               />
-              <p className="text-[10px] text-slate-500 mt-1">
+              <p className="text-[10px] text-slate-500 mt-1 font-sans">
                 Weight deviation beyond this threshold triggers REJECT.
               </p>
             </div>
           </div>
-        </div>
+        </SectionCard>
 
         {/* Section 2: Actuator & Conveyor Timing */}
-        <div className="bg-[#101A2B] border border-[#26344A] p-5 rounded-xl shadow-md space-y-4">
-          <h3 className="text-xs font-bold text-white uppercase border-b border-[#26344A] pb-2 flex items-center space-x-2">
-            <Gauge className="w-4 h-4 text-purple-400" />
-            <span>Pneumatic Actuator & Conveyor Timing</span>
-          </h3>
-
+        <SectionCard title="Actuator & Conveyor Timing" icon={Gauge}>
           <div className="space-y-4">
             <div>
               <div className="flex justify-between mb-1">
@@ -137,9 +125,9 @@ export const SettingsPage: React.FC = () => {
                 max="500"
                 value={actuatorDelayMs}
                 onChange={(e) => setActuatorDelayMs(Number(e.target.value))}
-                className="w-full h-2 bg-[#07111F] rounded-lg appearance-none cursor-pointer accent-purple-500"
+                className="w-full h-2 bg-[#0F172A] rounded-lg appearance-none cursor-pointer accent-purple-500"
               />
-              <p className="text-[10px] text-slate-500 mt-1">
+              <p className="text-[10px] text-slate-500 mt-1 font-sans">
                 Delay from IR trigger to pneumatic solenoid firing stroke.
               </p>
             </div>
@@ -151,19 +139,14 @@ export const SettingsPage: React.FC = () => {
                 step="0.05"
                 value={conveyorSpeedMs}
                 onChange={(e) => setConveyorSpeedMs(Number(e.target.value))}
-                className="w-full bg-[#07111F] border border-[#26344A] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-500"
+                className="w-full bg-[#0F172A] border border-[#26354A] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-500"
               />
             </div>
           </div>
-        </div>
+        </SectionCard>
 
         {/* Section 3: Vision & Offline Storage Config */}
-        <div className="bg-[#101A2B] border border-[#26344A] p-5 rounded-xl shadow-md space-y-4">
-          <h3 className="text-xs font-bold text-white uppercase border-b border-[#26344A] pb-2 flex items-center space-x-2">
-            <Camera className="w-4 h-4 text-amber-400" />
-            <span>Camera Vision & Offline Queue Limits</span>
-          </h3>
-
+        <SectionCard title="Vision & Offline Limits" icon={Camera}>
           <div className="space-y-4">
             <div>
               <div className="flex justify-between mb-1">
@@ -176,7 +159,7 @@ export const SettingsPage: React.FC = () => {
                 max="1000"
                 value={cameraExposure}
                 onChange={(e) => setCameraExposure(Number(e.target.value))}
-                className="w-full h-2 bg-[#07111F] rounded-lg appearance-none cursor-pointer accent-amber-500"
+                className="w-full h-2 bg-[#0F172A] rounded-lg appearance-none cursor-pointer accent-amber-500"
               />
             </div>
 
@@ -186,7 +169,7 @@ export const SettingsPage: React.FC = () => {
                 type="number"
                 value={brightnessThreshold}
                 onChange={(e) => setBrightnessThreshold(Number(e.target.value))}
-                className="w-full bg-[#07111F] border border-[#26344A] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-500"
+                className="w-full bg-[#0F172A] border border-[#26354A] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-500"
               />
             </div>
 
@@ -196,14 +179,15 @@ export const SettingsPage: React.FC = () => {
                 type="number"
                 value={offlineQueueLimit}
                 onChange={(e) => setOfflineQueueLimit(Number(e.target.value))}
-                className="w-full bg-[#07111F] border border-[#26344A] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-500"
+                className="w-full bg-[#0F172A] border border-[#26354A] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-500"
               />
             </div>
           </div>
-        </div>
+        </SectionCard>
 
       </div>
 
     </div>
   );
 };
+

@@ -22,6 +22,9 @@ import {
   HOURLY_REJECT_RATE, 
   DAMAGE_CATEGORY_PARETO
 } from '../data/mockData';
+import { PageHeader } from '../components/common/PageHeader';
+import { SectionCard } from '../components/common/SectionCard';
+import { MetricCard } from '../components/common/MetricCard';
 
 export const AnalyticsPage: React.FC = () => {
   const passVsReject = [
@@ -37,95 +40,94 @@ export const AnalyticsPage: React.FC = () => {
   ];
 
   return (
-    <div className="p-6 space-y-6 animate-in fade-in duration-300">
+    <div className="p-4 sm:p-6 space-y-6 animate-in fade-in duration-300 max-w-[1920px] mx-auto">
       
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#101A2B] border border-[#26344A] p-5 rounded-xl shadow-md">
-        <div>
-          <h1 className="text-xl font-bold text-white tracking-tight flex items-center space-x-2 font-mono">
-            <BarChart3 className="w-6 h-6 text-sky-400" />
-            <span>Industrial Quality Analytics & Defect Pareto Analysis</span>
-          </h1>
-          <p className="text-xs text-[#94A3B8] font-mono mt-1">
-            Industry 4.0 defect distribution, OEE metrics & weight anomaly telemetry
-          </p>
-        </div>
-
-        <div className="text-xs font-mono text-slate-300 bg-[#172235] px-3.5 py-2 rounded-lg border border-[#26344A] flex items-center space-x-2">
-          <Activity className="w-4 h-4 text-sky-400" />
-          <span>Evaluation Range: Active Shift</span>
-        </div>
-      </div>
+      {/* Enterprise Page Header */}
+      <PageHeader
+        title="Industrial Quality Analytics & Pareto Portal"
+        description="Industry 4.0 defect distribution, OEE metrics & weight anomaly telemetry"
+        badge="SHIFT EVALUATION"
+        badgeType="sky"
+        actions={
+          <div className="text-xs font-mono text-slate-300 bg-[#0F172A] px-3.5 py-1.5 rounded-lg border border-[#26354A] flex items-center space-x-2">
+            <Activity className="w-4 h-4 text-sky-400" />
+            <span>Range: Active Shift (12h)</span>
+          </div>
+        }
+      />
 
       {/* OEE / OPERATIONAL PERFORMANCE SECTION */}
-      <div className="bg-[#101A2B] border border-[#26344A] p-5 rounded-xl shadow-md space-y-4">
-        <div className="flex items-center justify-between border-b border-[#26344A] pb-3">
-          <h3 className="text-xs font-bold text-white uppercase font-mono flex items-center space-x-2">
-            <Award className="w-4 h-4 text-emerald-400" />
-            <span>Overall Equipment Effectiveness (OEE Metrics)</span>
-          </h3>
-          <span className="text-xs font-mono text-emerald-400 font-bold">
-            Target OEE: &gt; 85.0%
-          </span>
-        </div>
-
+      <SectionCard 
+        title="Overall Equipment Effectiveness (OEE Metrics)" 
+        icon={Award}
+        headerActions={<span className="text-xs font-mono text-emerald-400 font-bold">Target OEE: &gt; 85.0%</span>}
+      >
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 font-mono">
-          <div className="bg-[#172235] p-4 rounded-xl border border-[#26344A]">
-            <span className="text-[#94A3B8] text-xs block">Availability</span>
-            <span className="text-2xl font-bold text-sky-400 mt-1 block">96.8%</span>
-            <span className="text-[10px] text-slate-500">Conveyor Uptime</span>
-          </div>
+          <MetricCard
+            title="Availability Rate"
+            value="96.8%"
+            subtext="Conveyor Belt Uptime"
+            trend="+0.4%"
+            trendType="positive"
+            color="sky"
+          />
 
-          <div className="bg-[#172235] p-4 rounded-xl border border-[#26344A]">
-            <span className="text-[#94A3B8] text-xs block">Performance</span>
-            <span className="text-2xl font-bold text-purple-400 mt-1 block">94.1%</span>
-            <span className="text-[10px] text-slate-500">Belt Speed Rate</span>
-          </div>
+          <MetricCard
+            title="Performance Rate"
+            value="94.1%"
+            subtext="Target Belt Velocity (1.5 m/s)"
+            trend="Nominal"
+            trendType="neutral"
+            color="purple"
+          />
 
-          <div className="bg-[#172235] p-4 rounded-xl border border-[#26344A]">
-            <span className="text-[#94A3B8] text-xs block">Quality Rate</span>
-            <span className="text-2xl font-bold text-emerald-400 mt-1 block">98.2%</span>
-            <span className="text-[10px] text-slate-500">Defect Accuracy</span>
-          </div>
+          <MetricCard
+            title="Quality Rate"
+            value="98.2%"
+            subtext="AI Precision & Precision Rate"
+            trend="+0.8%"
+            trendType="positive"
+            color="emerald"
+          />
 
-          <div className="bg-[#172235] p-4 rounded-xl border border-sky-500/40 bg-sky-500/10">
-            <span className="text-sky-300 text-xs block font-bold">OVERALL OEE SCORE</span>
-            <span className="text-3xl font-black text-white mt-1 block">89.7%</span>
-            <span className="text-[10px] text-emerald-400 font-bold">EXCELLENT INDUSTRIAL CLASS</span>
+          <div className="bg-[#162235] p-5 rounded-xl border border-sky-500/40 shadow-md flex flex-col justify-between">
+            <span className="text-sky-400 text-xs uppercase font-bold tracking-tight">OVERALL OEE SCORE</span>
+            <div className="my-2">
+              <span className="text-3xl sm:text-4xl font-black text-white font-mono tracking-tight">89.7%</span>
+            </div>
+            <span className="text-[11px] text-emerald-400 font-mono font-bold">EXCELLENT INDUSTRIAL CLASS</span>
           </div>
         </div>
-      </div>
+      </SectionCard>
 
       {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
         {/* Chart 1: PASS vs REJECT (Donut Chart) */}
-        <div className="bg-[#101A2B] border border-[#26344A] p-5 rounded-xl shadow-md space-y-3">
-          <h3 className="text-xs font-bold text-white uppercase font-mono">PASS vs REJECT Share</h3>
-          <div className="h-56 w-full">
+        <SectionCard title="PASS vs REJECT Volume Distribution" icon={BarChart3}>
+          <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={passVsReject} cx="50%" cy="50%" innerRadius={55} outerRadius={80} paddingAngle={5} dataKey="value">
+                <Pie data={passVsReject} cx="50%" cy="50%" innerRadius={60} outerRadius={85} paddingAngle={5} dataKey="value">
                   {passVsReject.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip contentStyle={{ backgroundColor: '#07111F', borderColor: '#26344A', borderRadius: '8px', color: '#fff', fontSize: '12px' }} />
+                <Tooltip contentStyle={{ backgroundColor: '#07111F', borderColor: '#26354A', borderRadius: '8px', color: '#fff', fontSize: '12px' }} />
               </PieChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </SectionCard>
 
         {/* Chart 2: Damage Type Distribution */}
-        <div className="bg-[#101A2B] border border-[#26344A] p-5 rounded-xl shadow-md space-y-3">
-          <h3 className="text-xs font-bold text-white uppercase font-mono">Damage Type Distribution</h3>
-          <div className="h-56 w-full">
+        <SectionCard title="Damage Classification Breakdown" icon={BarChart3}>
+          <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={damageClasses}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#172235" />
                 <XAxis dataKey="name" stroke="#94A3B8" tick={{ fontSize: 11, fill: '#94A3B8' }} />
                 <YAxis stroke="#94A3B8" tick={{ fontSize: 11, fill: '#94A3B8' }} />
-                <Tooltip contentStyle={{ backgroundColor: '#07111F', borderColor: '#26344A', borderRadius: '8px', color: '#fff', fontSize: '12px' }} />
+                <Tooltip contentStyle={{ backgroundColor: '#07111F', borderColor: '#26354A', borderRadius: '8px', color: '#fff', fontSize: '12px' }} />
                 <Bar dataKey="value" radius={[4, 4, 0, 0]}>
                   {damageClasses.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
@@ -134,42 +136,41 @@ export const AnalyticsPage: React.FC = () => {
               </BarChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </SectionCard>
 
         {/* Chart 3: Reject Rate by Hour */}
-        <div className="bg-[#101A2B] border border-[#26344A] p-5 rounded-xl shadow-md space-y-3">
-          <h3 className="text-xs font-bold text-white uppercase font-mono">Reject Rate by Hour (%)</h3>
-          <div className="h-56 w-full">
+        <SectionCard title="Hourly Reject Rate Timeline (%)" icon={BarChart3}>
+          <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={HOURLY_REJECT_RATE}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#172235" />
                 <XAxis dataKey="time" stroke="#94A3B8" tick={{ fontSize: 11, fill: '#94A3B8' }} />
                 <YAxis stroke="#94A3B8" tick={{ fontSize: 11, fill: '#94A3B8' }} domain={[0, 10]} />
-                <Tooltip contentStyle={{ backgroundColor: '#07111F', borderColor: '#26344A', borderRadius: '8px', color: '#fff', fontSize: '12px' }} />
+                <Tooltip contentStyle={{ backgroundColor: '#07111F', borderColor: '#26354A', borderRadius: '8px', color: '#fff', fontSize: '12px' }} />
                 <Line type="monotone" dataKey="rate" stroke="#ef4444" strokeWidth={3} dot={{ fill: '#ef4444' }} name="Reject Rate %" />
               </LineChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </SectionCard>
 
         {/* Chart 4: Pareto Analysis Chart */}
-        <div className="bg-[#101A2B] border border-[#26344A] p-5 rounded-xl shadow-md space-y-3">
-          <h3 className="text-xs font-bold text-white uppercase font-mono">Defect Pareto Analysis (Cumulative Contribution)</h3>
-          <div className="h-56 w-full">
+        <SectionCard title="Defect Pareto Analysis (Root Cause Contribution)" icon={BarChart3}>
+          <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={DAMAGE_CATEGORY_PARETO}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#172235" />
                 <XAxis dataKey="category" stroke="#94A3B8" tick={{ fontSize: 10, fill: '#94A3B8' }} />
                 <YAxis stroke="#94A3B8" tick={{ fontSize: 11, fill: '#94A3B8' }} />
-                <Tooltip contentStyle={{ backgroundColor: '#07111F', borderColor: '#26344A', borderRadius: '8px', color: '#fff', fontSize: '12px' }} />
+                <Tooltip contentStyle={{ backgroundColor: '#07111F', borderColor: '#26354A', borderRadius: '8px', color: '#fff', fontSize: '12px' }} />
                 <Bar dataKey="count" fill="#38bdf8" radius={[4, 4, 0, 0]} name="Defect Count" />
               </BarChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </SectionCard>
 
       </div>
 
     </div>
   );
 };
+
