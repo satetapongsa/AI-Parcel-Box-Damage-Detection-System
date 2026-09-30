@@ -1,7 +1,8 @@
 import React from 'react';
 import { 
   Video, 
-  Activity
+  Activity,
+  Zap
 } from 'lucide-react';
 import { useSimulation } from '../context/SimulationContext';
 import { InspectionVisualizer } from '../components/InspectionVisualizer';
@@ -10,10 +11,22 @@ export const LiveInspectionPage: React.FC = () => {
   const { 
     latestParcel, 
     systemStatus, 
-    generateParcel
+    generateParcel,
+    dataSourceMode
   } = useSimulation();
 
   const isReject = latestParcel.status === 'REJECT';
+
+  const pipelineSteps = [
+    { label: 'IR SENSOR', status: '✓', detail: 'Triggered' },
+    { label: 'CAMERA CAPTURE', status: '✓', detail: 'Dual 1080p' },
+    { label: 'AI INFERENCE', status: '✓', detail: `${latestParcel.aiConfidence}%` },
+    { label: 'OCR / BARCODE', status: '✓', detail: latestParcel.trackingNumber },
+    { label: 'WEIGHT CHECK', status: '✓', detail: `${latestParcel.weight} kg` },
+    { label: 'DECISION ENGINE', status: isReject ? 'REJECT' : 'PASS', detail: latestParcel.status },
+    { label: 'ACTUATOR CYLINDER', status: latestParcel.actuatorTriggered ? 'TRIGGERED' : 'IDLE', detail: latestParcel.actuatorTriggered ? 'REJECTED' : 'PASSED' },
+    { label: 'EVIDENCE DB', status: 'SAVED', detail: 'SQLite Local' },
+  ];
 
   return (
     <div className="p-6 space-y-6 animate-in fade-in duration-300">
@@ -26,7 +39,7 @@ export const LiveInspectionPage: React.FC = () => {
             <span>Live Machine Vision Inspection Station</span>
           </h1>
           <p className="text-xs text-[#94A3B8] font-mono mt-1">
-            Real-time dual 1080p optical camera stream & edge inference processing • Station SORT-01
+            Mode: <strong className="text-purple-400">{dataSourceMode === 'LIVE_EDGE' ? 'LIVE EDGE (CiRA CORE MQTT ACTIVE)' : 'SIMULATED FRONTEND MOCK'}</strong> • Station SORT-01
           </p>
         </div>
 
@@ -56,6 +69,33 @@ export const LiveInspectionPage: React.FC = () => {
           >
             Simulate Wet
           </button>
+        </div>
+      </div>
+
+      {/* STEP-BY-STEP SEQUENTIAL INSPECTION DATA FLOW PIPELINE */}
+      <div className="bg-[#101A2B] border border-[#26344A] p-4 rounded-xl shadow-md font-mono text-xs space-y-2">
+        <div className="flex items-center justify-between text-[#94A3B8] border-b border-[#26344A] pb-2">
+          <span className="font-bold text-white flex items-center space-x-1.5">
+            <Zap className="w-4 h-4 text-sky-400" />
+            <span>Sequential Inspection Pipeline Data Flow</span>
+          </span>
+          <span className="text-[10px] text-emerald-400 font-bold">Latency: 35ms</span>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 pt-1">
+          {pipelineSteps.map((step, idx) => (
+            <div key={idx} className="bg-[#172235] p-2.5 rounded-lg border border-[#26344A] text-center space-y-1">
+              <span className="text-[9px] text-[#94A3B8] uppercase block font-bold truncate">{step.label}</span>
+              <span className={`text-xs font-black block ${
+                step.status === 'REJECT' || step.status === 'TRIGGERED' 
+                  ? 'text-red-400' 
+                  : 'text-emerald-400'
+              }`}>
+                {step.status}
+              </span>
+              <span className="text-[9px] text-slate-300 block truncate">{step.detail}</span>
+            </div>
+          ))}
         </div>
       </div>
 

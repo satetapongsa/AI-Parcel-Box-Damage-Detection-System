@@ -7,8 +7,8 @@ import {
   Play, 
   Pause, 
   Database, 
-  Cpu, 
-  RefreshCw
+  RefreshCw,
+  Radio
 } from 'lucide-react';
 import { useSimulation } from '../context/SimulationContext';
 
@@ -20,7 +20,10 @@ export const Header: React.FC = () => {
     toggleOfflineMode,
     syncOfflineQueue,
     pendingSyncCount,
-    latestParcel
+    latestParcel,
+    dataSourceMode,
+    setDataSourceMode,
+    connectionHealth
   } = useSimulation();
 
   const [time, setTime] = useState<Date>(new Date());
@@ -65,28 +68,17 @@ export const Header: React.FC = () => {
         </div>
       </div>
 
-      {/* Header Status Telemetry Strip */}
+      {/* Header Connection Health Telemetry Strip */}
       <div className="hidden xl:flex items-center space-x-2 font-mono text-[11px]">
         
-        {/* Station Pill */}
+        {/* CiRA CORE Status */}
         <div className="bg-[#101A2B] border border-[#26344A] px-2.5 py-1 rounded-lg flex items-center space-x-1.5">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-          <span className="font-bold text-white">SORT-01</span>
+          <span className="text-slate-300">CiRA CORE:</span>
+          <span className="font-bold text-emerald-400">{connectionHealth.ciraCore}</span>
         </div>
 
-        {/* AI Engine Status */}
-        <div className="bg-[#101A2B] border border-[#26344A] px-2.5 py-1 rounded-lg flex items-center space-x-1 text-sky-400 font-semibold">
-          <Cpu className="w-3.5 h-3.5 text-sky-400" />
-          <span>AI: ONLINE</span>
-        </div>
-
-        {/* Database Status */}
-        <div className="bg-[#101A2B] border border-[#26344A] px-2.5 py-1 rounded-lg flex items-center space-x-1 text-emerald-400 font-semibold">
-          <Database className="w-3.5 h-3.5 text-emerald-400" />
-          <span>DB: CONNECTED</span>
-        </div>
-
-        {/* MQTT Status */}
+        {/* MQTT Broker Status */}
         <div className={`border px-2.5 py-1 rounded-lg flex items-center space-x-1 font-semibold ${
           isOfflineMode 
             ? 'bg-amber-950/60 border-amber-500/40 text-amber-400' 
@@ -94,6 +86,12 @@ export const Header: React.FC = () => {
         }`}>
           {isOfflineMode ? <WifiOff className="w-3.5 h-3.5" /> : <Wifi className="w-3.5 h-3.5" />}
           <span>MQTT: {isOfflineMode ? 'DISCONNECTED' : 'CONNECTED'}</span>
+        </div>
+
+        {/* Database Status */}
+        <div className="bg-[#101A2B] border border-[#26344A] px-2.5 py-1 rounded-lg flex items-center space-x-1 text-emerald-400 font-semibold">
+          <Database className="w-3.5 h-3.5 text-emerald-400" />
+          <span>DB: CONNECTED</span>
         </div>
 
         {/* Last Inspection Time */}
@@ -106,6 +104,31 @@ export const Header: React.FC = () => {
       {/* Right Toolbar Controls */}
       <div className="flex items-center space-x-3">
         
+        {/* Data Source Switcher (MOCK vs LIVE EDGE) */}
+        <div className="bg-[#101A2B] border border-[#26344A] p-0.5 rounded-lg flex items-center font-mono text-xs">
+          <button
+            onClick={() => setDataSourceMode('MOCK')}
+            className={`px-2.5 py-1 rounded-md transition-all font-bold ${
+              dataSourceMode === 'MOCK'
+                ? 'bg-sky-600 text-white shadow'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            MOCK DATA
+          </button>
+          <button
+            onClick={() => setDataSourceMode('LIVE_EDGE')}
+            className={`px-2.5 py-1 rounded-md transition-all font-bold flex items-center space-x-1 ${
+              dataSourceMode === 'LIVE_EDGE'
+                ? 'bg-purple-600 text-white shadow animate-pulse'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Radio className="w-3.5 h-3.5 mr-0.5" />
+            <span>LIVE EDGE (CiRA)</span>
+          </button>
+        </div>
+
         {/* Offline Mode Switcher */}
         <button
           onClick={toggleOfflineMode}

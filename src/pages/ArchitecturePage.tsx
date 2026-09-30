@@ -1,10 +1,23 @@
 import React, { useState } from 'react';
-import { Network, Cpu, ArrowRight, Zap } from 'lucide-react';
+import { Network, Cpu, ArrowRight, Zap, Radio } from 'lucide-react';
 import { ARCHITECTURE_NODES } from '../data/mockData';
 import type { ArchitectureNode } from '../types/spdi';
 
 export const ArchitecturePage: React.FC = () => {
   const [selectedNode, setSelectedNode] = useState<ArchitectureNode | null>(null);
+
+  const integrationPipeline = [
+    { title: 'CAMERA', sub: 'Dual 1080p Optical', icon: '📸' },
+    { title: 'CiRA CORE', sub: 'Deep Learning Engine', icon: '🧠' },
+    { title: 'AI RESULT', sub: 'Bounding Boxes & Class', icon: '🏷️' },
+    { title: 'EDGE BRIDGE', sub: 'Normalizer & Adapter', icon: '🌉' },
+    { title: 'MQTT BROKER', sub: 'Topic Publisher', icon: '📡' },
+    { title: 'BACKEND API', sub: 'Event Processor', icon: '⚙️' },
+    { title: 'DATABASE', sub: 'Store-and-Forward DB', icon: '💾' },
+    { title: 'REALTIME EVENT', sub: 'WebSocket / SSE', icon: '⚡' },
+    { title: 'WEB DASHBOARD', sub: 'React Frontend UI', icon: '💻' },
+    { title: 'ALERT ENGINE', sub: 'Rule Processor', icon: '🚨' },
+  ];
 
   return (
     <div className="p-6 space-y-6 animate-in fade-in duration-300">
@@ -14,15 +27,39 @@ export const ArchitecturePage: React.FC = () => {
         <div>
           <h1 className="text-xl font-bold text-white tracking-tight flex items-center space-x-2 font-mono">
             <Network className="w-6 h-6 text-sky-400" />
-            <span>Interactive System Architecture & Pipeline Flowchart</span>
+            <span>CiRA CORE & Edge AI Real-Time Integration Architecture</span>
           </h1>
           <p className="text-xs text-[#94A3B8] font-mono mt-1">
-            End-to-end Hardware, Edge AI, IoT Microcontroller, Store-and-Forward & Cloud communications diagram
+            Decoupled Edge Bridge, MQTT Topics, Event Normalization & Real-time Alert Engine pipeline
           </p>
         </div>
 
-        <div className="text-xs font-mono bg-sky-500/10 border border-sky-500/30 text-sky-400 px-3.5 py-2 rounded-lg font-bold">
-          Click any node to inspect role, input/output & latency spec
+        <div className="text-xs font-mono bg-purple-500/10 border border-purple-500/30 text-purple-400 px-3.5 py-2 rounded-lg font-bold">
+          CiRA CORE Production Integration Ready
+        </div>
+      </div>
+
+      {/* CiRA CORE TO WEB DASHBOARD ARCHITECTURE DIAGRAM */}
+      <div className="bg-[#101A2B] border border-[#26344A] p-6 rounded-xl shadow-md space-y-4">
+        <div className="flex items-center justify-between border-b border-[#26344A] pb-3">
+          <h3 className="text-xs font-bold text-white uppercase font-mono flex items-center space-x-2">
+            <Radio className="w-4 h-4 text-purple-400" />
+            <span>End-to-End Integration Flow (CiRA CORE → Edge Bridge → MQTT → Dashboard)</span>
+          </h3>
+          <span className="text-xs font-mono text-emerald-400 font-bold">
+            MQTT Topic: <strong className="text-sky-400">spdi/SORT-01/inspection</strong>
+          </span>
+        </div>
+
+        {/* Integration Stepper Diagram */}
+        <div className="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-2 font-mono text-xs pt-2">
+          {integrationPipeline.map((step, idx) => (
+            <div key={idx} className="bg-[#172235] p-3 rounded-xl border border-[#26344A] text-center space-y-1 hover:border-purple-500 transition-all">
+              <span className="text-lg block">{step.icon}</span>
+              <span className="font-bold text-white text-[11px] block">{step.title}</span>
+              <span className="text-[9px] text-[#94A3B8] block">{step.sub}</span>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -30,7 +67,7 @@ export const ArchitecturePage: React.FC = () => {
       <div className="bg-[#101A2B] border border-[#26344A] p-6 rounded-xl shadow-md space-y-6">
         <h3 className="text-xs font-bold text-white uppercase font-mono border-b border-[#26344A] pb-3 flex items-center space-x-2">
           <Zap className="w-4 h-4 text-sky-400" />
-          <span>Real-time Parcel Inspection & Actuation Data Pipeline</span>
+          <span>Hardware Topology Graph (Click Node for Technical Specification)</span>
         </h3>
 
         {/* Horizontal & Vertical Flowchart */}

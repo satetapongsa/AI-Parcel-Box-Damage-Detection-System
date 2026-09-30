@@ -5,14 +5,16 @@ import type {
   TimelineEvent, 
   AnomalyLog, 
   EngineeringSettings,
-  DamageType,
-  DecisionStatus
+  DamageType
 } from '../types/spdi';
 import { 
   INITIAL_PARCEL_RECORDS, 
   SYSTEM_ANOMALIES_LOG, 
   DEFAULT_ENGINEERING_SETTINGS 
 } from '../data/mockData';
+import { EdgeBridge, type DataSourceMode } from '../lib/edge/edgeBridge';
+import { AlertEngine } from '../lib/events/alertEngine';
+import type { ConnectionHealth, InspectionEvent } from '../lib/events/inspectionEvent';
 
 interface SimulationContextType {
   parcels: ParcelRecord[];
@@ -25,11 +27,14 @@ interface SimulationContextType {
   demoSpeed: 'SLOW' | 'NORMAL' | 'FAST';
   isOfflineMode: boolean;
   pendingSyncCount: number;
+  dataSourceMode: DataSourceMode;
+  connectionHealth: ConnectionHealth;
   toast: { title: string; message: string; type: 'info' | 'success' | 'warning' | 'danger' } | null;
   toggleDemoMode: () => void;
   setDemoSpeed: (speed: 'SLOW' | 'NORMAL' | 'FAST') => void;
   toggleOfflineMode: () => void;
   syncOfflineQueue: () => void;
+  setDataSourceMode: (mode: DataSourceMode) => void;
   generateParcel: (forceDamage?: DamageType) => void;
   updateSettings: (newSettings: Partial<EngineeringSettings>) => void;
   resetSettings: () => void;
@@ -63,6 +68,8 @@ const initialStatus: SystemStatusState = {
   aiInferenceMs: 35
 };
 
+const edgeBridgeInstance = new EdgeBridge();
+
 export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [parcels, setParcels] = useState<ParcelRecord[]>(INITIAL_PARCEL_RECORDS);
   const [latestParcel, setLatestParcel] = useState<ParcelRecord>(INITIAL_PARCEL_RECORDS[0]);
@@ -84,6 +91,9 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [isOfflineMode, setIsOfflineMode] = useState<boolean>(false);
   const [pendingSyncCount, setPendingSyncCount] = useState<number>(0);
 
+  const [dataSourceMode, setDataSourceModeState] = useState<DataSourceMode>('MOCK');
+  const [connectionHealth, setConnectionHealth] = useState<ConnectionHealth>(edgeBridgeInstance.getConnectionHealth());
+
   const [toast, setToast] = useState<{ title: string; message: string; type: 'info' | 'success' | 'warning' | 'danger' } | null>(null);
 
   const showToast = (title: string, message: string, type: 'info' | 'success' | 'warning' | 'danger') => {
@@ -91,76 +101,54 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setTimeout(() => setToast(null), 4000);
   };
 
-  // Function to generate a realistic parcel inspection event
-  const generateParcel = (forceDamage?: DamageType) => {
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString('en-GB', { hour12: false });
-    const timestampStr = `${now.toISOString().slice(0, 10)} ${timeStr}`;
-    const randId = Math.floor(Math.random() * 899999) + 100000;
-    const trackingNumber = `THA-20260930-${randId}`;
+  const setDataSourceMode = (mode: DataSourceMode) => {
+    setDataSourceModeState(mode);
+    edgeBridgeInstance.setMode(mode);
+    setConnectionHealth(edgeBridgeInstance.getConnectionHealth());
 
-    const damageTypes: DamageType[] = ['NORMAL', 'NORMAL', 'NORMAL', 'NORMAL', 'DENT', 'TEAR', 'WATER_STAIN', 'WEIGHT_ANOMALY'];
-    const selectedDamage = forceDamage || damageTypes[Math.floor(Math.random() * damageTypes.length)];
+    if (mode === 'LIVE_EDGE') {
+      showToast('LIVE EDGE MODE ACTIVATED', 'Connected to EdgeBridge. Waiting for live CiRA CORE MQTT events...', 'info');
+    } else {
+      showToast('MOCK DATA MODE', 'Switched to frontend simulated data stream.', 'info');
+    }
+  };
 
-    let status: DecisionStatus = 'PASS';
-    let aiConfidence = Math.round((88 + Math.random() * 11) * 10) / 10;
-    let expectedWeight = Math.round((1.2 + Math.random() * 3.5) * 100) / 100;
-    let weight = expectedWeight;
-    let weightDifference = Math.round((Math.random() * 1.2 - 0.6) * 100) / 100;
-    let rejectReason: string | undefined = undefined;
+  const processNormalizedEvent = (evt: InspectionEvent) => {
+    let damageType: DamageType = 'NORMAL';
+    if (evt.ai.damageType === 'dent') damageType = 'DENT';
+    else if (evt.ai.damageType === 'tear') damageType = 'TEAR';
+    else if (evt.ai.damageType === 'water_stain') damageType = 'WATER_STAIN';
+    else if (evt.decision.reason === 'WEIGHT_ANOMALY') damageType = 'WEIGHT_ANOMALY';
 
+    const isRej = evt.decision.status === 'REJECT';
     let boxesTop: any[] = [];
     let boxesSide: any[] = [];
-    let actuatorTriggered = false;
 
-    if (selectedDamage === 'DENT') {
-      status = 'REJECT';
-      aiConfidence = Math.round((86 + Math.random() * 12) * 10) / 10;
-      rejectReason = `Corner Dent & Packaging Collapse (${aiConfidence}% confidence)`;
-      boxesTop = [{ x: 50, y: 18, width: 32, height: 35, label: `DENT ${aiConfidence}%`, confidence: aiConfidence }];
-      actuatorTriggered = true;
-    } else if (selectedDamage === 'TEAR') {
-      status = 'REJECT';
-      aiConfidence = Math.round((87 + Math.random() * 11) * 10) / 10;
-      rejectReason = `Box Seam Tear (${aiConfidence}% confidence)`;
-      boxesTop = [{ x: 28, y: 30, width: 38, height: 28, label: `TEAR ${aiConfidence}%`, confidence: aiConfidence }];
-      boxesSide = [{ x: 35, y: 22, width: 30, height: 32, label: `Tear Seam`, confidence: aiConfidence - 2 }];
-      actuatorTriggered = true;
-    } else if (selectedDamage === 'WATER_STAIN') {
-      status = 'REJECT';
-      aiConfidence = Math.round((85 + Math.random() * 12) * 10) / 10;
-      rejectReason = `Liquid Water Stain (${aiConfidence}% confidence)`;
-      boxesTop = [{ x: 20, y: 35, width: 45, height: 42, label: `WATER STAIN ${aiConfidence}%`, confidence: aiConfidence }];
-      actuatorTriggered = true;
-    } else if (selectedDamage === 'WEIGHT_ANOMALY') {
-      status = 'REJECT';
-      const spike = Math.random() > 0.5 ? 1.25 : 0.75;
-      weight = Math.round(expectedWeight * spike * 100) / 100;
-      weightDifference = Math.round(((weight - expectedWeight) / expectedWeight) * 1000) / 10;
-      rejectReason = `Weight anomaly exceeds ±${settings.weightTolerancePct}% tolerance (Actual: ${weight}kg, Expected: ${expectedWeight}kg)`;
-      actuatorTriggered = true;
-    } else {
-      // Normal
-      status = 'PASS';
-      aiConfidence = Math.round((96 + Math.random() * 3.8) * 10) / 10;
+    if (damageType === 'DENT') {
+      boxesTop = [{ x: 50, y: 18, width: 32, height: 35, label: `DENT ${evt.ai.confidence}%`, confidence: evt.ai.confidence }];
+    } else if (damageType === 'TEAR') {
+      boxesTop = [{ x: 28, y: 30, width: 38, height: 28, label: `TEAR ${evt.ai.confidence}%`, confidence: evt.ai.confidence }];
+      boxesSide = [{ x: 35, y: 22, width: 30, height: 32, label: `Tear Seam`, confidence: evt.ai.confidence - 2 }];
+    } else if (damageType === 'WATER_STAIN') {
+      boxesTop = [{ x: 20, y: 35, width: 45, height: 42, label: `WATER STAIN ${evt.ai.confidence}%`, confidence: evt.ai.confidence }];
     }
 
     const newRecord: ParcelRecord = {
       id: String(Date.now()),
-      trackingNumber,
-      timestamp: timestampStr,
-      time: timeStr,
-      status,
-      damageType: selectedDamage,
-      aiConfidence,
-      weight,
-      expectedWeight,
-      weightDifference,
-      stationId: 'SORT-01',
-      rejectReason,
+      trackingNumber: evt.trackingNumber,
+      timestamp: evt.timestamp,
+      time: evt.timestamp,
+      status: evt.decision.status,
+      damageType,
+      aiConfidence: evt.ai.confidence,
+      weight: evt.weight.actual,
+      expectedWeight: evt.weight.expected,
+      weightDifference: evt.weight.differencePercent,
+      stationId: evt.stationId,
+      rejectReason: isRej ? `Defect: ${damageType} (${evt.ai.confidence}% confidence)` : undefined,
       boundingBoxesTop: boxesTop,
       boundingBoxesSide: boxesSide,
-      actuatorTriggered,
+      actuatorTriggered: evt.actuator.rejectTriggered,
       syncedToCloud: !isOfflineMode
     };
 
@@ -171,26 +159,31 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setLatestParcel(newRecord);
     setParcels((prev) => [newRecord, ...prev]);
 
-    // Update real-time timeline events
+    // Alert Engine evaluation
+    const alert = AlertEngine.evaluate(evt, settings.aiConfidenceThreshold, settings.weightTolerancePct);
+    if (alert) {
+      showToast(alert.title, alert.description, alert.severity === 'CRITICAL' ? 'danger' : 'warning');
+    }
+
+    // Timeline update
     const newTimeline: TimelineEvent[] = [
-      { id: `t1-${Date.now()}`, timestamp: timeStr, source: 'IR SENSOR', message: 'IR Breakbeam triggered — Parcel entry', type: 'info' },
-      { id: `t2-${Date.now()}`, timestamp: timeStr, source: 'CAMERA', message: 'Dual 1080p frame captured (Top & Side)', type: 'info' },
-      { id: `t3-${Date.now()}`, timestamp: timeStr, source: 'OCR', message: `Barcode scanned: ${trackingNumber}`, type: 'info' },
-      { id: `t4-${Date.now()}`, timestamp: timeStr, source: 'EDGE AI', message: `YOLOv8 inference: ${selectedDamage} (${aiConfidence}%)`, type: status === 'PASS' ? 'success' : 'warning' },
-      { id: `t5-${Date.now()}`, timestamp: timeStr, source: 'LOAD CELL', message: `Weight: ${weight}kg (Expected: ${expectedWeight}kg, Diff: ${weightDifference}%)`, type: 'info' },
-      { id: `t6-${Date.now()}`, timestamp: timeStr, source: 'DECISION ENGINE', message: `Final Decision: ${status} ${rejectReason ? `(${rejectReason})` : ''}`, type: status === 'PASS' ? 'success' : 'danger' },
-      { id: `t7-${Date.now()}`, timestamp: timeStr, source: 'ACTUATOR', message: actuatorTriggered ? 'Pneumatic Reject Cylinder FIRED' : 'Pneumatic Reject idle (Parcel passed)', type: actuatorTriggered ? 'danger' : 'info' },
+      { id: `t1-${Date.now()}`, timestamp: evt.timestamp, source: 'IR SENSOR', message: 'IR Breakbeam triggered — Parcel entry', type: 'info' },
+      { id: `t2-${Date.now()}`, timestamp: evt.timestamp, source: 'CAMERA', message: 'Dual 1080p frame captured (Top & Side)', type: 'info' },
+      { id: `t3-${Date.now()}`, timestamp: evt.timestamp, source: 'OCR', message: `Barcode scanned: ${evt.trackingNumber}`, type: 'info' },
+      { id: `t4-${Date.now()}`, timestamp: evt.timestamp, source: 'EDGE AI', message: `YOLOv8 inference: ${evt.ai.damageType} (${evt.ai.confidence}%)`, type: isRej ? 'warning' : 'success' },
+      { id: `t5-${Date.now()}`, timestamp: evt.timestamp, source: 'LOAD CELL', message: `Weight: ${evt.weight.actual}kg (Expected: ${evt.weight.expected}kg, Diff: ${evt.weight.differencePercent}%)`, type: 'info' },
+      { id: `t6-${Date.now()}`, timestamp: evt.timestamp, source: 'DECISION ENGINE', message: `Final Decision: ${evt.decision.status}`, type: isRej ? 'danger' : 'success' },
+      { id: `t7-${Date.now()}`, timestamp: evt.timestamp, source: 'ACTUATOR', message: evt.actuator.rejectTriggered ? 'Pneumatic Reject Cylinder FIRED' : 'Pneumatic Reject idle', type: evt.actuator.rejectTriggered ? 'danger' : 'info' },
     ];
     setTimelineEvents(newTimeline);
 
-    // Update tower light & actuator status briefly
     setSystemStatus((prev) => ({
       ...prev,
       irSensorStatus: 'TRIGGERED',
       loadCellStatus: 'MEASURING',
-      actuatorStatus: actuatorTriggered ? 'FIRING' : 'READY',
-      towerLight: status === 'PASS' ? 'GREEN' : 'RED',
-      buzzer: actuatorTriggered
+      actuatorStatus: evt.actuator.rejectTriggered ? 'FIRING' : 'READY',
+      towerLight: isRej ? 'RED' : 'GREEN',
+      buzzer: evt.actuator.rejectTriggered
     }));
 
     setTimeout(() => {
@@ -203,21 +196,25 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         buzzer: false
       }));
     }, 1500);
-
-    if (status === 'REJECT') {
-      showToast('REJECT ALERT!', `Parcel ${trackingNumber} rejected: ${selectedDamage}`, 'danger');
-    }
   };
 
-  // Demo mode continuous generator loop
+  const generateParcel = (forceDamage?: DamageType) => {
+    let typeStr = 'none';
+    if (forceDamage === 'DENT') typeStr = 'dent';
+    else if (forceDamage === 'TEAR') typeStr = 'tear';
+    else if (forceDamage === 'WATER_STAIN') typeStr = 'water_stain';
+    else if (forceDamage === 'WEIGHT_ANOMALY') typeStr = 'weight_anomaly';
+
+    const evt = edgeBridgeInstance.triggerManualScan(typeStr);
+    processNormalizedEvent(evt);
+  };
+
+  // Connect EdgeBridge subscription
   useEffect(() => {
-    if (!demoModeActive) return;
-    const intervalTime = demoSpeed === 'FAST' ? 3000 : demoSpeed === 'SLOW' ? 8000 : 5000;
-    const timer = setInterval(() => {
-      generateParcel();
-    }, intervalTime);
-    return () => clearInterval(timer);
-  }, [demoModeActive, demoSpeed, isOfflineMode, settings]);
+    edgeBridgeInstance.subscribe((evt) => {
+      processNormalizedEvent(evt);
+    });
+  }, []);
 
   const toggleDemoMode = () => {
     setDemoModeActive(!demoModeActive);
@@ -318,11 +315,14 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         demoSpeed,
         isOfflineMode,
         pendingSyncCount,
+        dataSourceMode,
+        connectionHealth,
         toast,
         toggleDemoMode,
         setDemoSpeed,
         toggleOfflineMode,
         syncOfflineQueue,
+        setDataSourceMode,
         generateParcel,
         updateSettings,
         resetSettings,
