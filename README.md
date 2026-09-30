@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://ai-parcel-box-damage-detection-system.vercel.app/">
+  <a href="[https://ai-parcel-box-damage-detection-system.vercel.app/](https://ai-parcel-boxdetectionsys.vercel.app/)">
     🌐 Live Demo
   </a>
 </p>
