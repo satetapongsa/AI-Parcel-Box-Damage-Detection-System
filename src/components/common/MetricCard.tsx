@@ -37,9 +37,9 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   const style = getColorClasses();
 
   return (
-    <div className={`bg-[#162235] border border-[#26354A] p-4 sm:p-5 rounded-xl shadow-md transition-all hover:translate-y-[-2px] hover:border-[#38BDF8]/40 flex flex-col justify-between min-w-0`}>
+    <div className="bg-[#162235] border border-[#26354A] p-4 rounded-xl shadow-md transition-all hover:border-[#38BDF8]/40 flex flex-col justify-between min-w-0">
       <div className="flex items-center justify-between space-x-2">
-        <span className="text-xs sm:text-sm font-medium text-[#94A3B8] tracking-tight truncate">
+        <span className="text-xs sm:text-sm font-semibold text-[#94A3B8] font-sans tracking-tight">
           {title}
         </span>
         {Icon && (
@@ -49,7 +49,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
         )}
       </div>
 
-      <div className="mt-3 flex items-baseline justify-between flex-wrap gap-x-2 gap-y-1">
+      <div className="mt-2.5 flex items-baseline justify-between flex-wrap gap-x-2 gap-y-1">
         <span className={`text-2xl sm:text-3xl font-bold font-mono tracking-tight text-white ${style.text}`}>
           {value}
         </span>
@@ -64,10 +64,11 @@ export const MetricCard: React.FC<MetricCardProps> = ({
       </div>
 
       {subtext && (
-        <div className="text-[11px] font-mono text-[#94A3B8] mt-1.5 truncate">
+        <div className="text-[11px] font-sans text-[#94A3B8] mt-1.5 truncate">
           {subtext}
         </div>
       )}
     </div>
   );
 };
+
