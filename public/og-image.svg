@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="ogBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#07111f" />
+      <stop offset="50%" stop-color="#0b1329" />
+      <stop offset="100%" stop-color="#070d19" />
+    </linearGradient>
+
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#101a2b" />
+      <stop offset="100%" stop-color="#172235" />
+    </linearGradient>
+
+    <linearGradient id="textGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="50%" stop-color="#60a5fa" />
+      <stop offset="100%" stop-color="#34d399" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#ogBg)" />
+
+  <!-- Grid lines overlay -->
+  <path d="M 0,100 L 1200,100 M 0,200 L 1200,200 M 0,300 L 1200,300 M 0,400 L 1200,400 M 0,500 L 1200,500" stroke="#1e293b" stroke-width="1" opacity="0.4" />
+  <path d="M 200,0 L 200,630 M 400,0 L 400,630 M 600,0 L 600,630 M 800,0 L 800,630 M 1000,0 L 1000,630" stroke="#1e293b" stroke-width="1" opacity="0.4" />
+
+  <!-- Outer Card Frame -->
+  <rect x="60" y="60" width="1080" height="510" rx="24" fill="url(#cardGrad)" stroke="#26344a" stroke-width="4" />
+
+  <!-- Left: Big Logo Icon -->
+  <g transform="translate(100, 150)">
+    <rect width="330" height="330" rx="48" fill="#0b1329" stroke="#38bdf8" stroke-width="6" />
+    <!-- Isometric Box inside logo -->
+    <polygon points="165,60 270,110 165,160 60,110" fill="#38bdf8" opacity="0.9" />
+    <polygon points="60,110 165,160 165,270 60,220" fill="#1e40af" />
+    <polygon points="165,160 270,110 270,220 165,270" fill="#1d4ed8" />
+    <!-- Corner Reticle -->
+    <path d="M 80,90 L 50,90 L 50,120" stroke="#22d3ee" stroke-width="8" fill="none" stroke-linecap="round" />
+    <path d="M 250,90 L 280,90 L 280,120" stroke="#22d3ee" stroke-width="8" fill="none" stroke-linecap="round" />
+    <path d="M 50,210 L 50,240 L 80,240" stroke="#ef4444" stroke-width="8" fill="none" stroke-linecap="round" />
+    <path d="M 280,210 L 280,240 L 250,240" stroke="#ef4444" stroke-width="8" fill="none" stroke-linecap="round" />
+  </g>
+
+  <!-- Right: Title & System Info -->
+  <g transform="translate(470, 160)">
+    <!-- Badge -->
+    <rect x="0" y="0" width="230" height="36" rx="18" fill="#38bdf8" opacity="0.15" stroke="#38bdf8" stroke-width="2" />
+    <text x="15" y="23" font-family="monospace" font-size="14" font-weight="bold" fill="#38bdf8">● CiRA CORE AI ENGINE</text>
+
+    <!-- Main Title -->
+    <text x="0" y="90" font-family="system-ui, sans-serif" font-size="44" font-weight="900" fill="#ffffff">AI Parcel Box Damage</text>
+    <text x="0" y="145" font-family="system-ui, sans-serif" font-size="44" font-weight="900" fill="url(#textGrad)">Detection System</text>
+
+    <!-- Subtitle -->
+    <text x="0" y="200" font-family="monospace" font-size="18" fill="#94a3b8">Inspect Before Dispatch • Real-time Edge AI Quality Control</text>
+    <text x="0" y="230" font-family="monospace" font-size="16" fill="#64748b">ระบบประเมินและคัดแยกพัสดุชำรุดก่อนเข้าสู่ระบบขนส่งด้วย Edge AI และ IoT</text>
+
+    <!-- Status Pills -->
+    <g transform="translate(0, 270)">
+      <rect x="0" y="0" width="140" height="32" rx="8" fill="#22c55e" opacity="0.2" stroke="#22c55e" />
+      <text x="15" y="21" font-family="monospace" font-size="13" font-weight="bold" fill="#4ade80">● PASS (86.8%)</text>
+
+      <rect x="155" y="0" width="140" height="32" rx="8" fill="#ef4444" opacity="0.2" stroke="#ef4444" />
+      <text x="170" y="21" font-family="monospace" font-size="13" font-weight="bold" fill="#f87171">● HOLD (7.1%)</text>
+
+      <rect x="310" y="0" width="180" height="32" rx="8" fill="#38bdf8" opacity="0.2" stroke="#38bdf8" />
+      <text x="325" y="21" font-family="monospace" font-size="13" font-weight="bold" fill="#38bdf8">STATION: SORT-01</text>
+    </g>
+  </g>
+</svg>

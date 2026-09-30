@@ -54,7 +54,8 @@ export const Header: React.FC = () => {
     <header className="h-16 bg-[#07111F] border-b border-[#26344A] px-6 flex items-center justify-between sticky top-0 z-20 shadow-xl select-none">
       
       {/* Station Title & Subtitle */}
-      <div className="flex items-center space-x-4">
+      <div className="flex items-center space-x-3">
+        <img src="/logo.svg" alt="AI Parcel Box Logo" className="w-8 h-8 drop-shadow shrink-0" />
         <div>
           <h2 className="text-base font-bold text-white tracking-tight flex items-center space-x-2">
             <span>AI Parcel Box Damage Detection System</span>

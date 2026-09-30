@@ -2,12 +2,159 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- Primary Metadata -->
     <title>AI Parcel Box Damage Detection System</title>
+    <meta name="title" content="AI Parcel Box Damage Detection System" />
+    <meta name="description" content="ระบบประเมินและคัดแยกพัสดุชำรุดก่อนเข้าสู่ระบบขนส่งด้วย Edge AI และ IoT (Inspect Before Dispatch • CiRA CORE AI Integration)" />
+    <meta name="theme-color" content="#07111F" />
+
+    <!-- Favicon & Touch Icons -->
+    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+    <link rel="alternate icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/logo.svg" />
+
+    <!-- Open Graph / Facebook / Line / Discord Preview Embeds -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://satetapongsa.github.io/AI-Parcel-Box-Damage-Detection-System/" />
+    <meta property="og:title" content="AI Parcel Box Damage Detection System" />
+    <meta property="og:description" content="ระบบประเมินและคัดแยกพัสดุชำรุดก่อนเข้าสู่ระบบขนส่งด้วย Edge AI และ IoT (Inspect Before Dispatch • CiRA CORE AI)" />
+    <meta property="og:image" content="/og-image.svg" />
+    <meta property="og:image:type" content="image/svg+xml" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:site_name" content="AI Parcel Box Damage Detection System" />
+
+    <!-- Twitter Card Embeds -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="AI Parcel Box Damage Detection System" />
+    <meta name="twitter:description" content="Real-time Edge AI Parcel Integrity Inspection & Sorter System • CiRA CORE" />
+    <meta name="twitter:image" content="/og-image.svg" />
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Styles for Initial System & Database Loader -->
+    <style>
+      #initial-loader {
+        position: fixed;
+        inset: 0;
+        z-index: 99999;
+        background-color: #07111F;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        font-family: 'JetBrains Mono', 'Inter', monospace;
+        color: #f8fafc;
+        transition: opacity 0.5s ease, visibility 0.5s ease;
+      }
+      .loader-logo-wrap {
+        position: relative;
+        width: 110px;
+        height: 110px;
+        margin-bottom: 24px;
+      }
+      .loader-logo-wrap img, .loader-logo-wrap object {
+        width: 100%;
+        height: 100%;
+        filter: drop-shadow(0 0 20px rgba(56, 189, 248, 0.4));
+      }
+      .loader-pulse-ring {
+        position: absolute;
+        inset: -12px;
+        border: 2px stroke #38bdf8;
+        border-radius: 28px;
+        border: 2px dashed rgba(56, 189, 248, 0.5);
+        animation: spin-ring 8s linear infinite;
+      }
+      @keyframes spin-ring {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      .loader-title {
+        font-size: 16px;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+        color: #ffffff;
+        text-transform: uppercase;
+        margin-bottom: 6px;
+        text-align: center;
+      }
+      .loader-sub {
+        font-size: 12px;
+        color: #38bdf8;
+        margin-bottom: 24px;
+        font-weight: 600;
+        text-align: center;
+      }
+      .loader-bar-bg {
+        width: 280px;
+        height: 6px;
+        background: #101a2b;
+        border: 1px solid #26344a;
+        border-radius: 4px;
+        overflow: hidden;
+        position: relative;
+      }
+      .loader-bar-fill {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, #38bdf8, #22c55e);
+        border-radius: 4px;
+        animation: fill-bar 1.4s ease-out forwards;
+      }
+      @keyframes fill-bar {
+        0% { width: 0%; }
+        40% { width: 45%; }
+        80% { width: 85%; }
+        100% { width: 100%; }
+      }
+      .loader-text {
+        font-size: 11px;
+        color: #94a3b8;
+        margin-top: 10px;
+      }
+    </style>
   </head>
   <body>
+    <!-- Initial Loading Screen -->
+    <div id="initial-loader">
+      <div class="loader-logo-wrap">
+        <div class="loader-pulse-ring"></div>
+        <img src="/logo.svg" alt="AI Parcel Box Logo" />
+      </div>
+      <div class="loader-title">AI Parcel Box Damage Detection System</div>
+      <div class="loader-sub">● CiRA CORE AI • STATION SORT-01</div>
+      
+      <div class="loader-bar-bg">
+        <div class="loader-bar-fill"></div>
+      </div>
+      <div class="loader-text" id="loader-status">Connecting to Edge Engine & Loading Hub Database...</div>
+    </div>
+
+    <!-- Main React App Container -->
     <div id="root"></div>
+
     <script type="module" src="/src/main.tsx"></script>
+
+    <!-- Hide initial loader when app mounts -->
+    <script>
+      window.addEventListener('DOMContentLoaded', () => {
+        const loader = document.getElementById('initial-loader');
+        const statusText = document.getElementById('loader-status');
+        if (statusText) statusText.innerText = "Database Synchronized. Launching Dashboard...";
+        setTimeout(() => {
+          if (loader) {
+            loader.style.opacity = '0';
+            loader.style.visibility = 'hidden';
+            setTimeout(() => loader.remove(), 500);
+          }
+        }, 1200);
+      });
+    </script>
   </body>
 </html>

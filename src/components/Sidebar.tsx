@@ -8,7 +8,6 @@ import {
   AlertOctagon, 
   Sliders, 
   Network, 
-  Box, 
   UserCheck,
   Zap
 } from 'lucide-react';
@@ -37,11 +36,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
     <aside className="w-64 bg-[#07111F] border-r border-[#26344A] flex flex-col justify-between shrink-0 h-screen sticky top-0 z-30 select-none">
       
       <div>
-        {/* SPDI Brand Logo */}
-        <div className="p-5 border-b border-[#26344A]">
+        {/* System Brand Logo */}
+        <div className="p-4 border-b border-[#26344A]">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 via-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-sky-500/20 border border-sky-400/30">
-              <Box className="w-6 h-6 stroke-[2.2]" />
+            <div className="w-11 h-11 rounded-xl bg-[#0B1220] p-1 border border-sky-500/40 shadow-lg shadow-sky-500/20 shrink-0">
+              <img src="/logo.svg" alt="AI Parcel Box Logo" className="w-full h-full object-contain" />
             </div>
             <div>
               <div className="flex items-center space-x-1.5">
