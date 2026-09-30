@@ -16,7 +16,7 @@
 
 <p align="center">
   <a href="https://github.com/satetapongsa/AI-Parcel-Box-Damage-Detection-System"><img src="https://img.shields.io/badge/Build-Passing-22c55e?style=for-the-badge&logo=vite" alt="Build Status"></a>
-  <a href="https://ai-parcel-box-damage-detection-system.vercel.app/"><img src="https://img.shields.io/badge/Vercel-Live_Production-000000?style=for-the-badge&logo=vercel" alt="Vercel Deployment"></a>
+  <a href="https://ai-parcel-boxdetectionsys.vercel.app/"><img src="https://img.shields.io/badge/Vercel-Live_Production-000000?style=for-the-badge&logo=vercel" alt="Vercel Deployment"></a>
   <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-5.0-3178C6?style=for-the-badge&logo=typescript" alt="TypeScript"></a>
   <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19.0-61DAFB?style=for-the-badge&logo=react" alt="React 19"></a>
   <a href="https://tailwindcss.com/"><img src="https://img.shields.io/badge/Tailwind-v4.0-06B6D4?style=for-the-badge&logo=tailwindcss" alt="Tailwind CSS"></a>
@@ -25,7 +25,7 @@
 
 An industrial-grade Edge AI and IoT monitoring platform for real-time parcel integrity verification, machine vision defect classification, load-cell weight anomaly detection, and automated pneumatic sorting.
 
-* **Deployment:** [Live Production on Vercel](https://ai-parcel-box-damage-detection-system.vercel.app/)
+* **Deployment:** [Live Production on Vercel](https://ai-parcel-boxdetectionsys.vercel.app/)
 * **Repository:** [GitHub Source Code](https://github.com/satetapongsa/AI-Parcel-Box-Damage-Detection-System)
 * **Project Status:** Phase 1 Complete (High-Fidelity Dashboard & Integration Engine Live); Phase 2 Integration-Ready (CiRA CORE MQTT Edge Bridge).
 
