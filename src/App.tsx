@@ -17,7 +17,7 @@ export function AppContent() {
   const [isOpenMobile, setIsOpenMobile] = useState<boolean>(false);
 
   return (
-    <div className="min-h-screen bg-[#07111F] text-slate-100 flex flex-row overflow-x-hidden font-sans">
+    <div className="min-h-screen bg-[#07111F] text-slate-100 flex flex-row w-full max-w-full overflow-x-hidden font-sans">
       
       {/* Navigation Sidebar */}
       <Sidebar 
@@ -28,7 +28,7 @@ export function AppContent() {
       />
 
       {/* Main Right View Panel */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 w-full max-w-full overflow-x-hidden">
         
         {/* Top Header */}
         <Header onToggleMobileMenu={() => setIsOpenMobile(true)} />
@@ -37,7 +37,7 @@ export function AppContent() {
         <Toast />
 
         {/* Active Page Component */}
-        <main className="flex-1 overflow-y-auto pb-12">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden pb-12 w-full max-w-full">
           {activeTab === 'overview' && <OverviewPage />}
           {activeTab === 'live' && <LiveInspectionPage />}
           {activeTab === 'evidence' && <EvidencePage />}
