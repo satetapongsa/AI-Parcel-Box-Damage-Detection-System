@@ -57,9 +57,9 @@ export const Header: React.FC = () => {
       <div className="flex items-center space-x-4">
         <div>
           <h2 className="text-base font-bold text-white tracking-tight flex items-center space-x-2">
-            <span>Smart Parcel Inspection Center</span>
+            <span>AI Parcel Box Damage Detection System</span>
             <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-sky-500/20 text-sky-400 border border-sky-500/30">
-              Edge AI + IoT
+              CiRA CORE AI
             </span>
           </h2>
           <p className="text-xs text-[#94A3B8] font-mono">

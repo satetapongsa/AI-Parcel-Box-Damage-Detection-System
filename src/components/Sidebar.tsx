@@ -45,15 +45,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
             </div>
             <div>
               <div className="flex items-center space-x-1.5">
-                <h1 className="text-lg font-black text-white tracking-wider font-mono">
-                  SPDI
+                <h1 className="text-xs font-black text-white tracking-tight font-mono leading-tight">
+                  AI Parcel Box
                 </h1>
-                <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-sky-500/20 text-sky-400 border border-sky-500/30">
+                <span className="text-[9px] font-mono font-bold px-1 py-0.2 rounded bg-sky-500/20 text-sky-400 border border-sky-500/30">
                   v2.4
                 </span>
               </div>
-              <p className="text-[11px] text-[#94A3B8] font-mono tracking-tight">
-                Smart Parcel Inspection
+              <p className="text-[10px] text-sky-400 font-mono font-bold tracking-tight leading-tight mt-0.5">
+                Damage Detection System
               </p>
             </div>
           </div>
