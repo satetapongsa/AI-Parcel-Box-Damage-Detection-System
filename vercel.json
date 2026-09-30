@@ -1,4 +1,19 @@
 {
+  "headers": [
+    {
+      "source": "/(og-image-v2.png|og-image.png|logo.svg|robots.txt)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        },
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        }
+      ]
+    }
+  ],
   "rewrites": [
     {
       "source": "/((?!.*\\.).*)",
