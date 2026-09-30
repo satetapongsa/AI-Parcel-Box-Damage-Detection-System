@@ -56,31 +56,32 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
   };
 
   return (
-    <header className="min-h-16 bg-[#07111F] border-b border-[#26354A] px-4 sm:px-6 py-2.5 flex flex-wrap items-center justify-between sticky top-0 z-20 shadow-xl select-none gap-y-2">
+    <header className="min-h-14 bg-[#07111F] border-b border-[#26354A] px-3 sm:px-6 py-2 flex flex-wrap items-center justify-between sticky top-0 z-40 shadow-xl select-none gap-y-2 gap-x-2">
       
       {/* Station Title & Subtitle + Mobile Drawer Menu Toggle */}
-      <div className="flex items-center space-x-3 min-w-0">
+      <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
         {onToggleMobileMenu && (
           <button
             onClick={onToggleMobileMenu}
-            className="lg:hidden p-1.5 rounded-lg text-slate-300 hover:text-white bg-[#101A2B] border border-[#26354A] shrink-0"
+            className="lg:hidden p-2 rounded-lg text-slate-300 hover:text-white bg-[#101A2B] border border-[#26354A] shrink-0 active:scale-95 transition-transform"
             title="Toggle Navigation Menu"
+            aria-label="Toggle Navigation Menu"
           >
             <Menu className="w-5 h-5 text-sky-400" />
           </button>
         )}
 
-        <img src="/logo.svg" alt="AI Parcel Box Logo" className="w-8 h-8 drop-shadow shrink-0 hidden sm:block" />
+        <img src="/logo.svg" alt="AI Parcel Box Logo" className="w-7 h-7 sm:w-8 sm:h-8 drop-shadow shrink-0" />
         
         <div className="min-w-0">
-          <h2 className="text-xs sm:text-base font-bold text-white tracking-tight flex items-center space-x-2 truncate font-mono">
-            <span className="truncate">AI Parcel Box Damage Detection System</span>
-            <span className="hidden md:inline-block text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-sky-500/20 text-sky-400 border border-sky-500/30 shrink-0">
-              CiRA CORE AI
+          <h2 className="text-xs sm:text-base font-bold text-white tracking-tight flex items-center space-x-1.5 font-mono">
+            <span className="truncate">AI Parcel Box System</span>
+            <span className="hidden sm:inline-block text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-400 border border-sky-500/30 shrink-0">
+              CiRA
             </span>
           </h2>
-          <p className="text-[11px] text-[#94A3B8] font-mono truncate hidden sm:block">
-            Real-time Edge AI parcel integrity monitoring & sorter • SORT-01
+          <p className="text-[10px] sm:text-[11px] text-[#94A3B8] font-mono truncate hidden xs:block">
+            SORT-01 • Edge Vision
           </p>
         </div>
       </div>
@@ -117,13 +118,13 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
       </div>
 
       {/* Right Toolbar Controls */}
-      <div className="flex items-center space-x-2 sm:space-x-3 shrink-0 flex-wrap gap-y-1">
+      <div className="flex items-center space-x-1.5 sm:space-x-2 shrink-0 flex-wrap gap-y-1">
         
         {/* Data Source Switcher (MOCK vs LIVE EDGE) */}
-        <div className="bg-[#101A2B] border border-[#26354A] p-0.5 rounded-lg flex items-center font-mono text-[11px]">
+        <div className="bg-[#101A2B] border border-[#26354A] p-0.5 rounded-lg flex items-center font-mono text-[10px] sm:text-[11px]">
           <button
             onClick={() => setDataSourceMode('MOCK')}
-            className={`px-2 py-1 rounded transition-all font-bold ${
+            className={`px-1.5 py-0.5 sm:px-2 sm:py-1 rounded transition-all font-bold ${
               dataSourceMode === 'MOCK'
                 ? 'bg-sky-600 text-white shadow'
                 : 'text-slate-400 hover:text-white'
@@ -133,14 +134,14 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
           </button>
           <button
             onClick={() => setDataSourceMode('LIVE_EDGE')}
-            className={`px-2 py-1 rounded transition-all font-bold flex items-center space-x-1 ${
+            className={`px-1.5 py-0.5 sm:px-2 sm:py-1 rounded transition-all font-bold flex items-center space-x-0.5 ${
               dataSourceMode === 'LIVE_EDGE'
                 ? 'bg-purple-600 text-white shadow animate-pulse'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
             <Radio className="w-3 h-3 mr-0.5" />
-            <span>LIVE (CiRA)</span>
+            <span>LIVE</span>
           </button>
         </div>
 
