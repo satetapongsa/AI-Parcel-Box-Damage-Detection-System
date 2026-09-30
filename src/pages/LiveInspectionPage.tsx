@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useSimulation } from '../context/SimulationContext';
 import { InspectionVisualizer } from '../components/InspectionVisualizer';
+import { ConveyorSimulation } from '../components/ConveyorSimulation';
 import { PageHeader } from '../components/common/PageHeader';
 import { SectionCard } from '../components/common/SectionCard';
 import { StatusBadge } from '../components/common/StatusBadge';
@@ -75,6 +76,14 @@ export const LiveInspectionPage: React.FC = () => {
             </button>
           </div>
         }
+      />
+
+      {/* 3D CONVEYOR BELT SIMULATION */}
+      <ConveyorSimulation 
+        conveyorSpeed={systemStatus.conveyorSpeed > 0 ? 1 : 1.5}
+        parcelStatus={latestParcel.status}
+        simulationMode="AUTO"
+        currentParcel={latestParcel}
       />
 
       {/* STEP-BY-STEP SEQUENTIAL INSPECTION DATA FLOW PIPELINE */}

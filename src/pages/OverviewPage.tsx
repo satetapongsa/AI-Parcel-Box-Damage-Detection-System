@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Box, 
   CheckCircle2, 
@@ -7,10 +7,13 @@ import {
   AlertTriangle, 
   Activity, 
   Cpu,
-  ArrowRight
+  ArrowRight,
+  Layers,
+  Video
 } from 'lucide-react';
 import { useSimulation } from '../context/SimulationContext';
 import { InspectionVisualizer } from '../components/InspectionVisualizer';
+import { ConveyorSimulation } from '../components/ConveyorSimulation';
 import { PageHeader } from '../components/common/PageHeader';
 import { MetricCard } from '../components/common/MetricCard';
 import { SectionCard } from '../components/common/SectionCard';
@@ -23,6 +26,8 @@ export const OverviewPage: React.FC = () => {
     timelineEvents, 
     generateParcel 
   } = useSimulation();
+
+  const [inspectionViewMode, setInspectionViewMode] = useState<'SIM_3D' | 'CAMERA_2D'>('SIM_3D');
 
   const isReject = latestParcel.status === 'REJECT';
 
@@ -97,10 +102,48 @@ export const OverviewPage: React.FC = () => {
       {/* 4 & 5. Live Inspection + Decision Engine (Dual Stage Layout) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
-        {/* Left Side — Dual Camera Preview (7 Cols) */}
+        {/* Left Side — Dual Camera / 3D Conveyor Simulation (7 Cols) */}
         <div className="lg:col-span-7">
-          <SectionCard title="Live Vision Inspection Tunnel" icon={Activity}>
-            <InspectionVisualizer parcel={latestParcel} />
+          <SectionCard 
+            title="Live Inspection Tunnel & Conveyor" 
+            icon={Activity}
+            headerActions={
+              <div className="flex items-center bg-[#0F172A] border border-[#26354A] rounded-lg p-1 space-x-1 text-xs font-mono">
+                <button
+                  onClick={() => setInspectionViewMode('SIM_3D')}
+                  className={`px-2.5 py-1 rounded text-[11px] font-bold flex items-center space-x-1 transition ${
+                    inspectionViewMode === 'SIM_3D' 
+                      ? 'bg-sky-500 text-slate-950 shadow' 
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Layers className="w-3 h-3" />
+                  <span>3D Conveyor</span>
+                </button>
+                <button
+                  onClick={() => setInspectionViewMode('CAMERA_2D')}
+                  className={`px-2.5 py-1 rounded text-[11px] font-bold flex items-center space-x-1 transition ${
+                    inspectionViewMode === 'CAMERA_2D' 
+                      ? 'bg-sky-500 text-slate-950 shadow' 
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Video className="w-3 h-3" />
+                  <span>Dual Feeds</span>
+                </button>
+              </div>
+            }
+          >
+            {inspectionViewMode === 'SIM_3D' ? (
+              <ConveyorSimulation 
+                conveyorSpeed={systemStatus.conveyorSpeed > 0 ? 1 : 1.5}
+                parcelStatus={latestParcel.status}
+                simulationMode="AUTO"
+                currentParcel={latestParcel}
+              />
+            ) : (
+              <InspectionVisualizer parcel={latestParcel} />
+            )}
           </SectionCard>
         </div>
 
