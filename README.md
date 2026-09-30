@@ -1,12 +1,27 @@
-# Smart Parcel Damage Inspector & Integrity Sorter using Edge AI
-> **ระบบประเมินและคัดแยกพัสดุชำรุดก่อนเข้าสู่ระบบขนส่งด้วย Edge AI และ IoT**
+# Smart Parcel Damage Inspector
 
-[![Build Status](https://img.shields.io/badge/Build-Passing-22c55e?style=for-the-badge&logo=vite)](https://github.com/satetapongsa/AI-Parcel-Box-Damage-Detection-System)
-[![Vercel Deployment](https://img.shields.io/badge/Vercel-Live_Production-000000?style=for-the-badge&logo=vercel)](https://ai-parcel-box-damage-detection-system.vercel.app/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
-[![React 19](https://img.shields.io/badge/React-19.0-61DAFB?style=for-the-badge&logo=react)](https://react.dev/)
-[![Tailwind CSS v4](https://img.shields.io/badge/Tailwind-v4.0-06B6D4?style=for-the-badge&logo=tailwindcss)](https://tailwindcss.com/)
-[![CiRA CORE](https://img.shields.io/badge/CiRA_CORE-Edge_AI-purple?style=for-the-badge)](https://ciracore.com/)
+<p align="center">
+  <img src="./public/og-image.png" alt="Smart Parcel Damage Inspector Dashboard" width="100%">
+</p>
+
+<p align="center">
+  <strong>Edge AI & IoT Parcel Inspection Dashboard</strong>
+</p>
+
+<p align="center">
+  <a href="https://ai-parcel-box-damage-detection-system.vercel.app/">
+    🌐 Live Demo
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/satetapongsa/AI-Parcel-Box-Damage-Detection-System"><img src="https://img.shields.io/badge/Build-Passing-22c55e?style=for-the-badge&logo=vite" alt="Build Status"></a>
+  <a href="https://ai-parcel-box-damage-detection-system.vercel.app/"><img src="https://img.shields.io/badge/Vercel-Live_Production-000000?style=for-the-badge&logo=vercel" alt="Vercel Deployment"></a>
+  <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-5.0-3178C6?style=for-the-badge&logo=typescript" alt="TypeScript"></a>
+  <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19.0-61DAFB?style=for-the-badge&logo=react" alt="React 19"></a>
+  <a href="https://tailwindcss.com/"><img src="https://img.shields.io/badge/Tailwind-v4.0-06B6D4?style=for-the-badge&logo=tailwindcss" alt="Tailwind CSS"></a>
+  <a href="https://ciracore.com/"><img src="https://img.shields.io/badge/CiRA_CORE-Edge_AI-purple?style=for-the-badge" alt="CiRA CORE"></a>
+</p>
 
 An industrial-grade Edge AI and IoT monitoring platform for real-time parcel integrity verification, machine vision defect classification, load-cell weight anomaly detection, and automated pneumatic sorting.
 
