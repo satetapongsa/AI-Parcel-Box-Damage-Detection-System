@@ -27,7 +27,34 @@ An industrial-grade Edge AI and IoT monitoring platform for real-time parcel int
 
 * **Deployment:** [Live Production on Vercel](https://ai-parcel-boxdetectionsys.vercel.app/)
 * **Repository:** [GitHub Source Code](https://github.com/satetapongsa/AI-Parcel-Box-Damage-Detection-System)
-* **Project Status:** Phase 1 Complete (High-Fidelity Dashboard & Integration Engine Live); Phase 2 Integration-Ready (CiRA CORE MQTT Edge Bridge).
+* **Project Status:** Phase 1 Complete (High-Fidelity Dashboard & Integration Engine Live); Phase 2 Integration-Ready (CiRA CORE MQTT Edge Bridge); **Browser Simulation Engine v2 Complete**.
+
+---
+
+## 📖 วิธีใช้งานตัวจำลอง (SPDI Browser Simulation Engine v2)
+
+เว็บแอปพลิเคชันนี้มี **ระบบจำลองการทำงานของฮาร์ดแวร์และ AI แบบสมบูรณ์ในตัว (In-Browser Simulation Engine)** โดยไม่ต้องเชื่อมต่อฮาร์ดแวร์จริง:
+
+### 1. การควบคุมการจำลอง (Live Inspection Page)
+- **Play / Pause Flow:** กดเริ่ม/หยุดการปล่อยพัสดุอัตโนมัติตามสายพาน
+- **Speed Selector (x0.5 / x1 / x2 / x4):** ปรับความเร็วรอบการตรวจจับได้อย่างลื่นไหล
+- **Manual Parcel Trigger:** กดปุ่มส่งพัสดุทีละกล่องเพื่อทดสอบเงื่อนไขเฉพาะ (`Normal`, `Dent`, `Tear`, `Wet`, `Weight`)
+- **Virtual Hardware & Tower Light:** แสดงสถานะไฟ Tower Light 3 สีตามสไลด์กลุ่ม:
+  - 🟢 **GREEN:** PASS (ปกติ / สายพานผ่านฉลุย)
+  - 🔴 **RED + Buzzer:** REJECT (ตรวจพบชำรุด / โซลินอยด์ตัวปัดกำลังทำงาน)
+  - 🟡 **YELLOW:** ออฟไลน์ (WAN Disconnected) หรือระบบตรวจจับขัดข้อง
+- **CiRA CORE Screen & UART Console:** จำลองหน้าจอโปรโตไทป์จริงตามสไลด์ 9 (Node Graph + แท็บ Image/Output/Payload) และคอนโซล UART ESP32 จากสไลด์ 6
+
+### 2. การจัดการกล่องชำรุด (Reject Queue Page)
+- สำหรับ **Hub Operator** ดูรายการกล่องที่ถูกปัดเข้าช่อง Quarantine เพื่อบันทึกเหตุผลการจัดการ (`จัดการแล้ว / Resolved`)
+
+### 3. การทดสอบความล้มเหลว (Failure Tests Page)
+- มีชุดสวิตช์ **Real-Time Fault Injection** (ตัดอินเทอร์เน็ต, Vision Fault ภาพมืด, Belt Jam สายพานติด, สลับรหัส HTTP 401/422/500)
+- ปุ่ม **Run Slide-12 Test Suite** ทำการทดสอบอัตโนมัติ 5 กรณีศึกษา พร้อมสรุปอัตราผ่าน/ไม่ผ่าน และดาวน์โหลดรายงานในรูปแบบ **CSV** ได้ทันที
+
+### 4. การปรับจูนพารามิเตอร์ (Settings Page)
+- ปรับเปลี่ยน Confidence Threshold, Conveyor Speed, AI Inference Time, Actuator Delay และระยะติดตั้งจริง
+- ระบบคำนวณ **ระยะติดตั้งตัวปัดที่ต้องการ (Required Distance = Speed × (AI Time + Delay))** แบบเรียลไทม์ และแจ้งเตือน `MISSED_REJECT` สีแดงทันทีหากระยะติดตั้งจริงสั้นเกินไป (Case 3 Delay Tuning)
 
 ---
 

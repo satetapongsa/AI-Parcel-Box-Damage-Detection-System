@@ -5,9 +5,6 @@ export function useRealtimeEvents() {
     latestParcel, 
     timelineEvents, 
     anomalies, 
-    dataSourceMode, 
-    setDataSourceMode, 
-    connectionHealth,
     generateParcel 
   } = useSimulation();
 
@@ -15,9 +12,15 @@ export function useRealtimeEvents() {
     latestParcel,
     timelineEvents,
     anomalies,
-    dataSourceMode,
-    setDataSourceMode,
-    connectionHealth,
+    dataSourceMode: 'MOCK' as const,
+    setDataSourceMode: () => {},
+    connectionHealth: {
+      ciraCore: 'CONNECTED' as const,
+      mqttBroker: 'CONNECTED' as const,
+      edgeBridge: 'CONNECTED' as const,
+      database: 'CONNECTED' as const,
+      webClient: 'CONNECTED' as const
+    },
     triggerScan: generateParcel
   };
 }
