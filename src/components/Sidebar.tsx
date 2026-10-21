@@ -1,13 +1,10 @@
-import React from 'react';
 import { 
   LayoutDashboard, 
   Video, 
   FolderArchive, 
   BarChart3, 
-  Activity, 
   AlertOctagon, 
   Sliders, 
-  Network, 
   UserCheck,
   Zap,
   X
@@ -30,15 +27,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const { systemStatus } = useSimulation();
 
   const navItems = [
-    { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-    { id: 'live', label: 'Live Inspection', icon: Video, badge: 'LIVE', badgeColor: 'bg-emerald-500' },
-    { id: 'reject-queue', label: 'Reject Queue', icon: AlertOctagon, badge: 'ACTION', badgeColor: 'bg-amber-500' },
-    { id: 'evidence', label: 'Evidence', icon: FolderArchive },
-    { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-    { id: 'health', label: 'System Health', icon: Activity, badge: 'OK', badgeColor: 'bg-sky-500' },
-    { id: 'failure-tests', label: 'Failure Tests', icon: AlertOctagon },
-    { id: 'settings', label: 'Settings', icon: Sliders },
-    { id: 'architecture', label: 'Architecture', icon: Network },
+    { id: 'overview', label: 'แดชบอร์ดหลัก (Overview)', icon: LayoutDashboard },
+    { id: 'live', label: 'สายพานตรวจจับสด (Live)', icon: Video, badge: 'LIVE', badgeColor: 'bg-emerald-500' },
+    { id: 'reject-queue', label: 'กล่องรอจัดการ (Reject)', icon: AlertOctagon, badge: 'BIN', badgeColor: 'bg-amber-500' },
+    { id: 'evidence', label: 'หลักฐานภาพถ่าย (Evidence)', icon: FolderArchive },
+    { id: 'analytics', label: 'สถิติและรายงาน (Analytics)', icon: BarChart3 },
+    { id: 'settings', label: 'ตั้งค่าระบบ (Settings)', icon: Sliders },
   ];
 
   const handleSelectNav = (id: string) => {

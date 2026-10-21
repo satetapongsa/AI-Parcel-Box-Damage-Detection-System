@@ -5,7 +5,8 @@ import type {
   TimelineEvent, 
   AnomalyLog, 
   EngineeringSettings,
-  DamageType
+  DamageType,
+  NotificationItem
 } from '../types';
 import { 
   INITIAL_PARCEL_RECORDS, 
@@ -17,6 +18,7 @@ import type { FaultState } from '../lib/sim/faults';
 import type { CiraState } from '../lib/sim/ciraPanel';
 import type { UartLogEntry } from '../lib/sim/uartConsole';
 import type { TestSuiteSummary } from '../lib/sim/testSuite';
+import { saveInspectionToNeon, fetchRecentInspectionsFromNeon, type DbParcelInspection } from '../lib/database/neonClient';
 
 const initialStatus: SystemStatusState = {
   stationId: 'SORT-01',
@@ -60,6 +62,10 @@ interface SimulationContextType {
   uartLogs: UartLogEntry[];
   faults: FaultState;
   testSuiteResult: TestSuiteSummary | null;
+  notifications: NotificationItem[];
+  unreadNotificationCount: number;
+  dbRecords: DbParcelInspection[];
+  isLoadingDb: boolean;
   toast: { title: string; message: string; type: 'info' | 'success' | 'warning' | 'danger' } | null;
   toggleDemoMode: () => void;
   setDemoSpeed: (speed: SimSpeed) => void;
@@ -74,6 +80,9 @@ interface SimulationContextType {
   markRejectHandled: (id: string, reason: string) => void;
   runTestSuite: () => Promise<TestSuiteSummary>;
   showToast: (title: string, message: string, type: 'info' | 'success' | 'warning' | 'danger') => void;
+  markNotificationsAsRead: () => void;
+  clearNotifications: () => void;
+  refreshDbRecords: () => Promise<void>;
 }
 
 const SimulationContext = createContext<SimulationContextType | undefined>(undefined);
@@ -107,12 +116,47 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [faults, setFaultsState] = useState<FaultState>(engine.getFaults());
   const [testSuiteResult, setTestSuiteResult] = useState<TestSuiteSummary | null>(null);
 
-  const [toast, setToast] = useState<{ title: string; message: string; type: 'info' | 'success' | 'warning' | 'danger' } | null>(null);
+  // Notifications state for bell icon
+  const [notifications, setNotifications] = useState<NotificationItem[]>([
+    {
+      id: 'n1',
+      timestamp: '08:41:05',
+      title: 'พัสดุชำรุดถูกปัดออก: THA-20260930-001247',
+      message: 'ตรวจพบรอยฉีกขาด TEAR (96.8%) ปัดลงรางคัดแยกเรียบร้อย',
+      type: 'danger',
+      read: false
+    },
+    {
+      id: 'n2',
+      timestamp: '08:39:50',
+      title: 'พัสดุบุบชำรุด: THA-20260930-001246',
+      message: 'ตรวจพบรอยบุบ DENT (94.7%) ที่มุมกล่อง',
+      type: 'danger',
+      read: false
+    }
+  ]);
 
-  const showToast = useCallback((title: string, message: string, type: 'info' | 'success' | 'warning' | 'danger') => {
-    setToast({ title, message, type });
-    setTimeout(() => setToast(null), 4000);
+  // Neon DB state
+  const [dbRecords, setDbRecords] = useState<DbParcelInspection[]>([]);
+  const [isLoadingDb, setIsLoadingDb] = useState(false);
+
+  const [toast] = useState<{ title: string; message: string; type: 'info' | 'success' | 'warning' | 'danger' } | null>(null);
+
+  const showToast = useCallback((_title: string, _message: string, _type: 'info' | 'success' | 'warning' | 'danger') => {
+    // Suppress screen-corner popup according to user requirement
   }, []);
+
+  const refreshDbRecords = useCallback(async () => {
+    setIsLoadingDb(true);
+    const records = await fetchRecentInspectionsFromNeon(100);
+    setDbRecords(records);
+    setIsLoadingDb(false);
+  }, []);
+
+  // Fetch Neon records on mount
+  useEffect(() => {
+    refreshDbRecords();
+  }, [refreshDbRecords]);
 
   // Subscribe to engine callbacks
   useEffect(() => {
@@ -121,6 +165,34 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       onParcelProcessed: (newParcel) => {
         setLatestParcel(newParcel);
         setParcels((prev) => [newParcel, ...prev].slice(0, 500));
+
+        // If REJECT, save to notifications queue for bell icon
+        if (newParcel.status === 'REJECT') {
+          const newNotif: NotificationItem = {
+            id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            timestamp: newParcel.time,
+            title: `พัสดุไม่ผ่าน: ${newParcel.trackingNumber}`,
+            message: newParcel.rejectReason || `ตรวจพบ ${newParcel.damageType} (${newParcel.aiConfidence}%)`,
+            type: 'danger',
+            read: false,
+            parcelId: newParcel.id
+          };
+          setNotifications((prev) => [newNotif, ...prev].slice(0, 100));
+        }
+
+        // Save into Neon PostgreSQL Database
+        saveInspectionToNeon({
+          tracking_no: newParcel.trackingNumber,
+          station_id: newParcel.stationId,
+          status: newParcel.status,
+          damage_type: newParcel.damageType,
+          confidence: newParcel.aiConfidence,
+          weight_kg: newParcel.weight,
+          expected_weight_kg: newParcel.expectedWeight,
+          reject_reason: newParcel.rejectReason
+        }).then(() => {
+          refreshDbRecords();
+        });
       },
       onTimelineEvent: (event) => {
         setTimelineEvents((prev) => [event, ...prev].slice(0, 500));
@@ -136,31 +208,27 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       unsubscribe();
       engine.stop();
     };
-  }, [engine]);
+  }, [engine, refreshDbRecords]);
 
   const toggleDemoMode = () => {
     if (demoModeActive) {
       engine.stop();
       setDemoModeActive(false);
-      showToast('Simulation Paused', 'Conveyor and automated parcel flow paused.', 'info');
     } else {
       engine.start();
       setDemoModeActive(true);
-      showToast('Simulation Active', 'Real-time parcel flow started.', 'info');
     }
   };
 
   const setDemoSpeed = (speed: SimSpeed) => {
     setDemoSpeedState(speed);
     engine.setSpeed(speed);
-    showToast('Speed Changed', `Simulation running at ${speed}x speed.`, 'info');
   };
 
   const setFault = <K extends keyof FaultState>(key: K, value: FaultState[K]) => {
     engine.setFault(key, value);
     setFaultsState(engine.getFaults());
     setSystemStatus(engine.getStatus());
-    showToast('Fault Injection', `Updated fault: ${String(key)} -> ${String(value)}`, value ? 'warning' : 'info');
   };
 
   const toggleOfflineMode = () => {
@@ -170,30 +238,23 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const syncOfflineQueue = async () => {
     const count = engine.bridgeQueue.size();
-    if (count === 0) {
-      showToast('Queue Empty', 'All records are already synced to Cloud.', 'info');
-      return;
-    }
+    if (count === 0) return;
     await engine.flushBridgeQueue();
     setParcels((prev) => prev.map((p) => ({ ...p, syncedToCloud: true })));
-    showToast('Sync Completed', `${count} queued records processed through Store-and-Forward.`, 'success');
   };
 
   const generateParcel = (forceDamage?: DamageType, isFalsePositiveCase = false) => {
-    const parcel = engine.triggerSingleParcel(forceDamage, isFalsePositiveCase);
-    showToast('Manual Parcel Dispatched', `Track: ${parcel.trackingNumber} (${parcel.damageType})`, parcel.status === 'REJECT' ? 'danger' : 'success');
+    engine.triggerSingleParcel(forceDamage, isFalsePositiveCase);
   };
 
   const updateSettings = (newSettings: Partial<EngineeringSettings>) => {
     engine.updateSettings(newSettings);
     setSettings(engine.getSettings());
-    showToast('Settings Saved', 'Engineering parameters applied to engine.', 'success');
   };
 
   const resetSettings = () => {
     engine.updateSettings(DEFAULT_ENGINEERING_SETTINGS);
     setSettings(DEFAULT_ENGINEERING_SETTINGS);
-    showToast('Settings Reset', 'Restored to baseline engineering specs.', 'info');
   };
 
   const setCiraTab = (tab: 'Payload' | 'Output' | 'Image') => {
@@ -211,11 +272,17 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setParcels((prev) =>
       prev.map((p) => (p.id === id ? { ...p, handled: true, handledReason: reason } : p))
     );
-    showToast('Handled', `Reject action recorded: ${reason}`, 'info');
+  };
+
+  const markNotificationsAsRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  };
+
+  const clearNotifications = () => {
+    setNotifications([]);
   };
 
   const runTestSuite = async (): Promise<TestSuiteSummary> => {
-    showToast('Running Test Suite', 'Executing 5 slide-12 failure verification tests...', 'info');
     const startTime = Date.now();
     const results = [];
 
@@ -277,11 +344,11 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
     // Test 5: Actuator Timing & Tuning (Case 3)
     const origDist = engine.getSettings().actuatorDistanceInstalledM;
-    engine.updateSettings({ actuatorDistanceInstalledM: 0.10 }); // Deliberately short!
+    engine.updateSettings({ actuatorDistanceInstalledM: 0.10 });
     const missedBefore = engine.getStatus().missedRejectCount || 0;
     engine.processNextParcel('DENT');
     const missedAfter = engine.getStatus().missedRejectCount || 0;
-    engine.updateSettings({ actuatorDistanceInstalledM: origDist }); // Restore
+    engine.updateSettings({ actuatorDistanceInstalledM: origDist });
     results.push({
       name: 'Delay Time Tuning & Missed Reject Alert (Case 3)',
       category: 'Timing Calibration',
@@ -289,23 +356,6 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       metric: `Detected MISSED_REJECT: ${missedAfter - missedBefore > 0 ? 'YES' : 'NO'}`,
       threshold: 'Installed distance < Required (0.285m) flags MISSED_REJECT',
       details: 'Tests timing formula against conveyor speed and actuator stroke delay.',
-      timestamp: new Date().toTimeString().slice(0, 8)
-    });
-
-    // Additional 20 reject boxes test
-    let rejectActuated = 0;
-    for (let i = 0; i < 20; i++) {
-      const p = engine.processNextParcel('DENT');
-      if (p.actuatorTriggered) rejectActuated += 1;
-    }
-    const rejectRate = (rejectActuated / 20) * 100;
-    results.push({
-      name: '20-Box Consecutive Reject Actuation Verification',
-      category: 'Actuator Reliability',
-      status: (rejectRate >= 90 ? 'PASS' : 'FAIL') as 'PASS' | 'FAIL',
-      metric: `Actuated: ${rejectActuated}/20 (${rejectRate.toFixed(1)}%)`,
-      threshold: '>= 90% target success rate (Proposed by team)',
-      details: 'High-frequency rejection reliability check.',
       timestamp: new Date().toTimeString().slice(0, 8)
     });
 
@@ -320,11 +370,11 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     };
 
     setTestSuiteResult(summary);
-    showToast('Test Suite Finished', `Score: ${summary.passedTests}/${summary.totalTests} Passed (${summary.passRate}%)`, summary.failedTests === 0 ? 'success' : 'warning');
     return summary;
   };
 
   const rejectQueue = parcels.filter((p) => p.status === 'REJECT' && !p.handled);
+  const unreadNotificationCount = notifications.filter((n) => !n.read).length;
 
   return (
     <SimulationContext.Provider
@@ -345,6 +395,10 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         uartLogs,
         faults,
         testSuiteResult,
+        notifications,
+        unreadNotificationCount,
+        dbRecords,
+        isLoadingDb,
         toast,
         toggleDemoMode,
         setDemoSpeed,
@@ -358,7 +412,10 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         sendUartCmd,
         markRejectHandled,
         runTestSuite,
-        showToast
+        showToast,
+        markNotificationsAsRead,
+        clearNotifications,
+        refreshDbRecords
       }}
     >
       {children}

@@ -1,4 +1,5 @@
 import React from 'react';
+import { CheckCircle2, XCircle, AlertTriangle, AlertCircle, Circle } from 'lucide-react';
 
 export type StatusType = 
   | 'PASS' 
@@ -22,50 +23,50 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
   size = 'md',
   showIcon = true
 }) => {
-  const getStyle = () => {
+  const getStyleAndIcon = () => {
     switch (status) {
       case 'PASS':
         return {
           bg: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
-          icon: '✓'
+          icon: <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
         };
       case 'REJECT':
         return {
           bg: 'bg-red-500/15 text-red-400 border-red-500/30',
-          icon: '!'
+          icon: <XCircle className="w-3.5 h-3.5 shrink-0" />
         };
       case 'ONLINE':
       case 'READY':
         return {
           bg: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
-          icon: '●'
+          icon: <Circle className="w-2 h-2 fill-emerald-400 shrink-0" />
         };
       case 'OFFLINE':
       case 'DISCONNECTED':
         return {
           bg: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
-          icon: '●'
+          icon: <Circle className="w-2 h-2 fill-amber-400 shrink-0" />
         };
       case 'WARNING':
       case 'MANUAL INSPECTION':
         return {
           bg: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
-          icon: '⚠'
+          icon: <AlertTriangle className="w-3 h-3 shrink-0" />
         };
       case 'CRITICAL':
         return {
           bg: 'bg-red-500/20 text-red-400 border-red-500/40 font-bold',
-          icon: '🚨'
+          icon: <AlertCircle className="w-3.5 h-3.5 shrink-0" />
         };
       default:
         return {
           bg: 'bg-[#172235] text-slate-300 border-[#26354A]',
-          icon: '•'
+          icon: <Circle className="w-1.5 h-1.5 fill-slate-400 shrink-0" />
         };
     }
   };
 
-  const style = getStyle();
+  const { bg, icon } = getStyleAndIcon();
   const sizeClasses = {
     sm: 'px-2 py-0.5 text-[10px]',
     md: 'px-2.5 py-1 text-xs',
@@ -73,8 +74,8 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
   }[size];
 
   return (
-    <span className={`inline-flex items-center space-x-1 rounded-full border font-mono tracking-tight font-semibold shrink-0 ${style.bg} ${sizeClasses}`}>
-      {showIcon && <span className="mr-0.5">{style.icon}</span>}
+    <span className={`inline-flex items-center space-x-1.5 rounded-full border font-mono tracking-tight font-semibold shrink-0 ${bg} ${sizeClasses}`}>
+      {showIcon && icon}
       <span>{status}</span>
     </span>
   );
