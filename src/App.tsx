@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { SimulationProvider } from './context/SimulationContext';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
-import { Toast } from './components/Toast';
 import { OverviewPage } from './pages/OverviewPage';
 import { LiveInspectionPage } from './pages/LiveInspectionPage';
 import { EvidencePage } from './pages/EvidencePage';
@@ -33,9 +32,6 @@ export function AppContent() {
         
         {/* Top Header */}
         <Header onToggleMobileMenu={() => setIsOpenMobile(true)} />
-
-        {/* Real-time Alert Toast Notification */}
-        <Toast />
 
         {/* Active Page Component */}
         <main className="flex-1 overflow-y-auto overflow-x-hidden pb-12 w-full max-w-full">

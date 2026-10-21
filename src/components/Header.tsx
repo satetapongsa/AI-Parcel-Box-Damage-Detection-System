@@ -1,14 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Clock, 
-  Calendar, 
   Wifi, 
   WifiOff, 
   Play, 
   Pause, 
   Database, 
-  RefreshCw,
-  Menu
+  Bell,
+  Menu,
+  CheckCircle2,
+  XCircle,
+  RefreshCw
 } from 'lucide-react';
 import { useSimulation } from '../context/SimulationContext';
 
@@ -22,30 +24,37 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
     toggleDemoMode, 
     isOfflineMode, 
     toggleOfflineMode,
-    syncOfflineQueue,
-    pendingSyncCount,
-    latestParcel
+    latestParcel,
+    notifications,
+    unreadNotificationCount,
+    markNotificationsAsRead,
+    clearNotifications,
+    refreshDbRecords,
+    isLoadingDb
   } = useSimulation();
 
-  const connectionHealth = { ciraCore: 'CONNECTED' };
-
   const [time, setTime] = useState<Date>(new Date());
+  const [showNotificationMenu, setShowNotificationMenu] = useState(false);
+  const bellRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    });
-  };
+  // Close notification popover on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (bellRef.current && !bellRef.current.contains(e.target as Node)) {
+        setShowNotificationMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('en-GB', {
+    return date.toLocaleTimeString('th-TH', {
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
@@ -54,128 +63,180 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
   };
 
   return (
-    <header className="min-h-14 bg-[#07111F] border-b border-[#26354A] px-3 sm:px-6 py-2 flex flex-wrap items-center justify-between sticky top-0 z-40 shadow-xl select-none gap-y-2 gap-x-2">
+    <header className="min-h-16 bg-[#080E1A] border-b border-slate-800 px-4 sm:px-6 py-2.5 flex items-center justify-between sticky top-0 z-40 select-none">
       
-      {/* Station Title & Subtitle + Mobile Drawer Menu Toggle */}
-      <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
+      {/* Station Title & Line Info */}
+      <div className="flex items-center space-x-3 min-w-0">
         {onToggleMobileMenu && (
           <button
             onClick={onToggleMobileMenu}
-            className="lg:hidden p-2 rounded-lg text-slate-300 hover:text-white bg-[#101A2B] border border-[#26354A] shrink-0 active:scale-95 transition-transform"
-            title="Toggle Navigation Menu"
-            aria-label="Toggle Navigation Menu"
+            className="lg:hidden p-2 rounded-lg text-slate-300 hover:text-white bg-slate-900 border border-slate-700 shrink-0"
+            aria-label="เมนู"
           >
-            <Menu className="w-5 h-5 text-sky-400" />
+            <Menu className="w-5 h-5 text-cyan-400" />
           </button>
         )}
 
-        <img src="/logo.svg" alt="AI Parcel Box Logo" className="w-7 h-7 sm:w-8 sm:h-8 drop-shadow shrink-0" />
-        
-        <div className="min-w-0">
-          <h2 className="text-xs sm:text-base font-bold text-white tracking-tight flex items-center space-x-1.5 font-mono">
-            <span className="truncate">AI Parcel Box System</span>
-            <span className="hidden sm:inline-block text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-400 border border-sky-500/30 shrink-0">
-              CiRA
+        <div className="w-8 h-8 rounded-lg bg-cyan-950 border border-cyan-500/40 flex items-center justify-center shrink-0">
+          <Database className="w-4 h-4 text-cyan-400" />
+        </div>
+
+        <div>
+          <div className="flex items-center space-x-2">
+            <h1 className="text-sm sm:text-base font-bold text-white font-mono tracking-wide">
+              SPDI MONITORING HUB
+            </h1>
+            <span className="hidden sm:inline-block px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold font-mono">
+              STATION SORT-01
             </span>
-          </h2>
-          <p className="text-[10px] sm:text-[11px] text-[#94A3B8] font-mono truncate hidden xs:block">
-            SORT-01 • Edge Vision
+          </div>
+          <p className="text-[11px] text-slate-400 font-sans hidden sm:block">
+            ระบบประเมินและคัดแยกพัสดุชำรุด • Neon PostgreSQL เชื่อมต่อพร้อมใช้งาน
           </p>
         </div>
       </div>
 
-      {/* Header Connection Health Telemetry Strip */}
-      <div className="hidden 2xl:flex items-center space-x-2 font-mono text-[11px]">
-        {/* CiRA CORE Status */}
-        <div className="bg-[#101A2B] border border-[#26354A] px-2.5 py-1 rounded-lg flex items-center space-x-1.5">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-          <span className="text-slate-300">CiRA CORE:</span>
-          <span className="font-bold text-emerald-400">{connectionHealth.ciraCore}</span>
+      {/* Center Operational Strip */}
+      <div className="hidden xl:flex items-center space-x-4 font-mono text-xs">
+        {/* Neon DB Live Indicator */}
+        <div className="flex items-center space-x-2 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="text-slate-400">Neon DB:</span>
+          <span className="text-emerald-400 font-bold">CONNECTED</span>
+          <button 
+            onClick={() => refreshDbRecords()} 
+            disabled={isLoadingDb}
+            className="text-slate-400 hover:text-cyan-400 transition ml-1"
+            title="รีเฟรชข้อมูลจาก Neon DB"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoadingDb ? 'animate-spin text-cyan-400' : ''}`} />
+          </button>
         </div>
 
-        {/* MQTT Broker Status */}
-        <div className={`border px-2.5 py-1 rounded-lg flex items-center space-x-1 font-semibold ${
-          isOfflineMode 
-            ? 'bg-amber-950/60 border-amber-500/40 text-amber-400' 
-            : 'bg-[#101A2B] border-[#26354A] text-purple-400'
-        }`}>
-          {isOfflineMode ? <WifiOff className="w-3.5 h-3.5" /> : <Wifi className="w-3.5 h-3.5" />}
-          <span>MQTT: {isOfflineMode ? 'DISCONNECTED' : 'CONNECTED'}</span>
+        {/* Conveyor & Actuator Status */}
+        <div className="flex items-center space-x-2 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg text-slate-300">
+          <span>สายพาน:</span>
+          <span className={demoModeActive ? 'text-emerald-400 font-bold' : 'text-amber-400 font-bold'}>
+            {demoModeActive ? 'ทำงานปกติ' : 'หยุดชั่วคราว'}
+          </span>
         </div>
 
-        {/* Database Status */}
-        <div className="bg-[#101A2B] border border-[#26354A] px-2.5 py-1 rounded-lg flex items-center space-x-1 text-emerald-400 font-semibold">
-          <Database className="w-3.5 h-3.5 text-emerald-400" />
-          <span>DB: CONNECTED</span>
-        </div>
-
-        {/* Last Inspection Time */}
-        <div className="bg-[#101A2B] border border-[#26354A] px-2.5 py-1 rounded-lg text-[#94A3B8]">
-          Last scan: <span className="text-white font-bold">{latestParcel?.time || 'Just now'}</span>
+        {/* Last Scanned Parcel */}
+        <div className="bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg text-slate-400">
+          ล่าสุด: <span className="text-white font-bold">{latestParcel?.trackingNumber || '-'}</span>
         </div>
       </div>
 
-      {/* Right Toolbar Controls */}
-      <div className="flex items-center space-x-1.5 sm:space-x-2 shrink-0 flex-wrap gap-y-1">
-        
-        {/* Simulation Badge */}
-        <div className="bg-[#101A2B] border border-cyan-800/60 px-2.5 py-1 rounded-lg flex items-center space-x-1.5 font-mono text-[11px]">
-          <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-          <span className="text-cyan-300 font-bold">SIMULATION MODE</span>
-        </div>
-
-        {/* Offline Mode Switcher */}
-        <button
-          onClick={toggleOfflineMode}
-          className={`px-2.5 py-1 rounded-lg font-mono text-[11px] font-bold transition-all flex items-center space-x-1 border ${
-            isOfflineMode
-              ? 'bg-amber-600 text-white border-amber-400 shadow animate-pulse'
-              : 'bg-[#101A2B] hover:bg-[#172235] text-amber-400 border-[#26354A]'
-          }`}
-          title="Toggle Store-and-Forward Offline Resiliency Mode"
-        >
-          {isOfflineMode ? <WifiOff className="w-3 h-3" /> : <Wifi className="w-3 h-3" />}
-          <span>{isOfflineMode ? 'OFFLINE' : 'Sim Offline'}</span>
-        </button>
-
-        {/* Sync Button if Offline Queue has records */}
-        {pendingSyncCount > 0 && (
-          <button
-            onClick={syncOfflineQueue}
-            className="px-2.5 py-1 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-mono text-[11px] font-bold transition-all flex items-center space-x-1 shadow animate-bounce"
-          >
-            <RefreshCw className="w-3 h-3 animate-spin" />
-            <span>Sync ({pendingSyncCount})</span>
-          </button>
-        )}
-
-        {/* Demo Mode Toggle */}
+      {/* Right Controls: Conveyor Play/Pause, Offline Toggle, Clock & Notification Bell */}
+      <div className="flex items-center space-x-3">
+        {/* Play / Pause Conveyor Button */}
         <button
           onClick={toggleDemoMode}
-          className={`px-2.5 py-1 rounded-lg font-mono text-[11px] font-bold transition-all flex items-center space-x-1 border ${
+          className={`px-3 py-1.5 rounded-lg font-mono text-xs font-bold transition flex items-center space-x-1.5 shadow ${
             demoModeActive
-              ? 'bg-emerald-600 text-white border-emerald-400 shadow'
-              : 'bg-[#101A2B] hover:bg-[#172235] text-slate-300 border-[#26354A]'
+              ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
+              : 'bg-emerald-600 hover:bg-emerald-500 text-white'
           }`}
+          title={demoModeActive ? 'หยุดสายพานชั่วคราว' : 'เริ่มสายพาน'}
         >
-          {demoModeActive ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
-          <span className="hidden sm:inline">{demoModeActive ? 'DEMO ACTIVE' : 'DEMO PAUSED'}</span>
+          {demoModeActive ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+          <span className="hidden sm:inline">{demoModeActive ? 'พักระบบ' : 'เริ่มระบบ'}</span>
         </button>
 
-        {/* Live Clock Widget */}
-        <div className="hidden md:flex items-center space-x-2 bg-[#101A2B] border border-[#26354A] px-2.5 py-1 rounded-lg font-mono text-[11px] text-slate-200">
-          <Calendar className="w-3 h-3 text-sky-400" />
-          <span>{formatDate(time)}</span>
-          <span className="text-slate-600">|</span>
-          <Clock className="w-3 h-3 text-sky-400" />
-          <span className="text-sky-400 font-bold">{formatTime(time)}</span>
+        {/* Offline / Fail-Safe Toggle */}
+        <button
+          onClick={toggleOfflineMode}
+          className={`px-2.5 py-1.5 rounded-lg font-mono text-xs font-bold transition flex items-center space-x-1.5 border ${
+            isOfflineMode
+              ? 'bg-amber-600 text-white border-amber-400 shadow animate-pulse'
+              : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-700'
+          }`}
+          title="จำลองโหมดออฟไลน์ (Store-and-Forward)"
+        >
+          {isOfflineMode ? <WifiOff className="w-3.5 h-3.5" /> : <Wifi className="w-3.5 h-3.5" />}
+          <span className="hidden md:inline">{isOfflineMode ? 'ออฟไลน์' : 'ออนไลน์'}</span>
+        </button>
+
+        {/* Live Clock */}
+        <div className="hidden md:flex items-center space-x-2 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg font-mono text-xs text-slate-300">
+          <Clock className="w-3.5 h-3.5 text-cyan-400" />
+          <span className="text-white font-bold">{formatTime(time)}</span>
         </div>
 
-        {/* User Profile Avatar */}
-        <div className="flex items-center space-x-2 pl-1 border-l border-[#26354A]">
-          <div className="w-7 h-7 rounded-full bg-sky-600 border border-sky-400/50 flex items-center justify-center text-white font-bold text-[11px] shadow">
-            OP
-          </div>
+        {/* QUIET NOTIFICATION BELL (Top-Right Icon with dropdown for operators) */}
+        <div className="relative" ref={bellRef}>
+          <button
+            onClick={() => {
+              setShowNotificationMenu(!showNotificationMenu);
+              if (!showNotificationMenu) {
+                markNotificationsAsRead();
+              }
+            }}
+            className="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-white transition relative shadow"
+            title="การแจ้งเตือนพัสดุชำรุด"
+            aria-label="แจ้งเตือน"
+          >
+            <Bell className="w-4 h-4 text-amber-400" />
+            {unreadNotificationCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-600 text-white font-mono text-[9px] font-bold flex items-center justify-center animate-pulse">
+                {unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}
+              </span>
+            )}
+          </button>
+
+          {/* Notification Dropdown Panel */}
+          {showNotificationMenu && (
+            <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-[#0B1424] border border-slate-700 rounded-xl shadow-2xl z-50 overflow-hidden font-sans">
+              <div className="p-3 border-b border-slate-800 flex items-center justify-between bg-slate-950">
+                <div className="flex items-center space-x-2">
+                  <Bell className="w-4 h-4 text-amber-400" />
+                  <span className="text-xs font-bold text-white font-mono uppercase">
+                    แจ้งเตือนพัสดุไม่ผ่าน (Quarantine)
+                  </span>
+                </div>
+                {notifications.length > 0 && (
+                  <button
+                    onClick={clearNotifications}
+                    className="text-[10px] text-slate-400 hover:text-red-400 font-mono transition"
+                  >
+                    ล้างทั้งหมด
+                  </button>
+                )}
+              </div>
+
+              <div className="max-h-80 overflow-y-auto divide-y divide-slate-800/80">
+                {notifications.length === 0 ? (
+                  <div className="p-6 text-center text-xs text-slate-500 font-mono">
+                    <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-emerald-500/50" />
+                    ไม่มีรายการแจ้งเตือนใหม่ ทุกกล่องผ่านเกณฑ์เรียบร้อย
+                  </div>
+                ) : (
+                  notifications.map((n) => (
+                    <div key={n.id} className="p-3 hover:bg-slate-900/60 transition space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-red-400 flex items-center space-x-1.5">
+                          <XCircle className="w-3.5 h-3.5 shrink-0" />
+                          <span className="truncate">{n.title}</span>
+                        </span>
+                        <span className="text-[10px] text-slate-500 font-mono shrink-0">
+                          {n.timestamp}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-300 font-sans pl-5">
+                        {n.message}
+                      </p>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="p-2 border-t border-slate-800 bg-slate-950 text-center">
+                <span className="text-[10px] text-slate-400 font-mono">
+                  คนงานสามารถดูรายละเอียดและคัดแยกกล่องได้ที่เมนู "กล่องรอจัดการ"
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
       </div>
