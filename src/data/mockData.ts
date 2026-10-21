@@ -449,12 +449,22 @@ export const SYSTEM_ANOMALIES_LOG: AnomalyLog[] = [
 
 export const DEFAULT_ENGINEERING_SETTINGS: EngineeringSettings = {
   aiConfidenceThreshold: 85,
-  actuatorDelayMs: 180,
   weightTolerancePct: 5,
   conveyorSpeedMs: 0.75,
-  cameraExposure: 450,
-  brightnessThreshold: 120,
-  offlineQueueLimit: 500
+  aiInferenceSec: 0.20,
+  actuatorDelayMs: 180,
+  actuatorType: 'PNEUMATIC',
+  actuatorDistanceInstalledM: 0.35,
+  irTimeoutSec: 3.0,
+  minBrightness: 120,
+  offlineQueueLimit: 500,
+  classMapping: {
+    box_good: 'NORMAL',
+    box_dent: 'DENT',
+    box_tear: 'TEAR',
+    box_water: 'WATER_STAIN'
+  },
+  reviewStateEnabled: false
 };
 
 export const HOURLY_REJECT_RATE = [

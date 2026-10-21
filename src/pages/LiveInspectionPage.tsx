@@ -5,11 +5,17 @@ import {
   CheckCircle2,
   XCircle,
   AlertTriangle,
-  Droplets
+  Droplets,
+  Play,
+  Pause,
+  Scale
 } from 'lucide-react';
 import { useSimulation } from '../context/SimulationContext';
 import { InspectionVisualizer } from '../components/InspectionVisualizer';
 import { ConveyorSimulation } from '../components/ConveyorSimulation';
+import { VirtualHardwarePanel } from '../components/VirtualHardwarePanel';
+import { CiraPanel } from '../components/CiraPanel';
+import { UartConsole } from '../components/UartConsole';
 import { PageHeader } from '../components/common/PageHeader';
 import { SectionCard } from '../components/common/SectionCard';
 import { StatusBadge } from '../components/common/StatusBadge';
@@ -19,20 +25,26 @@ export const LiveInspectionPage: React.FC = () => {
     latestParcel, 
     systemStatus, 
     generateParcel,
-    dataSourceMode
+    demoModeActive,
+    toggleDemoMode,
+    demoSpeed,
+    setDemoSpeed,
+    timelineEvents
   } = useSimulation();
 
   const isReject = latestParcel.status === 'REJECT';
 
   const pipelineSteps = [
-    { label: 'IR SENSOR', status: '✓', detail: 'Triggered' },
-    { label: 'CAMERA CAPTURE', status: '✓', detail: 'Dual 1080p' },
-    { label: 'AI INFERENCE', status: '✓', detail: `${latestParcel.aiConfidence}%` },
-    { label: 'OCR / BARCODE', status: '✓', detail: latestParcel.trackingNumber },
-    { label: 'WEIGHT CHECK', status: '✓', detail: `${latestParcel.weight} kg` },
-    { label: 'DECISION ENGINE', status: isReject ? 'REJECT' : 'PASS', detail: latestParcel.status },
-    { label: 'ACTUATOR CYLINDER', status: latestParcel.actuatorTriggered ? 'TRIGGERED' : 'IDLE', detail: latestParcel.actuatorTriggered ? 'REJECTED' : 'PASSED' },
-    { label: 'EVIDENCE DB', status: 'SAVED', detail: 'SQLite Local' },
+    { label: '1. IR SENSOR', status: '✓', detail: systemStatus.irSensorStatus },
+    { label: '2. CAMERA CAPTURE', status: '✓', detail: 'Dual 1080p' },
+    { label: '3. BARCODE', status: '✓', detail: latestParcel.trackingNumber },
+    { label: '4. CiRA CORE AI', status: '✓', detail: `${latestParcel.aiConfidence}%` },
+    { label: '5. LOAD CELL', status: '✓', detail: `${latestParcel.weight} kg` },
+    { label: '6. DECISION', status: isReject ? 'REJECT' : 'PASS', detail: latestParcel.status },
+    { label: '7. UART / ESP32', status: isReject ? 'CMD 3' : 'CMD 1', detail: isReject ? 'RED' : 'GREEN' },
+    { label: '8. ACTUATOR', status: latestParcel.actuatorTriggered ? 'TRIGGERED' : 'IDLE', detail: latestParcel.actuatorTriggered ? 'PUSHED' : 'PASSED' },
+    { label: '9. LOCAL SQLITE', status: 'SAVED', detail: 'Local Disk' },
+    { label: '10. CLOUD SYNC', status: latestParcel.syncedToCloud ? 'SYNCED' : 'PENDING', detail: latestParcel.syncedToCloud ? '201 OK' : 'Queued' },
   ];
 
   return (
@@ -41,42 +53,79 @@ export const LiveInspectionPage: React.FC = () => {
       {/* Enterprise Page Header */}
       <PageHeader
         title="Live Vision Inspection Station"
-        description={`Active mode: ${dataSourceMode === 'LIVE_EDGE' ? 'LIVE EDGE (CiRA CORE MQTT Active)' : 'Simulated Frontend Engine'} • Station SORT-01`}
-        badge={dataSourceMode === 'LIVE_EDGE' ? 'LIVE MQTT' : 'SIMULATION'}
-        badgeType={dataSourceMode === 'LIVE_EDGE' ? 'purple' : 'sky'}
+        description="จำลองขั้นตอนการตรวจจับและคัดแยกกล่องพัสดุชำรุดแบบครบวงจร (Station SORT-01)"
+        badge="SIMULATION"
+        badgeType="sky"
         actions={
           <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
+            {/* Play/Pause Control */}
+            <button
+              onClick={toggleDemoMode}
+              className={`px-3 py-1.5 rounded-lg font-bold transition-all shadow flex items-center space-x-1.5 ${
+                demoModeActive ? 'bg-amber-600 hover:bg-amber-500 text-white' : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+              }`}
+            >
+              {demoModeActive ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+              <span>{demoModeActive ? 'Pause' : 'Play Flow'}</span>
+            </button>
+
+            {/* Speed Selector */}
+            <div className="flex items-center bg-slate-900 border border-slate-700 rounded-lg p-0.5">
+              {([0.5, 1, 2, 4] as const).map((spd) => (
+                <button
+                  key={spd}
+                  onClick={() => setDemoSpeed(spd)}
+                  className={`px-2 py-1 rounded text-[11px] font-semibold transition ${
+                    demoSpeed === spd ? 'bg-cyan-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  x{spd}
+                </button>
+              ))}
+            </div>
+
+            {/* Manual Single Parcel Injections */}
             <button
               onClick={() => generateParcel('NORMAL')}
-              className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-all shadow flex items-center space-x-1"
+              className="px-2.5 py-1.5 rounded-lg bg-emerald-600/80 hover:bg-emerald-500 text-white font-bold transition shadow flex items-center space-x-1"
             >
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>Sim Normal</span>
-            </button>
-            <button
-              onClick={() => generateParcel('TEAR')}
-              className="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white font-bold transition-all shadow flex items-center space-x-1"
-            >
-              <XCircle className="w-3.5 h-3.5" />
-              <span>Sim Tear</span>
+              <CheckCircle2 className="w-3 h-3" />
+              <span>Normal</span>
             </button>
             <button
               onClick={() => generateParcel('DENT')}
-              className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-bold transition-all shadow flex items-center space-x-1"
+              className="px-2.5 py-1.5 rounded-lg bg-amber-600/80 hover:bg-amber-500 text-white font-bold transition shadow flex items-center space-x-1"
             >
-              <AlertTriangle className="w-3.5 h-3.5" />
-              <span>Sim Dent</span>
+              <AlertTriangle className="w-3 h-3" />
+              <span>Dent</span>
+            </button>
+            <button
+              onClick={() => generateParcel('TEAR')}
+              className="px-2.5 py-1.5 rounded-lg bg-red-600/80 hover:bg-red-500 text-white font-bold transition shadow flex items-center space-x-1"
+            >
+              <XCircle className="w-3 h-3" />
+              <span>Tear</span>
             </button>
             <button
               onClick={() => generateParcel('WATER_STAIN')}
-              className="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-bold transition-all shadow flex items-center space-x-1"
+              className="px-2.5 py-1.5 rounded-lg bg-sky-600/80 hover:bg-sky-500 text-white font-bold transition shadow flex items-center space-x-1"
             >
-              <Droplets className="w-3.5 h-3.5" />
-              <span>Sim Wet</span>
+              <Droplets className="w-3 h-3" />
+              <span>Wet</span>
+            </button>
+            <button
+              onClick={() => generateParcel('WEIGHT_ANOMALY')}
+              className="px-2.5 py-1.5 rounded-lg bg-purple-600/80 hover:bg-purple-500 text-white font-bold transition shadow flex items-center space-x-1"
+            >
+              <Scale className="w-3 h-3" />
+              <span>Weight</span>
             </button>
           </div>
         }
       />
+
+      {/* VIRTUAL HARDWARE PANEL (Tower Light 3-Color, Solenoid, Sensors) */}
+      <VirtualHardwarePanel />
 
       {/* 3D CONVEYOR BELT SIMULATION */}
       <ConveyorSimulation 
@@ -86,19 +135,21 @@ export const LiveInspectionPage: React.FC = () => {
         currentParcel={latestParcel}
       />
 
-      {/* STEP-BY-STEP SEQUENTIAL INSPECTION DATA FLOW PIPELINE */}
+      {/* 10-STEP SYSTEM FLOW PIPELINE FROM SECTION 6.1 */}
       <SectionCard 
-        title="Sequential Inspection Pipeline Data Flow" 
+        title="10-Step Automated Inspection & Decision Pipeline" 
         icon={Zap}
-        headerActions={<span className="text-xs text-emerald-400 font-mono font-bold">Pipeline Latency: 35ms</span>}
+        headerActions={<span className="text-xs text-emerald-400 font-mono font-bold">Latency: {systemStatus.aiInferenceMs}ms</span>}
       >
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5">
+        <div className="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-2 font-mono">
           {pipelineSteps.map((step, idx) => (
-            <div key={idx} className="bg-[#0F172A] p-2.5 rounded-lg border border-[#26354A] text-center space-y-1 font-mono">
+            <div key={idx} className="bg-[#0F172A] p-2 rounded-lg border border-[#26354A] text-center space-y-1">
               <span className="text-[9px] text-[#94A3B8] uppercase block font-bold truncate">{step.label}</span>
               <span className={`text-xs font-bold block ${
-                step.status === 'REJECT' || step.status === 'TRIGGERED' 
+                step.status === 'REJECT' || step.status === 'TRIGGERED' || step.status === 'CMD 3' 
                   ? 'text-red-400' 
+                  : step.status === 'PENDING'
+                  ? 'text-amber-400'
                   : 'text-emerald-400'
               }`}>
                 {step.status}
@@ -109,8 +160,18 @@ export const LiveInspectionPage: React.FC = () => {
         </div>
       </SectionCard>
 
+      {/* CiRA CORE Screen & ESP32 UART Console side-by-side */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-7">
+          <CiraPanel />
+        </div>
+        <div className="lg:col-span-5">
+          <UartConsole />
+        </div>
+      </div>
+
       {/* Main Dual Camera Visualizer */}
-      <SectionCard title="Dual-Camera High-Resolution Vision Feed" icon={Activity}>
+      <SectionCard title="Dual-Camera Machine Vision Feed" icon={Activity}>
         <InspectionVisualizer parcel={latestParcel} />
       </SectionCard>
 
@@ -119,7 +180,7 @@ export const LiveInspectionPage: React.FC = () => {
         
         {/* Real-Time Sensor Telemetry (7 Cols) */}
         <div className="lg:col-span-7">
-          <SectionCard title="Inspection Tunnel Telemetry & Instrumentation" icon={Activity}>
+          <SectionCard title="Tunnel Instrumentation & Actuator Timing" icon={Activity}>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 font-mono text-xs">
               <div className="bg-[#0F172A] p-3.5 rounded-lg border border-[#26354A]">
                 <span className="text-[#94A3B8] text-[10px] block uppercase">IR Breakbeam Sensor</span>
@@ -143,23 +204,29 @@ export const LiveInspectionPage: React.FC = () => {
               </div>
 
               <div className="bg-[#0F172A] p-3.5 rounded-lg border border-[#26354A]">
-                <span className="text-[#94A3B8] text-[10px] block uppercase">Air Pressure</span>
-                <span className="text-sky-400 font-bold text-sm mt-1 block">
-                  {systemStatus.airPressure} bar
+                <span className="text-[#94A3B8] text-[10px] block uppercase">Tower Light State</span>
+                <span className={`font-bold text-sm mt-1 block ${
+                  systemStatus.towerLight === 'RED' ? 'text-red-400' : systemStatus.towerLight === 'YELLOW' ? 'text-amber-400' : 'text-emerald-400'
+                }`}>
+                  {systemStatus.towerLight}
                 </span>
               </div>
 
               <div className="bg-[#0F172A] p-3.5 rounded-lg border border-[#26354A]">
-                <span className="text-[#94A3B8] text-[10px] block uppercase">AI Frame Rate</span>
-                <span className="text-purple-400 font-bold text-sm mt-1 block">
-                  {systemStatus.aiFps} FPS
+                <span className="text-[#94A3B8] text-[10px] block uppercase">Actuator Dispatch</span>
+                <span className={`font-bold text-sm mt-1 block ${
+                  systemStatus.actuatorStatus === 'FIRING' ? 'text-red-400 animate-pulse' : 'text-emerald-400'
+                }`}>
+                  {systemStatus.actuatorStatus}
                 </span>
               </div>
 
               <div className="bg-[#0F172A] p-3.5 rounded-lg border border-[#26354A]">
-                <span className="text-[#94A3B8] text-[10px] block uppercase">Inference Latency</span>
-                <span className="text-emerald-400 font-bold text-sm mt-1 block">
-                  {systemStatus.aiInferenceMs} ms
+                <span className="text-[#94A3B8] text-[10px] block uppercase">Store-and-Forward Queue</span>
+                <span className={`font-bold text-sm mt-1 block ${
+                  systemStatus.pendingSyncCount > 0 ? 'text-amber-400' : 'text-slate-400'
+                }`}>
+                  {systemStatus.pendingSyncCount} pending
                 </span>
               </div>
             </div>
@@ -185,24 +252,23 @@ export const LiveInspectionPage: React.FC = () => {
             </p>
           </div>
 
-          <SectionCard title="Active Scan Parameters" icon={Activity}>
-            <div className="text-xs font-mono space-y-2.5 text-slate-300">
-              <div className="flex justify-between border-b border-[#26354A] pb-2">
-                <span className="text-[#94A3B8]">AI Damage Type:</span>
-                <span className="font-bold text-white">{latestParcel.damageType}</span>
-              </div>
-              <div className="flex justify-between border-b border-[#26354A] pb-2">
-                <span className="text-[#94A3B8]">Confidence Score:</span>
-                <span className="text-sky-400 font-bold">{latestParcel.aiConfidence}%</span>
-              </div>
-              <div className="flex justify-between border-b border-[#26354A] pb-2">
-                <span className="text-[#94A3B8]">Weight Difference:</span>
-                <span className="text-white font-bold">{latestParcel.weightDifference}%</span>
-              </div>
-              <div className="flex justify-between pt-1">
-                <span className="text-[#94A3B8]">Actuator Cylinder:</span>
-                <span className="text-emerald-400 font-bold">READY (PRESSURE NORMAL)</span>
-              </div>
+          {/* Live Timeline Events Box */}
+          <SectionCard title="Live Chronological Inspection Timeline" icon={Activity}>
+            <div className="text-xs font-mono space-y-2 max-h-48 overflow-y-auto pr-1">
+              {timelineEvents.slice(0, 7).map((evt) => (
+                <div key={evt.id} className="flex items-start space-x-2 border-b border-slate-800/60 pb-1.5">
+                  <span className="text-slate-500 text-[10px]">[{evt.timestamp}]</span>
+                  <span className={`text-[10px] px-1 rounded font-bold ${
+                    evt.type === 'danger' ? 'bg-red-500/20 text-red-400' :
+                    evt.type === 'warning' ? 'bg-amber-500/20 text-amber-300' :
+                    evt.type === 'success' ? 'bg-emerald-500/20 text-emerald-400' :
+                    'bg-cyan-500/20 text-cyan-300'
+                  }`}>
+                    {evt.source}
+                  </span>
+                  <span className="text-slate-300 text-[11px] truncate">{evt.message}</span>
+                </div>
+              ))}
             </div>
           </SectionCard>
         </div>
@@ -212,4 +278,3 @@ export const LiveInspectionPage: React.FC = () => {
     </div>
   );
 };
-

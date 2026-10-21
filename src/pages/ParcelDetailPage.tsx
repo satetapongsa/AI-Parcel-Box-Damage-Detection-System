@@ -118,7 +118,7 @@ export const ParcelDetailPage: React.FC<ParcelDetailPageProps> = ({
               <ParcelVisualizer
                 parcelId={parcel.parcelId}
                 damageType={parcel.damageType}
-                confidence={parcel.confidence}
+                confidence={parcel.aiConfidence}
                 boundingBoxes={[]} // Empty for original view
                 cameraId={parcel.camera}
                 isScanning={false}
@@ -137,7 +137,7 @@ export const ParcelDetailPage: React.FC<ParcelDetailPageProps> = ({
               <ParcelVisualizer
                 parcelId={parcel.parcelId}
                 damageType={parcel.damageType}
-                confidence={parcel.confidence}
+                confidence={parcel.aiConfidence}
                 boundingBoxes={parcel.boundingBoxes}
                 cameraId={parcel.camera}
                 isScanning={true}
@@ -161,7 +161,7 @@ export const ParcelDetailPage: React.FC<ParcelDetailPageProps> = ({
             <div className="bg-navy-950 p-3 rounded-lg border border-navy-800">
               <span className="text-slate-400 text-[10px] block">Damage Type</span>
               <span className={`text-base font-bold mt-1 block ${
-                parcel.result === 'NORMAL' ? 'text-emerald-400' : 'text-red-400'
+                parcel.status === 'PASS' ? 'text-emerald-400' : 'text-red-400'
               }`}>
                 {parcel.damageType}
               </span>
@@ -170,16 +170,16 @@ export const ParcelDetailPage: React.FC<ParcelDetailPageProps> = ({
             <div className="bg-navy-950 p-3 rounded-lg border border-navy-800">
               <span className="text-slate-400 text-[10px] block">Severity</span>
               <span className={`text-base font-bold mt-1 block ${
-                parcel.severity === 'HIGH' || parcel.severity === 'CRITICAL' ? 'text-red-400' : 'text-orange-400'
+                parcel.status === 'REJECT' ? 'text-red-400' : 'text-emerald-400'
               }`}>
-                {parcel.severity}
+                {parcel.status === 'REJECT' ? 'CRITICAL' : 'INFO'}
               </span>
             </div>
 
             <div className="bg-navy-950 p-3 rounded-lg border border-navy-800">
               <span className="text-slate-400 text-[10px] block">Confidence</span>
               <span className="text-base font-bold text-blue-400 mt-1 block">
-                {parcel.confidence}%
+                {parcel.aiConfidence}%
               </span>
             </div>
 
@@ -229,7 +229,7 @@ export const ParcelDetailPage: React.FC<ParcelDetailPageProps> = ({
             </div>
             <div className="flex justify-between border-b border-navy-800 py-1">
               <span className="text-slate-400">Confidence Score:</span>
-              <span className="text-blue-400 font-bold">{parcel.confidence}%</span>
+              <span className="text-blue-400 font-bold">{parcel.aiConfidence}%</span>
             </div>
             <div className="flex justify-between py-1">
               <span className="text-slate-400">Final Audit Status:</span>

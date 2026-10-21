@@ -31,26 +31,34 @@ export const ParcelVisualizer: React.FC<ParcelVisualizerProps> = ({
           badgeBg: '#059669',
           text: '#34d399'
         };
-      case 'DAMAGED':
+      case 'DENT':
+        return {
+          stroke: '#f59e0b',
+          bg: 'rgba(245, 158, 11, 0.2)',
+          badgeBg: '#d97706',
+          text: '#fbbf24'
+        };
+      case 'TEAR':
         return {
           stroke: '#ef4444',
           bg: 'rgba(239, 68, 68, 0.2)',
           badgeBg: '#dc2626',
           text: '#f87171'
         };
-      case 'WET':
+      case 'WATER_STAIN':
         return {
           stroke: '#3b82f6',
           bg: 'rgba(59, 130, 246, 0.2)',
           badgeBg: '#2563eb',
           text: '#60a5fa'
         };
-      case 'OPEN':
+      case 'WEIGHT_ANOMALY':
+      default:
         return {
-          stroke: '#f97316',
-          bg: 'rgba(249, 115, 22, 0.2)',
-          badgeBg: '#ea580c',
-          text: '#fb923c'
+          stroke: '#a855f7',
+          bg: 'rgba(168, 85, 247, 0.2)',
+          badgeBg: '#9333ea',
+          text: '#c084fc'
         };
     }
   };
@@ -134,7 +142,7 @@ export const ParcelVisualizer: React.FC<ParcelVisualizerProps> = ({
             </g>
 
             {/* DAMAGE VISUAL EFFECT OVERLAYS */}
-            {damageType === 'WET' && (
+            {damageType === 'WATER_STAIN' && (
               <g>
                 {/* Dark wet stain spots */}
                 <ellipse cx="110" cy="165" rx="35" ry="25" fill="#2d1c10" opacity="0.75" />
@@ -147,21 +155,19 @@ export const ParcelVisualizer: React.FC<ParcelVisualizerProps> = ({
               </g>
             )}
 
-            {damageType === 'DAMAGED' && (
+            {damageType === 'DENT' && (
               <g>
                 {/* Dented / Crushed edge deformation */}
                 <path d="M 210 90 L 260 90 L 250 120 L 210 125 Z" fill="#54371f" opacity="0.9" />
                 <path d="M 210 90 L 250 120 M 230 85 L 240 135 M 220 95 L 260 115" stroke="#1f1207" strokeWidth="3" />
-                {/* Box Tear lines */}
-                <path d="M 190 100 Q 215 110 205 135 T 235 140" stroke="#110a04" strokeWidth="4" fill="none" />
                 <circle cx="215" cy="120" r="8" fill="#1a0e05" />
               </g>
             )}
 
-            {damageType === 'OPEN' && (
+            {damageType === 'TEAR' && (
               <g>
-                {/* Flap detached tape tearing */}
-                <path d="M 110 60 L 150 40 L 170 50" fill="none" stroke="#ea580c" strokeWidth="4" strokeDasharray="3 3" />
+                {/* Box Tear lines */}
+                <path d="M 110 60 L 150 40 L 170 50" fill="none" stroke="#ef4444" strokeWidth="4" strokeDasharray="3 3" />
                 <polygon points="120,55 140,35 155,50 135,70" fill="#cca06e" stroke="#784e2c" strokeWidth="2" transform="rotate(-15 135 50)" />
                 <path d="M 130 52 L 170 70" stroke="#e2e8f0" strokeWidth="3" opacity="0.9" />
               </g>

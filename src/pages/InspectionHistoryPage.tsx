@@ -233,17 +233,15 @@ export const InspectionHistoryPage: React.FC<InspectionHistoryPageProps> = ({
                       {p.damageType}
                     </td>
                     <td className="px-4 py-3.5 text-blue-400 font-bold">
-                      {p.confidence}%
+                      {p.aiConfidence}%
                     </td>
                     <td className="px-4 py-3.5">
                       <span className={`text-[10px] px-2 py-0.5 rounded ${
-                        p.severity === 'HIGH' || p.severity === 'CRITICAL'
+                        p.status === 'REJECT'
                           ? 'bg-red-500/20 text-red-400 font-bold'
-                          : p.severity === 'MEDIUM'
-                          ? 'bg-orange-500/20 text-orange-400 font-bold'
-                          : 'text-slate-400'
+                          : 'bg-emerald-500/20 text-emerald-400 font-bold'
                       }`}>
-                        {p.severity}
+                        {p.status === 'REJECT' ? 'CRITICAL' : 'INFO'}
                       </span>
                     </td>
                     <td className="px-4 py-3.5">

@@ -32,6 +32,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const navItems = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
     { id: 'live', label: 'Live Inspection', icon: Video, badge: 'LIVE', badgeColor: 'bg-emerald-500' },
+    { id: 'reject-queue', label: 'Reject Queue', icon: AlertOctagon, badge: 'ACTION', badgeColor: 'bg-amber-500' },
     { id: 'evidence', label: 'Evidence', icon: FolderArchive },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     { id: 'health', label: 'System Health', icon: Activity, badge: 'OK', badgeColor: 'bg-sky-500' },

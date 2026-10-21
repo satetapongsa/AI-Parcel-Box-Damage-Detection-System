@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import type { 
   ParcelRecord, 
   SystemStatusState, 
@@ -6,43 +6,17 @@ import type {
   AnomalyLog, 
   EngineeringSettings,
   DamageType
-} from '../types/spdi';
+} from '../types';
 import { 
   INITIAL_PARCEL_RECORDS, 
   SYSTEM_ANOMALIES_LOG, 
   DEFAULT_ENGINEERING_SETTINGS 
 } from '../data/mockData';
-import { EdgeBridge, type DataSourceMode } from '../lib/edge/edgeBridge';
-import { AlertEngine } from '../lib/events/alertEngine';
-import type { ConnectionHealth, InspectionEvent } from '../lib/events/inspectionEvent';
-
-interface SimulationContextType {
-  parcels: ParcelRecord[];
-  latestParcel: ParcelRecord;
-  systemStatus: SystemStatusState;
-  timelineEvents: TimelineEvent[];
-  anomalies: AnomalyLog[];
-  settings: EngineeringSettings;
-  demoModeActive: boolean;
-  demoSpeed: 'SLOW' | 'NORMAL' | 'FAST';
-  isOfflineMode: boolean;
-  pendingSyncCount: number;
-  dataSourceMode: DataSourceMode;
-  connectionHealth: ConnectionHealth;
-  toast: { title: string; message: string; type: 'info' | 'success' | 'warning' | 'danger' } | null;
-  toggleDemoMode: () => void;
-  setDemoSpeed: (speed: 'SLOW' | 'NORMAL' | 'FAST') => void;
-  toggleOfflineMode: () => void;
-  syncOfflineQueue: () => void;
-  setDataSourceMode: (mode: DataSourceMode) => void;
-  generateParcel: (forceDamage?: DamageType) => void;
-  updateSettings: (newSettings: Partial<EngineeringSettings>) => void;
-  resetSettings: () => void;
-  runFailureTest: (testId: string) => Promise<{ passed: boolean; details: string }>;
-  showToast: (title: string, message: string, type: 'info' | 'success' | 'warning' | 'danger') => void;
-}
-
-const SimulationContext = createContext<SimulationContextType | undefined>(undefined);
+import { SimulationEngine, type SimSpeed } from '../lib/sim/engine';
+import type { FaultState } from '../lib/sim/faults';
+import type { CiraState } from '../lib/sim/ciraPanel';
+import type { UartLogEntry } from '../lib/sim/uartConsole';
+import type { TestSuiteSummary } from '../lib/sim/testSuite';
 
 const initialStatus: SystemStatusState = {
   stationId: 'SORT-01',
@@ -65,12 +39,52 @@ const initialStatus: SystemStatusState = {
   conveyorSpeed: 0.75,
   airPressure: 6.0,
   aiFps: 28,
-  aiInferenceMs: 35
+  aiInferenceMs: 35,
+  missedRejectCount: 0
 };
 
-const edgeBridgeInstance = new EdgeBridge();
+interface SimulationContextType {
+  engine: SimulationEngine;
+  parcels: ParcelRecord[];
+  rejectQueue: ParcelRecord[];
+  latestParcel: ParcelRecord;
+  systemStatus: SystemStatusState;
+  timelineEvents: TimelineEvent[];
+  anomalies: AnomalyLog[];
+  settings: EngineeringSettings;
+  demoModeActive: boolean;
+  demoSpeed: SimSpeed;
+  isOfflineMode: boolean;
+  pendingSyncCount: number;
+  ciraState: CiraState;
+  uartLogs: UartLogEntry[];
+  faults: FaultState;
+  testSuiteResult: TestSuiteSummary | null;
+  toast: { title: string; message: string; type: 'info' | 'success' | 'warning' | 'danger' } | null;
+  toggleDemoMode: () => void;
+  setDemoSpeed: (speed: SimSpeed) => void;
+  toggleOfflineMode: () => void;
+  syncOfflineQueue: () => Promise<void>;
+  generateParcel: (forceDamage?: DamageType, isFalsePositiveCase?: boolean) => void;
+  updateSettings: (newSettings: Partial<EngineeringSettings>) => void;
+  resetSettings: () => void;
+  setFault: <K extends keyof FaultState>(key: K, value: FaultState[K]) => void;
+  setCiraTab: (tab: 'Payload' | 'Output' | 'Image') => void;
+  sendUartCmd: (cmd: '1' | '2' | '3') => void;
+  markRejectHandled: (id: string, reason: string) => void;
+  runTestSuite: () => Promise<TestSuiteSummary>;
+  showToast: (title: string, message: string, type: 'info' | 'success' | 'warning' | 'danger') => void;
+}
+
+const SimulationContext = createContext<SimulationContextType | undefined>(undefined);
 
 export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const engineRef = useRef<SimulationEngine | null>(null);
+  if (!engineRef.current) {
+    engineRef.current = new SimulationEngine(DEFAULT_ENGINEERING_SETTINGS, initialStatus);
+  }
+  const engine = engineRef.current;
+
   const [parcels, setParcels] = useState<ParcelRecord[]>(INITIAL_PARCEL_RECORDS);
   const [latestParcel, setLatestParcel] = useState<ParcelRecord>(INITIAL_PARCEL_RECORDS[0]);
   const [systemStatus, setSystemStatus] = useState<SystemStatusState>(initialStatus);
@@ -78,7 +92,7 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     { id: 't1', timestamp: '08:42:11', source: 'IR SENSOR', message: 'IR Breakbeam beam interrupted — Parcel detected', type: 'info' },
     { id: 't2', timestamp: '08:42:12', source: 'CAMERA', message: 'Dual 1080p frame captured (Top & Side View)', type: 'info' },
     { id: 't3', timestamp: '08:42:12', source: 'OCR', message: 'Barcode decoded: THA-20260930-001248', type: 'info' },
-    { id: 't4', timestamp: '08:42:13', source: 'EDGE AI', message: 'YOLOv8 damage inference complete (Normal condition)', type: 'success' },
+    { id: 't4', timestamp: '08:42:13', source: 'EDGE AI', message: 'CiRA CORE damage inference complete (Normal condition)', type: 'success' },
     { id: 't5', timestamp: '08:42:13', source: 'LOAD CELL', message: 'Weight verified: 2.41 kg (Expected: 2.40 kg, Diff: +0.4%)', type: 'info' },
     { id: 't6', timestamp: '08:42:13', source: 'DECISION ENGINE', message: 'Final Decision: PASS -> Conveyor dispatch clear', type: 'success' },
     { id: 't7', timestamp: '08:42:14', source: 'ACTUATOR', message: 'Pneumatic reject cylinder idle', type: 'info' },
@@ -87,225 +101,237 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [settings, setSettings] = useState<EngineeringSettings>(DEFAULT_ENGINEERING_SETTINGS);
 
   const [demoModeActive, setDemoModeActive] = useState<boolean>(true);
-  const [demoSpeed, setDemoSpeed] = useState<'SLOW' | 'NORMAL' | 'FAST'>('NORMAL');
-  const [isOfflineMode, setIsOfflineMode] = useState<boolean>(false);
-  const [pendingSyncCount, setPendingSyncCount] = useState<number>(0);
-
-  const [dataSourceMode, setDataSourceModeState] = useState<DataSourceMode>('MOCK');
-  const [connectionHealth, setConnectionHealth] = useState<ConnectionHealth>(edgeBridgeInstance.getConnectionHealth());
+  const [demoSpeed, setDemoSpeedState] = useState<SimSpeed>(1);
+  const [ciraState, setCiraState] = useState<CiraState>(engine.getCiraState());
+  const [uartLogs, setUartLogs] = useState<UartLogEntry[]>(engine.getUartLogs());
+  const [faults, setFaultsState] = useState<FaultState>(engine.getFaults());
+  const [testSuiteResult, setTestSuiteResult] = useState<TestSuiteSummary | null>(null);
 
   const [toast, setToast] = useState<{ title: string; message: string; type: 'info' | 'success' | 'warning' | 'danger' } | null>(null);
 
-  const showToast = (title: string, message: string, type: 'info' | 'success' | 'warning' | 'danger') => {
+  const showToast = useCallback((title: string, message: string, type: 'info' | 'success' | 'warning' | 'danger') => {
     setToast({ title, message, type });
     setTimeout(() => setToast(null), 4000);
-  };
-
-  const setDataSourceMode = (mode: DataSourceMode) => {
-    setDataSourceModeState(mode);
-    edgeBridgeInstance.setMode(mode);
-    setConnectionHealth(edgeBridgeInstance.getConnectionHealth());
-
-    if (mode === 'LIVE_EDGE') {
-      showToast('LIVE EDGE MODE ACTIVATED', 'Connected to EdgeBridge. Waiting for live CiRA CORE MQTT events...', 'info');
-    } else {
-      showToast('MOCK DATA MODE', 'Switched to frontend simulated data stream.', 'info');
-    }
-  };
-
-  const processNormalizedEvent = (evt: InspectionEvent) => {
-    let damageType: DamageType = 'NORMAL';
-    if (evt.ai.damageType === 'dent') damageType = 'DENT';
-    else if (evt.ai.damageType === 'tear') damageType = 'TEAR';
-    else if (evt.ai.damageType === 'water_stain') damageType = 'WATER_STAIN';
-    else if (evt.decision.reason === 'WEIGHT_ANOMALY') damageType = 'WEIGHT_ANOMALY';
-
-    const isRej = evt.decision.status === 'REJECT';
-    let boxesTop: any[] = [];
-    let boxesSide: any[] = [];
-
-    if (damageType === 'DENT') {
-      boxesTop = [{ x: 50, y: 18, width: 32, height: 35, label: `DENT ${evt.ai.confidence}%`, confidence: evt.ai.confidence }];
-    } else if (damageType === 'TEAR') {
-      boxesTop = [{ x: 28, y: 30, width: 38, height: 28, label: `TEAR ${evt.ai.confidence}%`, confidence: evt.ai.confidence }];
-      boxesSide = [{ x: 35, y: 22, width: 30, height: 32, label: `Tear Seam`, confidence: evt.ai.confidence - 2 }];
-    } else if (damageType === 'WATER_STAIN') {
-      boxesTop = [{ x: 20, y: 35, width: 45, height: 42, label: `WATER STAIN ${evt.ai.confidence}%`, confidence: evt.ai.confidence }];
-    }
-
-    const newRecord: ParcelRecord = {
-      id: String(Date.now()),
-      trackingNumber: evt.trackingNumber,
-      timestamp: evt.timestamp,
-      time: evt.timestamp,
-      status: evt.decision.status,
-      damageType,
-      aiConfidence: evt.ai.confidence,
-      weight: evt.weight.actual,
-      expectedWeight: evt.weight.expected,
-      weightDifference: evt.weight.differencePercent,
-      stationId: evt.stationId,
-      rejectReason: isRej ? `Defect: ${damageType} (${evt.ai.confidence}% confidence)` : undefined,
-      boundingBoxesTop: boxesTop,
-      boundingBoxesSide: boxesSide,
-      actuatorTriggered: evt.actuator.rejectTriggered,
-      syncedToCloud: !isOfflineMode
-    };
-
-    if (isOfflineMode) {
-      setPendingSyncCount((prev) => prev + 1);
-    }
-
-    setLatestParcel(newRecord);
-    setParcels((prev) => [newRecord, ...prev]);
-
-    // Alert Engine evaluation
-    const alert = AlertEngine.evaluate(evt, settings.aiConfidenceThreshold, settings.weightTolerancePct);
-    if (alert) {
-      showToast(alert.title, alert.description, alert.severity === 'CRITICAL' ? 'danger' : 'warning');
-    }
-
-    // Timeline update
-    const newTimeline: TimelineEvent[] = [
-      { id: `t1-${Date.now()}`, timestamp: evt.timestamp, source: 'IR SENSOR', message: 'IR Breakbeam triggered — Parcel entry', type: 'info' },
-      { id: `t2-${Date.now()}`, timestamp: evt.timestamp, source: 'CAMERA', message: 'Dual 1080p frame captured (Top & Side)', type: 'info' },
-      { id: `t3-${Date.now()}`, timestamp: evt.timestamp, source: 'OCR', message: `Barcode scanned: ${evt.trackingNumber}`, type: 'info' },
-      { id: `t4-${Date.now()}`, timestamp: evt.timestamp, source: 'EDGE AI', message: `YOLOv8 inference: ${evt.ai.damageType} (${evt.ai.confidence}%)`, type: isRej ? 'warning' : 'success' },
-      { id: `t5-${Date.now()}`, timestamp: evt.timestamp, source: 'LOAD CELL', message: `Weight: ${evt.weight.actual}kg (Expected: ${evt.weight.expected}kg, Diff: ${evt.weight.differencePercent}%)`, type: 'info' },
-      { id: `t6-${Date.now()}`, timestamp: evt.timestamp, source: 'DECISION ENGINE', message: `Final Decision: ${evt.decision.status}`, type: isRej ? 'danger' : 'success' },
-      { id: `t7-${Date.now()}`, timestamp: evt.timestamp, source: 'ACTUATOR', message: evt.actuator.rejectTriggered ? 'Pneumatic Reject Cylinder FIRED' : 'Pneumatic Reject idle', type: evt.actuator.rejectTriggered ? 'danger' : 'info' },
-    ];
-    setTimelineEvents(newTimeline);
-
-    setSystemStatus((prev) => ({
-      ...prev,
-      irSensorStatus: 'TRIGGERED',
-      loadCellStatus: 'MEASURING',
-      actuatorStatus: evt.actuator.rejectTriggered ? 'FIRING' : 'READY',
-      towerLight: isRej ? 'RED' : 'GREEN',
-      buzzer: evt.actuator.rejectTriggered
-    }));
-
-    setTimeout(() => {
-      setSystemStatus((prev) => ({
-        ...prev,
-        irSensorStatus: 'READY',
-        loadCellStatus: 'READY',
-        actuatorStatus: 'READY',
-        towerLight: 'GREEN',
-        buzzer: false
-      }));
-    }, 1500);
-  };
-
-  const generateParcel = (forceDamage?: DamageType) => {
-    let typeStr = 'none';
-    if (forceDamage === 'DENT') typeStr = 'dent';
-    else if (forceDamage === 'TEAR') typeStr = 'tear';
-    else if (forceDamage === 'WATER_STAIN') typeStr = 'water_stain';
-    else if (forceDamage === 'WEIGHT_ANOMALY') typeStr = 'weight_anomaly';
-
-    const evt = edgeBridgeInstance.triggerManualScan(typeStr);
-    processNormalizedEvent(evt);
-  };
-
-  // Connect EdgeBridge subscription
-  useEffect(() => {
-    edgeBridgeInstance.subscribe((evt) => {
-      processNormalizedEvent(evt);
-    });
   }, []);
 
+  // Subscribe to engine callbacks
+  useEffect(() => {
+    const unsubscribe = engine.addListener({
+      onStatusChange: (status) => setSystemStatus(status),
+      onParcelProcessed: (newParcel) => {
+        setLatestParcel(newParcel);
+        setParcels((prev) => [newParcel, ...prev].slice(0, 500));
+      },
+      onTimelineEvent: (event) => {
+        setTimelineEvents((prev) => [event, ...prev].slice(0, 500));
+      },
+      onCiraChange: (cira) => setCiraState(cira),
+      onUartLog: () => setUartLogs(engine.getUartLogs())
+    });
+
+    // Start running simulation
+    engine.start();
+
+    return () => {
+      unsubscribe();
+      engine.stop();
+    };
+  }, [engine]);
+
   const toggleDemoMode = () => {
-    setDemoModeActive(!demoModeActive);
-    showToast('Demo Mode', demoModeActive ? 'Demo Mode Paused' : 'Demo Mode Active', 'info');
+    if (demoModeActive) {
+      engine.stop();
+      setDemoModeActive(false);
+      showToast('Simulation Paused', 'Conveyor and automated parcel flow paused.', 'info');
+    } else {
+      engine.start();
+      setDemoModeActive(true);
+      showToast('Simulation Active', 'Real-time parcel flow started.', 'info');
+    }
+  };
+
+  const setDemoSpeed = (speed: SimSpeed) => {
+    setDemoSpeedState(speed);
+    engine.setSpeed(speed);
+    showToast('Speed Changed', `Simulation running at ${speed}x speed.`, 'info');
+  };
+
+  const setFault = <K extends keyof FaultState>(key: K, value: FaultState[K]) => {
+    engine.setFault(key, value);
+    setFaultsState(engine.getFaults());
+    setSystemStatus(engine.getStatus());
+    showToast('Fault Injection', `Updated fault: ${String(key)} -> ${String(value)}`, value ? 'warning' : 'info');
   };
 
   const toggleOfflineMode = () => {
-    const nextOffline = !isOfflineMode;
-    setIsOfflineMode(nextOffline);
-    setSystemStatus((prev) => ({
-      ...prev,
-      isOfflineMode: nextOffline,
-      internetStatus: nextOffline ? 'OFFLINE' : 'ONLINE',
-      mqttStatus: nextOffline ? 'OFFLINE' : 'ONLINE',
-      cloudSyncStatus: nextOffline ? 'OFFLINE' : 'ONLINE'
-    }));
-
-    if (nextOffline) {
-      showToast('OFFLINE MODE ACTIVATED', 'WAN link cut. Edge AI continues sorting. Records queued in local SQLite DB.', 'warning');
-    } else {
-      showToast('ONLINE MODE RESTORED', 'Network connected. Store-and-Forward sync initiated.', 'success');
-    }
+    const nextOffline = !faults.wanDisconnected;
+    setFault('wanDisconnected', nextOffline);
   };
 
-  const syncOfflineQueue = () => {
-    if (pendingSyncCount === 0) {
-      showToast('Queue Synced', 'All local records are already synchronized.', 'info');
+  const syncOfflineQueue = async () => {
+    const count = engine.bridgeQueue.size();
+    if (count === 0) {
+      showToast('Queue Empty', 'All records are already synced to Cloud.', 'info');
       return;
     }
-    const syncedCount = pendingSyncCount;
-    setPendingSyncCount(0);
+    await engine.flushBridgeQueue();
     setParcels((prev) => prev.map((p) => ({ ...p, syncedToCloud: true })));
-    setSystemStatus((prev) => ({
-      ...prev,
-      internetStatus: 'ONLINE',
-      mqttStatus: 'ONLINE',
-      cloudSyncStatus: 'ONLINE',
-      isOfflineMode: false
-    }));
-    setIsOfflineMode(false);
-    showToast('Synchronization Complete', `${syncedCount} / ${syncedCount} local records synced with Cloud Dashboard.`, 'success');
+    showToast('Sync Completed', `${count} queued records processed through Store-and-Forward.`, 'success');
+  };
+
+  const generateParcel = (forceDamage?: DamageType, isFalsePositiveCase = false) => {
+    const parcel = engine.triggerSingleParcel(forceDamage, isFalsePositiveCase);
+    showToast('Manual Parcel Dispatched', `Track: ${parcel.trackingNumber} (${parcel.damageType})`, parcel.status === 'REJECT' ? 'danger' : 'success');
   };
 
   const updateSettings = (newSettings: Partial<EngineeringSettings>) => {
-    setSettings((prev) => ({ ...prev, ...newSettings }));
-    showToast('Settings Saved', 'Engineering parameters updated and applied to Decision Engine.', 'success');
+    engine.updateSettings(newSettings);
+    setSettings(engine.getSettings());
+    showToast('Settings Saved', 'Engineering parameters applied to engine.', 'success');
   };
 
   const resetSettings = () => {
+    engine.updateSettings(DEFAULT_ENGINEERING_SETTINGS);
     setSettings(DEFAULT_ENGINEERING_SETTINGS);
-    showToast('Settings Reset', 'Configuration restored to default engineering baseline.', 'info');
+    showToast('Settings Reset', 'Restored to baseline engineering specs.', 'info');
   };
 
-  const runFailureTest = async (testId: string): Promise<{ passed: boolean; details: string }> => {
-    showToast('Running Failure Test', `Executing engineering simulation: ${testId}...`, 'info');
-    await new Promise((res) => setTimeout(res, 2000));
+  const setCiraTab = (tab: 'Payload' | 'Output' | 'Image') => {
+    engine.setCiraTab(tab);
+    setCiraState(engine.getCiraState());
+  };
 
-    if (testId === 'test-false-positive') {
-      generateParcel('NORMAL');
-      return {
-        passed: true,
-        details: 'PASS: Glossy bubble wrap reflection filtered correctly. AI confidence remained below threshold (38.2%). Decision: PASS.'
-      };
-    } else if (testId === 'test-ai-confusion') {
-      generateParcel('TEAR');
-      return {
-        passed: true,
-        details: 'PASS: Machine vision successfully discriminated physical seam tear from printed barcode graphics (Confidence: 96.8%). Decision: REJECT.'
-      };
-    } else if (testId === 'test-hardware-limit') {
-      generateParcel('WEIGHT_ANOMALY');
-      return {
-        passed: true,
-        details: 'PASS: Consecutive parcel overlap detected. IR sensor timeout triggered. Yellow Tower Light activated and conveyor paused safely.'
-      };
-    } else if (testId === 'test-offline-resiliency') {
-      setIsOfflineMode(true);
-      generateParcel('DENT');
-      return {
-        passed: true,
-        details: 'PASS: WAN link severed. Edge AI & Pneumatic Actuator continued autonomous operation. Record queued in local SQLite storage.'
-      };
+  const sendUartCmd = (cmd: '1' | '2' | '3') => {
+    engine.sendUartCommand(cmd);
+    setUartLogs(engine.getUartLogs());
+  };
+
+  const markRejectHandled = (id: string, reason: string) => {
+    engine.localStore.markHandled(id, reason);
+    setParcels((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, handled: true, handledReason: reason } : p))
+    );
+    showToast('Handled', `Reject action recorded: ${reason}`, 'info');
+  };
+
+  const runTestSuite = async (): Promise<TestSuiteSummary> => {
+    showToast('Running Test Suite', 'Executing 5 slide-12 failure verification tests...', 'info');
+    const startTime = Date.now();
+    const results = [];
+
+    // Test 1: Vision Fault / Dark image
+    engine.setFault('visionFaultDark', true);
+    const pVision = engine.processNextParcel('NORMAL');
+    engine.setFault('visionFaultDark', false);
+    results.push({
+      name: 'Vision Fault / Brightness Check',
+      category: 'Vision Fault',
+      status: (pVision.aiConfidence < 60 ? 'PASS' : 'FAIL') as 'PASS' | 'FAIL',
+      metric: `Confidence degraded to ${pVision.aiConfidence}% (< 60%)`,
+      threshold: 'Lux < 120 triggers warning & confidence penalty',
+      details: 'Evaluates camera frame underexposure fail-safe.',
+      timestamp: new Date().toTimeString().slice(0, 8)
+    });
+
+    // Test 2: Belt Jam / IR Timeout
+    engine.setFault('beltJam', true);
+    const jamStatus = engine.getStatus();
+    engine.setFault('beltJam', false);
+    results.push({
+      name: 'Belt Jam / IR Timeout Safe-Halt',
+      category: 'Conveyor Jam',
+      status: (jamStatus.conveyorStatus === 'JAMMED' && jamStatus.towerLight === 'RED' ? 'PASS' : 'FAIL') as 'PASS' | 'FAIL',
+      metric: `Belt: ${jamStatus.conveyorStatus}, Tower Light: ${jamStatus.towerLight}`,
+      threshold: 'IR blocked > 3.0s halts belt & activates Red Light',
+      details: 'Safety interlock test when sensor beam is blocked continuously.',
+      timestamp: new Date().toTimeString().slice(0, 8)
+    });
+
+    // Test 3: False Positive (Case 1)
+    const pPattern = engine.processNextParcel('NORMAL', true);
+    results.push({
+      name: 'False Positive Discrimination (Case 1)',
+      category: 'AI False Positive',
+      status: (pPattern.status === 'PASS' ? 'PASS' : 'FAIL') as 'PASS' | 'FAIL',
+      metric: `Decision: ${pPattern.status} (${pPattern.aiConfidence}%)`,
+      threshold: 'High-contrast print pattern must NOT trigger false reject',
+      details: 'Verifies box graphic pattern is separated from structural tear.',
+      timestamp: new Date().toTimeString().slice(0, 8)
+    });
+
+    // Test 4: Offline Fail-Safe (Case 2)
+    engine.setFault('wanDisconnected', true);
+    const pOffline = engine.processNextParcel('DENT');
+    const queueSize = engine.bridgeQueue.size();
+    engine.setFault('wanDisconnected', false);
+    await engine.flushBridgeQueue();
+    results.push({
+      name: 'Offline Fail-Safe & Store-and-Forward (Case 2)',
+      category: 'Store-and-Forward',
+      status: (pOffline.actuatorTriggered && queueSize > 0 ? 'PASS' : 'FAIL') as 'PASS' | 'FAIL',
+      metric: `Actuator: ${pOffline.actuatorTriggered ? 'FIRED' : 'IDLE'}, Queued: ${queueSize}`,
+      threshold: 'Edge physical reject works offline 100%, records queue in SQLite',
+      details: 'Tests LAN cable disconnect resiliency without losing reject actuation.',
+      timestamp: new Date().toTimeString().slice(0, 8)
+    });
+
+    // Test 5: Actuator Timing & Tuning (Case 3)
+    const origDist = engine.getSettings().actuatorDistanceInstalledM;
+    engine.updateSettings({ actuatorDistanceInstalledM: 0.10 }); // Deliberately short!
+    const missedBefore = engine.getStatus().missedRejectCount || 0;
+    engine.processNextParcel('DENT');
+    const missedAfter = engine.getStatus().missedRejectCount || 0;
+    engine.updateSettings({ actuatorDistanceInstalledM: origDist }); // Restore
+    results.push({
+      name: 'Delay Time Tuning & Missed Reject Alert (Case 3)',
+      category: 'Timing Calibration',
+      status: (missedAfter > missedBefore ? 'PASS' : 'FAIL') as 'PASS' | 'FAIL',
+      metric: `Detected MISSED_REJECT: ${missedAfter - missedBefore > 0 ? 'YES' : 'NO'}`,
+      threshold: 'Installed distance < Required (0.285m) flags MISSED_REJECT',
+      details: 'Tests timing formula against conveyor speed and actuator stroke delay.',
+      timestamp: new Date().toTimeString().slice(0, 8)
+    });
+
+    // Additional 20 reject boxes test
+    let rejectActuated = 0;
+    for (let i = 0; i < 20; i++) {
+      const p = engine.processNextParcel('DENT');
+      if (p.actuatorTriggered) rejectActuated += 1;
     }
+    const rejectRate = (rejectActuated / 20) * 100;
+    results.push({
+      name: '20-Box Consecutive Reject Actuation Verification',
+      category: 'Actuator Reliability',
+      status: (rejectRate >= 90 ? 'PASS' : 'FAIL') as 'PASS' | 'FAIL',
+      metric: `Actuated: ${rejectActuated}/20 (${rejectRate.toFixed(1)}%)`,
+      threshold: '>= 90% target success rate (Proposed by team)',
+      details: 'High-frequency rejection reliability check.',
+      timestamp: new Date().toTimeString().slice(0, 8)
+    });
 
-    return { passed: true, details: 'Test completed successfully.' };
+    const passedTests = results.filter((r) => r.status === 'PASS').length;
+    const summary: TestSuiteSummary = {
+      totalTests: results.length,
+      passedTests,
+      failedTests: results.length - passedTests,
+      passRate: Number(((passedTests / results.length) * 100).toFixed(1)),
+      executionTimeSec: Number(((Date.now() - startTime) / 1000).toFixed(2)),
+      results
+    };
+
+    setTestSuiteResult(summary);
+    showToast('Test Suite Finished', `Score: ${summary.passedTests}/${summary.totalTests} Passed (${summary.passRate}%)`, summary.failedTests === 0 ? 'success' : 'warning');
+    return summary;
   };
+
+  const rejectQueue = parcels.filter((p) => p.status === 'REJECT' && !p.handled);
 
   return (
     <SimulationContext.Provider
       value={{
+        engine,
         parcels,
+        rejectQueue,
         latestParcel,
         systemStatus,
         timelineEvents,
@@ -313,20 +339,25 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         settings,
         demoModeActive,
         demoSpeed,
-        isOfflineMode,
-        pendingSyncCount,
-        dataSourceMode,
-        connectionHealth,
+        isOfflineMode: faults.wanDisconnected,
+        pendingSyncCount: engine.bridgeQueue.size(),
+        ciraState,
+        uartLogs,
+        faults,
+        testSuiteResult,
         toast,
         toggleDemoMode,
         setDemoSpeed,
         toggleOfflineMode,
         syncOfflineQueue,
-        setDataSourceMode,
         generateParcel,
         updateSettings,
         resetSettings,
-        runFailureTest,
+        setFault,
+        setCiraTab,
+        sendUartCmd,
+        markRejectHandled,
+        runTestSuite,
         showToast
       }}
     >

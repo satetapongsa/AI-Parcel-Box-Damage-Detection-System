@@ -8,7 +8,6 @@ import {
   Pause, 
   Database, 
   RefreshCw,
-  Radio,
   Menu
 } from 'lucide-react';
 import { useSimulation } from '../context/SimulationContext';
@@ -25,11 +24,10 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
     toggleOfflineMode,
     syncOfflineQueue,
     pendingSyncCount,
-    latestParcel,
-    dataSourceMode,
-    setDataSourceMode,
-    connectionHealth
+    latestParcel
   } = useSimulation();
+
+  const connectionHealth = { ciraCore: 'CONNECTED' };
 
   const [time, setTime] = useState<Date>(new Date());
 
@@ -120,29 +118,10 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
       {/* Right Toolbar Controls */}
       <div className="flex items-center space-x-1.5 sm:space-x-2 shrink-0 flex-wrap gap-y-1">
         
-        {/* Data Source Switcher (MOCK vs LIVE EDGE) */}
-        <div className="bg-[#101A2B] border border-[#26354A] p-0.5 rounded-lg flex items-center font-mono text-[10px] sm:text-[11px]">
-          <button
-            onClick={() => setDataSourceMode('MOCK')}
-            className={`px-1.5 py-0.5 sm:px-2 sm:py-1 rounded transition-all font-bold ${
-              dataSourceMode === 'MOCK'
-                ? 'bg-sky-600 text-white shadow'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            MOCK
-          </button>
-          <button
-            onClick={() => setDataSourceMode('LIVE_EDGE')}
-            className={`px-1.5 py-0.5 sm:px-2 sm:py-1 rounded transition-all font-bold flex items-center space-x-0.5 ${
-              dataSourceMode === 'LIVE_EDGE'
-                ? 'bg-purple-600 text-white shadow animate-pulse'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Radio className="w-3 h-3 mr-0.5" />
-            <span>LIVE</span>
-          </button>
+        {/* Simulation Badge */}
+        <div className="bg-[#101A2B] border border-cyan-800/60 px-2.5 py-1 rounded-lg flex items-center space-x-1.5 font-mono text-[11px]">
+          <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+          <span className="text-cyan-300 font-bold">SIMULATION MODE</span>
         </div>
 
         {/* Offline Mode Switcher */}

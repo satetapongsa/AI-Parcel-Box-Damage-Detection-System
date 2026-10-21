@@ -11,6 +11,7 @@ import { SystemHealthPage } from './pages/SystemHealthPage';
 import { FailureTestsPage } from './pages/FailureTestsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { ArchitecturePage } from './pages/ArchitecturePage';
+import { RejectQueuePage } from './pages/RejectQueuePage';
 
 export function AppContent() {
   const [activeTab, setActiveTab] = useState<string>('overview');
@@ -40,6 +41,7 @@ export function AppContent() {
         <main className="flex-1 overflow-y-auto overflow-x-hidden pb-12 w-full max-w-full">
           {activeTab === 'overview' && <OverviewPage />}
           {activeTab === 'live' && <LiveInspectionPage />}
+          {activeTab === 'reject-queue' && <RejectQueuePage />}
           {activeTab === 'evidence' && <EvidencePage />}
           {activeTab === 'analytics' && <AnalyticsPage />}
           {activeTab === 'health' && <SystemHealthPage />}
