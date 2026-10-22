@@ -136,7 +136,7 @@ export function Dashboard() {
           <div className="bg-[#0B1526] border border-slate-800/80 rounded-xl p-5 flex items-center justify-between shadow-lg">
             <div>
               <span className="text-slate-400 text-xs uppercase font-medium tracking-wider block mb-1">
-                Passed Inspection
+                Valid Deliverable Packages (End Sensor)
               </span>
               <div className="flex items-baseline space-x-2">
                 <span className="text-3xl font-extrabold text-emerald-400 font-mono">{passCount}</span>
@@ -152,11 +152,11 @@ export function Dashboard() {
           <div className="bg-[#0B1526] border border-slate-800/80 rounded-xl p-5 flex items-center justify-between shadow-lg">
             <div>
               <span className="text-slate-400 text-xs uppercase font-medium tracking-wider block mb-1">
-                Ejected / Failed Boxes
+                Damaged Packages (Diverted Sensor)
               </span>
               <div className="flex items-baseline space-x-2">
                 <span className="text-3xl font-extrabold text-red-400 font-mono">{rejectCount}</span>
-                <span className="text-xs text-slate-400">diverted to bin</span>
+                <span className="text-xs text-slate-400">ejected by pusher</span>
               </div>
             </div>
             <div className="w-12 h-12 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
