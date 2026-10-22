@@ -11,6 +11,7 @@ import {
   Layers
 } from 'lucide-react';
 import { useSimulation, SimulationProvider } from './context/SimulationContext';
+import { ConveyorTopDownSimulation } from './components/ConveyorTopDownSimulation';
 
 export function Dashboard() {
   const {
@@ -164,7 +165,14 @@ export function Dashboard() {
           </div>
         </div>
 
-        {/* 4. Active Inspection Banner (Immediate feedback on latest box) */}
+        {/* 4. Top-Down Conveyor & Pneumatic Cylinder Divert Simulation */}
+        <ConveyorTopDownSimulation 
+          isRunning={demoModeActive}
+          onToggleRunning={toggleDemoMode}
+          latestParcel={latestParcel}
+        />
+
+        {/* 5. Active Inspection Banner (Immediate feedback on latest box) */}
         <div className={`p-4 sm:p-5 rounded-xl border transition-all shadow-md ${
           latestParcel.status === 'REJECT'
             ? 'bg-red-950/30 border-red-500/40'
