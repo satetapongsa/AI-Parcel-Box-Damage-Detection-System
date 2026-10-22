@@ -53,9 +53,9 @@ export const LiveInspectionPage: React.FC = () => {
       {/* Enterprise Page Header */}
       <PageHeader
         title="Live Vision Inspection Station"
-        description="จำลองขั้นตอนการตรวจจับและคัดแยกกล่องพัสดุชำรุดแบบครบวงจร (Station SORT-01)"
-        badge="SIMULATION"
-        badgeType="sky"
+        description="End-to-end automated machine vision defect classification & diverter control tunnel (SORT-01)"
+        badge="ONLINE"
+        badgeType="green"
         actions={
           <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
             {/* Play/Pause Control */}

@@ -120,18 +120,18 @@ export interface EngineeringSettings {
   aiConfidenceThreshold: number; // e.g. 85 %
   weightTolerancePct: number;    // e.g. 5 %
   conveyorSpeedMs: number;       // e.g. 0.75 m/s
-  aiInferenceSec: number;        // e.g. 0.20 s (ค่าสมมติ ต้องวัดจริงจาก CiRA CORE)
+  aiInferenceSec: number;        // e.g. 0.20 s benchmark
   actuatorDelayMs: number;       // e.g. 180 ms
-  actuatorType: 'PNEUMATIC' | 'SERVO'; // ค่าเริ่มต้น PNEUMATIC (รอทีมยืนยัน)
-  actuatorDistanceInstalledM: number; // ระยะติดตั้งจริง (เมตร)
-  irTimeoutSec: number;          // IR timeout (วินาที)
-  minBrightness: number;         // Brightness ขั้นต่ำ
-  offlineQueueLimit: number;     // e.g. 500
+  actuatorType: 'PNEUMATIC' | 'SERVO'; // Default PNEUMATIC
+  actuatorDistanceInstalledM: number; // Installed distance (meters)
+  irTimeoutSec: number;          // IR timeout (seconds)
+  minBrightness: number;         // Minimum optical lux threshold
+  offlineQueueLimit: number;     // e.g. 500 records
   classMapping: Record<string, DamageType>; // e.g. { 'box_good': 'NORMAL', 'box_dent': 'DENT' }
-  reviewStateEnabled: boolean;   // สถานะที่สาม "รอคนตรวจ" (REVIEW 60-85%)
-  weakAiModelMode?: boolean;     // โหมดโมเดลอ่อนสำหรับทดสอบ False Positive
-  dropCameraSide?: boolean;      // กล้องหลุด 1 ตัว
-  actuatorFault?: boolean;       // ตัวปัดขัดข้อง
+  reviewStateEnabled: boolean;   // Third state "Operator Review" (REVIEW 60-85%)
+  weakAiModelMode?: boolean;     // Degraded AI model for false positive testing
+  dropCameraSide?: boolean;      // Disconnect side camera
+  actuatorFault?: boolean;       // Actuator mechanical fault
 }
 
 export interface NotificationItem {

@@ -64,8 +64,8 @@ export const SettingsPage: React.FC = () => {
       {/* Enterprise Page Header */}
       <PageHeader
         title="Engineering System Parameters & Control Config"
-        description="พารามิเตอร์ทั้งหมดในตารางข้อ 6.2 พร้อมการคำนวณระยะตัวปัดเรียลไทม์ (Case 3 Delay Tuning)"
-        badge="SIMULATION CONFIG"
+        description="Conveyor timing, AI thresholds, optical limits, and actuator calibration parameters"
+        badge="SYSTEM CONFIG"
         badgeType="sky"
         actions={
           <div className="flex items-center space-x-3">
@@ -95,14 +95,14 @@ export const SettingsPage: React.FC = () => {
         <div className="flex items-center space-x-2">
           <AlertCircle className="w-5 h-5 shrink-0" />
           <div>
-            <span className="font-bold">Real-time Timing Calculation (Case 3 Delay Tuning):</span>
+            <span className="font-bold">Real-Time Divert Calculation:</span>
             <span className="ml-2 font-normal text-slate-300">
-              ระยะต้องการ = {conveyorSpeedMs}m/s × ({aiInferenceSec}s + {actuatorDelayMs/1000}s) = <strong>{requiredDistanceM} m</strong>
+              Required Travel = {conveyorSpeedMs}m/s × ({aiInferenceSec}s + {actuatorDelayMs/1000}s) = <strong>{requiredDistanceM} m</strong>
             </span>
           </div>
         </div>
         <div className="flex items-center space-x-3">
-          <span>ระยะติดตั้งจริง: <strong>{actuatorDistanceInstalledM} m</strong></span>
+          <span>Installed Separation: <strong>{actuatorDistanceInstalledM} m</strong></span>
           <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${
             isTimingSufficient ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500 text-white'
           }`}>
@@ -129,7 +129,7 @@ export const SettingsPage: React.FC = () => {
                 className="w-full h-2 bg-[#0F172A] rounded-lg appearance-none cursor-pointer accent-sky-500"
               />
               <p className="text-[10px] text-slate-500 mt-1 font-sans">
-                REJECT เมื่อตรวจพบความเสียหายและ confidence &ge; {aiConfidenceThreshold}%
+                Trigger divert when defect detected with confidence &ge; {aiConfidenceThreshold}%
               </p>
             </div>
 
@@ -147,15 +147,15 @@ export const SettingsPage: React.FC = () => {
                 className="w-full h-2 bg-[#0F172A] rounded-lg appearance-none cursor-pointer accent-emerald-500"
               />
               <p className="text-[10px] text-slate-500 mt-1 font-sans">
-                (ค่าสมมติ) เบี่ยงเบนเกินเกณฑ์จะถูกตีเป็น WEIGHT_ANOMALY
+                Discrepancies beyond tolerance flag as WEIGHT_ANOMALY
               </p>
             </div>
 
             <div className="pt-2 border-t border-slate-800">
               <div className="flex items-center justify-between">
                 <div>
-                  <span className="text-slate-300 block">Review State (รอคนตรวจ):</span>
-                  <span className="text-[10px] text-slate-500 font-sans">Confidence 60-85% to REVIEW</span>
+                  <span className="text-slate-300 block">Review State Routing:</span>
+                  <span className="text-[10px] text-slate-500 font-sans">Route confidence 60-85% to secondary inspection</span>
                 </div>
                 <input
                   type="checkbox"
@@ -191,7 +191,7 @@ export const SettingsPage: React.FC = () => {
               <div className="flex justify-between mb-1">
                 <div className="flex items-center space-x-1">
                   <span className="text-slate-300">AI Inference Time (s):</span>
-                  <span className="text-[9px] bg-amber-500/20 text-amber-300 px-1 rounded">ต้องวัดจริง</span>
+                  <span className="text-[9px] bg-cyan-500/20 text-cyan-300 px-1 rounded">BENCHMARK</span>
                 </div>
                 <span className="text-purple-400 font-bold">{aiInferenceSec} s</span>
               </div>
@@ -238,14 +238,14 @@ export const SettingsPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="text-slate-300 block mb-1">Actuator Mechanism (รอทีมยืนยัน):</label>
+              <label className="text-slate-300 block mb-1">Actuator Mechanism:</label>
               <select
                 value={actuatorType}
                 onChange={(e) => setActuatorType(e.target.value as 'PNEUMATIC' | 'SERVO')}
                 className="w-full bg-[#0F172A] border border-[#26354A] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-500"
               >
-                <option value="PNEUMATIC">Pneumatic Cylinder (ตาม System Flow หน้า 5)</option>
-                <option value="SERVO">Servo Motor (ตาม Wokwi สไลด์ 6)</option>
+                <option value="PNEUMATIC">Pneumatic Cylinder (5/2 Solenoid)</option>
+                <option value="SERVO">Servo Motor Deflector</option>
               </select>
             </div>
           </div>
@@ -269,7 +269,7 @@ export const SettingsPage: React.FC = () => {
                 className="w-full h-2 bg-[#0F172A] rounded-lg appearance-none cursor-pointer accent-amber-500"
               />
               <p className="text-[10px] text-slate-500 mt-1 font-sans">
-                บังลำแสงค้างเกินเวลานี้ = Belt Jam หยุดสายพานทันที
+                Continuous occlusion beyond threshold stops conveyor immediately
               </p>
             </div>
 
@@ -287,7 +287,7 @@ export const SettingsPage: React.FC = () => {
                 className="w-full h-2 bg-[#0F172A] rounded-lg appearance-none cursor-pointer accent-amber-500"
               />
               <p className="text-[10px] text-slate-500 mt-1 font-sans">
-                ความสว่างเฉลี่ยต่ำกว่าเกณฑ์ = กล้องมัว/ไฟดับ
+                Ambient illumination below threshold flags optical warning
               </p>
             </div>
 
@@ -306,7 +306,7 @@ export const SettingsPage: React.FC = () => {
                 className="w-full h-2 bg-[#0F172A] rounded-lg appearance-none cursor-pointer accent-cyan-500"
               />
               <p className="text-[10px] text-slate-500 mt-1 font-sans">
-                เมื่อเต็มจะทิ้งแถวที่เก่าสุด (FIFO) ตามโค้ด bridge.py
+                FIFO policy purges oldest records when queue limit is exceeded
               </p>
             </div>
           </div>

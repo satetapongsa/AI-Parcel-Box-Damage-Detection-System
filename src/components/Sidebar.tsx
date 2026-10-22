@@ -27,12 +27,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const { systemStatus } = useSimulation();
 
   const navItems = [
-    { id: 'overview', label: 'แดชบอร์ดหลัก (Overview)', icon: LayoutDashboard },
-    { id: 'live', label: 'สายพานตรวจจับสด (Live)', icon: Video, badge: 'LIVE', badgeColor: 'bg-emerald-500' },
-    { id: 'reject-queue', label: 'กล่องรอจัดการ (Reject)', icon: AlertOctagon, badge: 'BIN', badgeColor: 'bg-amber-500' },
-    { id: 'evidence', label: 'หลักฐานภาพถ่าย (Evidence)', icon: FolderArchive },
-    { id: 'analytics', label: 'สถิติและรายงาน (Analytics)', icon: BarChart3 },
-    { id: 'settings', label: 'ตั้งค่าระบบ (Settings)', icon: Sliders },
+    { id: 'overview', label: 'Operations Hub', icon: LayoutDashboard },
+    { id: 'live', label: 'Live Conveyor Inspection', icon: Video, badge: 'ACTIVE', badgeColor: 'bg-emerald-500' },
+    { id: 'reject-queue', label: 'Quarantine Bin', icon: AlertOctagon, badge: 'BIN', badgeColor: 'bg-amber-500' },
+    { id: 'evidence', label: 'Inspection Records', icon: FolderArchive },
+    { id: 'analytics', label: 'Analytics & Trends', icon: BarChart3 },
+    { id: 'settings', label: 'System Configuration', icon: Sliders },
   ];
 
   const handleSelectNav = (id: string) => {

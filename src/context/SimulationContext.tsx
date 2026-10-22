@@ -121,16 +121,16 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     {
       id: 'n1',
       timestamp: '08:41:05',
-      title: 'พัสดุชำรุดถูกปัดออก: THA-20260930-001247',
-      message: 'ตรวจพบรอยฉีกขาด TEAR (96.8%) ปัดลงรางคัดแยกเรียบร้อย',
+      title: 'Defect Diverted: THA-20260930-001247',
+      message: 'Detected surface tear (96.8% confidence). Diverted to quarantine bin.',
       type: 'danger',
       read: false
     },
     {
       id: 'n2',
       timestamp: '08:39:50',
-      title: 'พัสดุบุบชำรุด: THA-20260930-001246',
-      message: 'ตรวจพบรอยบุบ DENT (94.7%) ที่มุมกล่อง',
+      title: 'Structural Dent: THA-20260930-001246',
+      message: 'Detected severe dent (94.7% confidence) on package corner.',
       type: 'danger',
       read: false
     }
@@ -171,8 +171,8 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           const newNotif: NotificationItem = {
             id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
             timestamp: newParcel.time,
-            title: `พัสดุไม่ผ่าน: ${newParcel.trackingNumber}`,
-            message: newParcel.rejectReason || `ตรวจพบ ${newParcel.damageType} (${newParcel.aiConfidence}%)`,
+            title: `Defect Diverted: ${newParcel.trackingNumber}`,
+            message: newParcel.rejectReason || `${newParcel.damageType} detected (${newParcel.aiConfidence}%)`,
             type: 'danger',
             read: false,
             parcelId: newParcel.id
@@ -180,7 +180,7 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           setNotifications((prev) => [newNotif, ...prev].slice(0, 100));
         }
 
-        // Save into Neon PostgreSQL Database
+        // Save every parcel inspection into Neon Database
         saveInspectionToNeon({
           tracking_no: newParcel.trackingNumber,
           station_id: newParcel.stationId,
@@ -268,10 +268,20 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   const markRejectHandled = (id: string, reason: string) => {
+    const target = parcels.find((p) => p.id === id);
     engine.localStore.markHandled(id, reason);
     setParcels((prev) =>
       prev.map((p) => (p.id === id ? { ...p, handled: true, handledReason: reason } : p))
     );
+
+    // Persist resolution in Neon DB while retaining full historical row
+    if (target) {
+      import('../lib/database/neonClient').then(({ updateInspectionHandledInNeon }) => {
+        updateInspectionHandledInNeon(target.trackingNumber, reason).then(() => {
+          refreshDbRecords();
+        });
+      });
+    }
   };
 
   const markNotificationsAsRead = () => {
