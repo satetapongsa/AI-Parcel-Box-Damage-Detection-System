@@ -18,7 +18,12 @@ import type { FaultState } from '../lib/sim/faults';
 import type { CiraState } from '../lib/sim/ciraPanel';
 import type { UartLogEntry } from '../lib/sim/uartConsole';
 import type { TestSuiteSummary } from '../lib/sim/testSuite';
-import { saveInspectionToNeon, fetchRecentInspectionsFromNeon, type DbParcelInspection } from '../lib/database/neonClient';
+import { 
+  saveInspectionToNeon, 
+  fetchRecentInspectionsFromNeon, 
+  updateInspectionHandledInNeon,
+  type DbParcelInspection 
+} from '../lib/database/neonClient';
 
 const initialStatus: SystemStatusState = {
   stationId: 'SORT-01',
@@ -276,10 +281,8 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
     // Persist resolution in Neon DB while retaining full historical row
     if (target) {
-      import('../lib/database/neonClient').then(({ updateInspectionHandledInNeon }) => {
-        updateInspectionHandledInNeon(target.trackingNumber, reason).then(() => {
-          refreshDbRecords();
-        });
+      updateInspectionHandledInNeon(target.trackingNumber, reason).then(() => {
+        refreshDbRecords();
       });
     }
   };
