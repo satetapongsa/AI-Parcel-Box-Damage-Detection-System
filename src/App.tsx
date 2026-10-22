@@ -8,10 +8,13 @@ import {
   Play,
   Pause,
   Clock,
-  Layers
+  Layers,
+  BarChart3,
+  Activity
 } from 'lucide-react';
 import { useSimulation, SimulationProvider } from './context/SimulationContext';
 import { ConveyorTopDownSimulation } from './components/ConveyorTopDownSimulation';
+import { StatisticsMonitoringView } from './components/StatisticsMonitoringView';
 
 export function Dashboard() {
   const {
@@ -26,6 +29,7 @@ export function Dashboard() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PASS' | 'REJECT'>('ALL');
+  const [activeTab, setActiveTab] = useState<'monitor' | 'stats'>('monitor');
 
   // Initial fetch of records from Neon DB
   useEffect(() => {
@@ -83,6 +87,33 @@ export function Dashboard() {
               Live automated conveyor inspection, defect diversion logs & database audit
             </p>
           </div>
+        </div>
+
+        {/* Navigation Mode Switcher: Monitor vs Statistics */}
+        <div className="flex items-center bg-[#070E1A] p-1 rounded-xl border border-slate-700/80 font-mono text-xs shadow-inner">
+          <button
+            onClick={() => setActiveTab('monitor')}
+            className={`px-3.5 py-1.5 rounded-lg font-bold transition flex items-center space-x-2 ${
+              activeTab === 'monitor'
+                ? 'bg-cyan-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Activity className="w-4 h-4" />
+            <span>Conveyor Monitor</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('stats')}
+            className={`px-3.5 py-1.5 rounded-lg font-bold transition flex items-center space-x-2 ${
+              activeTab === 'stats'
+                ? 'bg-cyan-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <BarChart3 className="w-4 h-4" />
+            <span>Statistics & Graphs</span>
+          </button>
         </div>
 
         {/* Global Controls */}
@@ -165,217 +196,224 @@ export function Dashboard() {
           </div>
         </div>
 
-        {/* 4. Top-Down Conveyor & Pneumatic Cylinder Divert Simulation */}
-        <ConveyorTopDownSimulation 
-          isRunning={demoModeActive}
-          onToggleRunning={toggleDemoMode}
-          latestParcel={latestParcel}
-        />
+        {/* 4. Conditional Content: Conveyor Monitor vs Statistics & Graphs */}
+        {activeTab === 'monitor' ? (
+          <>
+            {/* Top-Down Conveyor & Pneumatic Cylinder Divert Simulation */}
+            <ConveyorTopDownSimulation 
+              isRunning={demoModeActive}
+              onToggleRunning={toggleDemoMode}
+              latestParcel={latestParcel}
+            />
 
-        {/* 5. Active Inspection Banner (Immediate feedback on latest box) */}
-        <div className={`p-4 sm:p-5 rounded-xl border transition-all shadow-md ${
-          latestParcel.status === 'REJECT'
-            ? 'bg-red-950/30 border-red-500/40'
-            : 'bg-[#0B1526] border-slate-800'
-        }`}>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-start sm:items-center space-x-3.5">
-              <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
-                latestParcel.status === 'REJECT'
-                  ? 'bg-red-500/20 text-red-400'
-                  : 'bg-emerald-500/20 text-emerald-400'
-              }`}>
-                {latestParcel.status === 'REJECT' ? (
-                  <XCircle className="w-5 h-5 animate-pulse" />
-                ) : (
-                  <CheckCircle2 className="w-5 h-5" />
-                )}
-              </div>
-              <div>
-                <div className="flex items-center space-x-2">
-                  <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">Latest Box Scanned:</span>
-                  <span className="font-mono text-sm sm:text-base font-bold text-white">
-                    {latestParcel.trackingNumber}
-                  </span>
-                  <span className={`px-2 py-0.5 rounded text-[11px] font-mono font-bold ${
+            {/* Active Inspection Banner (Immediate feedback on latest box) */}
+            <div className={`p-4 sm:p-5 rounded-xl border transition-all shadow-md ${
+              latestParcel.status === 'REJECT'
+                ? 'bg-red-950/30 border-red-500/40'
+                : 'bg-[#0B1526] border-slate-800'
+            }`}>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-start sm:items-center space-x-3.5">
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
                     latestParcel.status === 'REJECT'
-                      ? 'bg-red-500/20 text-red-300 border border-red-500/30'
-                      : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                      ? 'bg-red-500/20 text-red-400'
+                      : 'bg-emerald-500/20 text-emerald-400'
                   }`}>
-                    {latestParcel.status === 'REJECT' ? 'EJECTED / FAILED' : 'PASSED'}
-                  </span>
+                    {latestParcel.status === 'REJECT' ? (
+                      <XCircle className="w-5 h-5 animate-pulse" />
+                    ) : (
+                      <CheckCircle2 className="w-5 h-5" />
+                    )}
+                  </div>
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">Latest Box Scanned:</span>
+                      <span className="font-mono text-sm sm:text-base font-bold text-white">
+                        {latestParcel.trackingNumber}
+                      </span>
+                      <span className={`px-2 py-0.5 rounded text-[11px] font-mono font-bold ${
+                        latestParcel.status === 'REJECT'
+                          ? 'bg-red-500/20 text-red-300 border border-red-500/30'
+                          : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                      }`}>
+                        {latestParcel.status === 'REJECT' ? 'EJECTED / FAILED' : 'PASSED'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-300 mt-1 font-sans">
+                      {latestParcel.status === 'REJECT' 
+                        ? `Reason: ${latestParcel.rejectReason || latestParcel.damageType} (AI Confidence: ${latestParcel.aiConfidence}%) • Weight: ${latestParcel.weight} kg`
+                        : `Parcel passed optical defect inspection & weight tolerance • Weight: ${latestParcel.weight} kg`}
+                    </p>
+                  </div>
                 </div>
-                <p className="text-xs text-slate-300 mt-1 font-sans">
-                  {latestParcel.status === 'REJECT' 
-                    ? `Reason: ${latestParcel.rejectReason || latestParcel.damageType} (AI Confidence: ${latestParcel.aiConfidence}%) • Weight: ${latestParcel.weight} kg`
-                    : `Parcel passed optical defect inspection & weight tolerance • Weight: ${latestParcel.weight} kg`}
-                </p>
+
+                <div className="flex items-center space-x-2 text-xs font-mono text-slate-400 self-end sm:self-center">
+                  <Clock className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Timestamp: <strong className="text-slate-200">{latestParcel.time}</strong></span>
+                </div>
               </div>
             </div>
 
-            <div className="flex items-center space-x-2 text-xs font-mono text-slate-400 self-end sm:self-center">
-              <Clock className="w-3.5 h-3.5 text-slate-500" />
-              <span>Timestamp: <strong className="text-slate-200">{latestParcel.time}</strong></span>
-            </div>
-          </div>
-        </div>
+            {/* Clean Inspection Records Table */}
+            <div className="bg-[#0B1526] border border-slate-800/80 rounded-xl shadow-xl overflow-hidden flex flex-col">
+              {/* Table Header & Search Filter */}
+              <div className="p-4 sm:p-5 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-base font-bold text-white flex items-center space-x-2">
+                    <span>Inspection & Ejection Records</span>
+                    <span className="text-xs font-mono font-normal text-slate-400">
+                      ({filteredRecords.length} records)
+                    </span>
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Exact timestamps, ejection reasons, and pass/fail audit data saved to database
+                  </p>
+                </div>
 
-        {/* 5. Clean, Fast Inspection Records Table */}
-        <div className="bg-[#0B1526] border border-slate-800/80 rounded-xl shadow-xl overflow-hidden flex flex-col">
-          {/* Table Header & Search Filter */}
-          <div className="p-4 sm:p-5 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h2 className="text-base font-bold text-white flex items-center space-x-2">
-                <span>Inspection & Ejection Records</span>
-                <span className="text-xs font-mono font-normal text-slate-400">
-                  ({filteredRecords.length} records)
-                </span>
-              </h2>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Exact timestamps, ejection reasons, and pass/fail audit data saved to database
-              </p>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              {/* Status Filter Tabs */}
-              <div className="flex bg-[#070E1A] p-1 rounded-lg border border-slate-700/60 font-mono text-xs">
-                {(['ALL', 'PASS', 'REJECT'] as const).map(f => (
-                  <button
-                    key={f}
-                    onClick={() => setStatusFilter(f)}
-                    className={`px-2.5 py-1 rounded text-[11px] font-medium transition ${
-                      statusFilter === f 
-                        ? 'bg-slate-700 text-white shadow' 
-                        : 'text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    {f === 'ALL' ? 'All' : f === 'PASS' ? 'Passed' : 'Ejected'}
-                  </button>
-                ))}
-              </div>
-
-              {/* Search Box */}
-              <div className="relative w-44 sm:w-56">
-                <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Search tracking / reason..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-[#070E1A] border border-slate-700 text-xs text-white rounded-lg pl-8 pr-3 py-1.5 focus:outline-none focus:border-cyan-500 font-mono placeholder:text-slate-500"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Table Data */}
-          <div className="overflow-x-auto max-h-[560px] overflow-y-auto font-mono text-xs">
-            {filteredRecords.length === 0 ? (
-              <div className="py-16 text-center text-slate-500">
-                <Package className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                <span>No inspection records matching query.</span>
-              </div>
-            ) : (
-              <table className="w-full text-left border-collapse">
-                <thead className="sticky top-0 bg-[#070E1A] border-b border-slate-800 text-[10px] text-slate-400 uppercase tracking-wider z-10">
-                  <tr>
-                    <th className="p-3.5 pl-5">Status</th>
-                    <th className="p-3.5">Tracking Number</th>
-                    <th className="p-3.5">Timestamp (Ejection / Scan)</th>
-                    <th className="p-3.5">Defect / Inspection Detail</th>
-                    <th className="p-3.5">Confidence</th>
-                    <th className="p-3.5">Weight</th>
-                    <th className="p-3.5 pr-5 text-right">Database Audit</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60">
-                  {filteredRecords.map((r, i) => {
-                    const isReject = r.status === 'REJECT';
-                    const timeFormatted = r.created_at ? new Date(r.created_at).toLocaleTimeString('en-US', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                      second: '2-digit',
-                      hour12: false
-                    }) : '-';
-
-                    return (
-                      <tr 
-                        key={`${r.tracking_no}-${i}`}
-                        className={`transition hover:bg-slate-800/40 ${
-                          isReject ? 'bg-red-950/10' : ''
+                <div className="flex items-center space-x-2">
+                  {/* Status Filter Tabs */}
+                  <div className="flex bg-[#070E1A] p-1 rounded-lg border border-slate-700/60 font-mono text-xs">
+                    {(['ALL', 'PASS', 'REJECT'] as const).map(f => (
+                      <button
+                        key={f}
+                        onClick={() => setStatusFilter(f)}
+                        className={`px-2.5 py-1 rounded text-[11px] font-medium transition ${
+                          statusFilter === f 
+                            ? 'bg-slate-700 text-white shadow' 
+                            : 'text-slate-400 hover:text-slate-200'
                         }`}
                       >
-                        {/* Status */}
-                        <td className="p-3.5 pl-5">
-                          <span className={`inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                            isReject 
-                              ? 'bg-red-500/15 text-red-400 border border-red-500/30' 
-                              : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                          }`}>
-                            {isReject ? <XCircle className="w-3 h-3" /> : <CheckCircle2 className="w-3 h-3" />}
-                            <span>{isReject ? 'EJECTED' : 'PASSED'}</span>
-                          </span>
-                        </td>
+                        {f === 'ALL' ? 'All' : f === 'PASS' ? 'Passed' : 'Ejected'}
+                      </button>
+                    ))}
+                  </div>
 
-                        {/* Tracking Number */}
-                        <td className="p-3.5 font-bold text-white">
-                          {r.tracking_no}
-                        </td>
+                  {/* Search Box */}
+                  <div className="relative w-44 sm:w-56">
+                    <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="Search tracking / reason..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full bg-[#070E1A] border border-slate-700 text-xs text-white rounded-lg pl-8 pr-3 py-1.5 focus:outline-none focus:border-cyan-500 font-mono placeholder:text-slate-500"
+                    />
+                  </div>
+                </div>
+              </div>
 
-                        {/* Ejection / Inspection Timestamp */}
-                        <td className="p-3.5 text-slate-300">
-                          <span className="flex items-center space-x-1.5">
-                            <Clock className="w-3 h-3 text-slate-500 shrink-0" />
-                            <span>{timeFormatted}</span>
-                          </span>
-                        </td>
-
-                        {/* Defect / Detail */}
-                        <td className="p-3.5">
-                          {isReject ? (
-                            <div className="flex flex-col">
-                              <span className="font-semibold text-red-300">
-                                {r.damage_type}
-                              </span>
-                              <span className="text-[11px] text-slate-400 font-sans">
-                                {r.reject_reason || 'Diverted to quarantine bin'}
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="text-slate-400">Normal / Passed</span>
-                          )}
-                        </td>
-
-                        {/* Confidence */}
-                        <td className="p-3.5 text-cyan-400 font-semibold">
-                          {Number(r.confidence).toFixed(1)}%
-                        </td>
-
-                        {/* Weight */}
-                        <td className="p-3.5 text-slate-300">
-                          {Number(r.weight_kg).toFixed(2)} kg
-                        </td>
-
-                        {/* Database Audit State */}
-                        <td className="p-3.5 pr-5 text-right text-slate-400 text-[11px]">
-                          {r.handled ? (
-                            <span className="text-emerald-400 font-medium">
-                              Resolved: {r.handled_reason || 'Cleared'}
-                            </span>
-                          ) : (
-                            <span className="text-slate-500">
-                              Logged in DB
-                            </span>
-                          )}
-                        </td>
+              {/* Table Data */}
+              <div className="overflow-x-auto max-h-[560px] overflow-y-auto font-mono text-xs">
+                {filteredRecords.length === 0 ? (
+                  <div className="py-16 text-center text-slate-500">
+                    <Package className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                    <span>No inspection records matching query.</span>
+                  </div>
+                ) : (
+                  <table className="w-full text-left border-collapse">
+                    <thead className="sticky top-0 bg-[#070E1A] border-b border-slate-800 text-[10px] text-slate-400 uppercase tracking-wider z-10">
+                      <tr>
+                        <th className="p-3.5 pl-5">Status</th>
+                        <th className="p-3.5">Tracking Number</th>
+                        <th className="p-3.5">Timestamp (Ejection / Scan)</th>
+                        <th className="p-3.5">Defect / Inspection Detail</th>
+                        <th className="p-3.5">Confidence</th>
+                        <th className="p-3.5">Weight</th>
+                        <th className="p-3.5 pr-5 text-right">Database Audit</th>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </div>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/60">
+                      {filteredRecords.map((r, i) => {
+                        const isReject = r.status === 'REJECT';
+                        const timeFormatted = r.created_at ? new Date(r.created_at).toLocaleTimeString('en-US', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          second: '2-digit',
+                          hour12: false
+                        }) : '-';
+
+                        return (
+                          <tr 
+                            key={`${r.tracking_no}-${i}`}
+                            className={`transition hover:bg-slate-800/40 ${
+                              isReject ? 'bg-red-950/10' : ''
+                            }`}
+                          >
+                            <td className="p-3.5 pl-5">
+                              <span className={`inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                                isReject 
+                                  ? 'bg-red-500/15 text-red-400 border border-red-500/30' 
+                                  : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                              }`}>
+                                {isReject ? <XCircle className="w-3 h-3" /> : <CheckCircle2 className="w-3 h-3" />}
+                                <span>{isReject ? 'EJECTED' : 'PASSED'}</span>
+                              </span>
+                            </td>
+
+                            <td className="p-3.5 font-bold text-white">
+                              {r.tracking_no}
+                            </td>
+
+                            <td className="p-3.5 text-slate-300">
+                              <span className="flex items-center space-x-1.5">
+                                <Clock className="w-3 h-3 text-slate-500 shrink-0" />
+                                <span>{timeFormatted}</span>
+                              </span>
+                            </td>
+
+                            <td className="p-3.5">
+                              {isReject ? (
+                                <div className="flex flex-col">
+                                  <span className="font-semibold text-red-300">
+                                    {r.damage_type}
+                                  </span>
+                                  <span className="text-[11px] text-slate-400 font-sans">
+                                    {r.reject_reason || 'Diverted to quarantine bin'}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-slate-400">Normal / Passed</span>
+                              )}
+                            </td>
+
+                            <td className="p-3.5 text-cyan-400 font-semibold">
+                              {Number(r.confidence).toFixed(1)}%
+                            </td>
+
+                            <td className="p-3.5 text-slate-300">
+                              {Number(r.weight_kg).toFixed(2)} kg
+                            </td>
+
+                            <td className="p-3.5 pr-5 text-right text-slate-400 text-[11px]">
+                              {r.handled ? (
+                                <span className="text-emerald-400 font-medium">
+                                  Resolved: {r.handled_reason || 'Cleared'}
+                                </span>
+                              ) : (
+                                <span className="text-slate-500">
+                                  Logged in DB
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+          </>
+        ) : (
+          /* Statistics & Graphs Tab View */
+          <StatisticsMonitoringView 
+            dbRecords={dbRecords}
+            liveParcels={parcels}
+            totalInspected={totalInspected}
+            passCount={passCount}
+            rejectCount={rejectCount}
+          />
+        )}
 
       </main>
 
