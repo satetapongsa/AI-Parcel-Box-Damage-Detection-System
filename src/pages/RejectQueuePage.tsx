@@ -29,8 +29,8 @@ export const RejectQueuePage: React.FC = () => {
     <div className="p-4 sm:p-6 space-y-6 animate-in fade-in duration-300 max-w-[1920px] mx-auto">
       {/* Enterprise Page Header */}
       <PageHeader
-        title="Reject Queue & Quarantine Bin Management"
-        description="รายการพัสดุชำรุดที่ถูกปัดออกสำหรับ Hub Operator ทำการตรวจซ้ำ ระบุเหตุผล และจัดการ"
+        title="Quarantine Bin & Defect Resolution"
+        description="Parcels diverted for physical defect verification, operator disposition, and audit logging"
         badge="OPERATOR CONSOLE"
         badgeType="amber"
       />
@@ -129,7 +129,7 @@ export const RejectQueuePage: React.FC = () => {
                         onClick={() => handleAction(p.id, selectedReason[p.id] || 'Repacked & Returned to Sender')}
                         className="px-3 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] shadow transition"
                       >
-                        จัดการแล้ว (Resolved)
+                        Mark Resolved
                       </button>
                     </td>
                   </tr>

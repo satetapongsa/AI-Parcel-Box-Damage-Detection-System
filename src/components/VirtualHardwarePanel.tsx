@@ -20,8 +20,8 @@ export const VirtualHardwarePanel: React.FC = () => {
           </h2>
         </div>
         <div className="flex items-center space-x-2">
-          <span className="text-[10px] bg-amber-500/10 border border-amber-500/30 text-amber-300 font-mono px-2 py-0.5 rounded">
-            SIMULATION
+          <span className="text-[10px] bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 font-mono px-2 py-0.5 rounded">
+            HARDWARE I/O
           </span>
           <span className="text-[11px] text-slate-400 font-mono">
             Line Speed: {settings.conveyorSpeedMs} m/s
@@ -88,8 +88,8 @@ export const VirtualHardwarePanel: React.FC = () => {
         <div className="bg-[#070D1B] border border-slate-800/80 rounded-lg p-3 flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-mono text-slate-400">ACTUATOR (DISPATCH)</span>
-            <span className="text-[9px] bg-blue-500/10 text-blue-400 px-1.5 py-0.5 rounded border border-blue-500/20">
-              รอทีมยืนยัน
+            <span className="text-[9px] bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-500/20">
+              READY
             </span>
           </div>
 

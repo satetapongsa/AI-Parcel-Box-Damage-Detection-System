@@ -20,8 +20,8 @@ export const UartConsole: React.FC = () => {
             ESP32 UART Console
           </h2>
         </div>
-        <span className="text-[10px] bg-amber-500/10 border border-amber-500/30 text-amber-300 font-mono px-2 py-0.5 rounded">
-          อิงต้นแบบ Wokwi ยังไม่ใช่โปรโตคอลจริง
+        <span className="text-[10px] bg-slate-800 border border-slate-700 text-slate-300 font-mono px-2 py-0.5 rounded">
+          ESP32 UART / 115200 BAUD
         </span>
       </div>
 

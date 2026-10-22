@@ -55,8 +55,8 @@ export const FailureTestsPage: React.FC = () => {
       {/* Enterprise Page Header */}
       <PageHeader
         title="Failure Mode Test & Validation Lab"
-        description="ชุดทดสอบความล้มเหลว 5 รายการตามสไลด์ 12 พร้อมระบบ Fault Injection แบบเรียลไทม์"
-        badge="SIMULATION BENCHMARK"
+        description="Comprehensive fault injection suite validating edge resilience, offline queues, and conveyor safety"
+        badge="VALIDATION BENCHMARK"
         badgeType="amber"
         actions={
           <div className="flex items-center space-x-2">
@@ -78,14 +78,14 @@ export const FailureTestsPage: React.FC = () => {
               }`}
             >
               <Play className="w-4 h-4" />
-              <span>{isRunningSuite ? 'Executing Test Suite...' : 'Run Slide-12 Test Suite'}</span>
+              <span>{isRunningSuite ? 'Executing Test Suite...' : 'Run Test Suite'}</span>
             </button>
           </div>
         }
       />
 
-      {/* Manual Fault Injection Panel (Section 6.4) */}
-      <SectionCard title="Real-Time Fault Injection Triggers (Section 6.4)" icon={AlertOctagon}>
+      {/* Manual Fault Injection Panel */}
+      <SectionCard title="Real-Time Fault Injection Triggers" icon={AlertOctagon}>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 font-mono text-xs">
           {/* Fault 1: Cut Internet */}
           <div className={`p-3.5 rounded-lg border transition ${
@@ -94,7 +94,7 @@ export const FailureTestsPage: React.FC = () => {
             <div className="flex items-center justify-between mb-2">
               <span className="font-bold text-slate-200 flex items-center">
                 <WifiOff className="w-4 h-4 mr-1 text-amber-400" />
-                ตัดอินเทอร์เน็ต (Case 2)
+                Cut WAN Network
               </span>
               <input
                 type="checkbox"
@@ -104,7 +104,7 @@ export const FailureTestsPage: React.FC = () => {
               />
             </div>
             <p className="text-[10px] text-slate-400 font-sans">
-              Edge ยังปัดต่อ ไฟเหลือง ข้อมูลเข้าคิว Local SQLite ต่อ LAN กลับแล้ว Sync
+              Edge continues diverting; yellow beacon activates; records queue in SQLite until reconnect.
             </p>
           </div>
 
@@ -115,7 +115,7 @@ export const FailureTestsPage: React.FC = () => {
             <div className="flex items-center justify-between mb-2">
               <span className="font-bold text-slate-200 flex items-center">
                 <EyeOff className="w-4 h-4 mr-1 text-amber-400" />
-                Vision Fault (ภาพมืด)
+                Vision Fault (Low Lux)
               </span>
               <input
                 type="checkbox"
@@ -125,7 +125,7 @@ export const FailureTestsPage: React.FC = () => {
               />
             </div>
             <p className="text-[10px] text-slate-400 font-sans">
-              ภาพมืดกว่า Min Brightness เตือนไฟเหลือง ลดระดับความมั่นใจโมเดล
+              Lux drops below threshold; yellow warning raises; confidence penalty applied.
             </p>
           </div>
 
@@ -146,13 +146,13 @@ export const FailureTestsPage: React.FC = () => {
               />
             </div>
             <p className="text-[10px] text-slate-400 font-sans">
-              IR ถูกบังค้างเกิน timeout หยุดสายพานทันที ไฟแดง+บัซเซอร์
+              IR beam occluded beyond timeout; belt halts immediately; red beacon and buzzer trip.
             </p>
           </div>
 
           {/* Fault 4: Cloud Response Code */}
           <div className="p-3.5 rounded-lg border bg-[#0F172A] border-[#26354A]">
-            <span className="font-bold text-slate-200 block mb-1">Cloud HTTP Status Code:</span>
+            <span className="font-bold text-slate-200 block mb-1">Cloud HTTP Response Code:</span>
             <select
               value={faults.cloudResponseFault}
               onChange={(e) => setFault('cloudResponseFault', e.target.value as any)}
@@ -165,7 +165,7 @@ export const FailureTestsPage: React.FC = () => {
               <option value="RATE_LIMIT_429">429 Rate Limited (Retry)</option>
             </select>
             <p className="text-[10px] text-slate-400 font-sans mt-1">
-              ทดสอบพฤติกรรม bridge.py ในการเก็บ/ทิ้งคิวตามรหัสตอบกลับ
+              Validates bridge store-and-forward queue retention against upstream status codes.
             </p>
           </div>
         </div>
@@ -179,11 +179,11 @@ export const FailureTestsPage: React.FC = () => {
               <div className="flex items-center space-x-2">
                 <span className="text-sm font-bold text-white uppercase">Test Suite Verification Summary</span>
                 <span className="text-[10px] bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 px-2 py-0.5 rounded">
-                  เกณฑ์ผ่าน &ge; 90% (ข้อเสนอทีม)
+                  PASS CRITERIA &ge; 90%
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-0.5 font-sans">
-                ตัวเลขทั้งหมดมาจากการจำลองสถานการณ์ ห้ามนำไปอ้างอิงเป็นความแม่นยำของ AI จริง
+                Automated fault tolerance and fail-safe recovery benchmark metrics
               </p>
             </div>
 

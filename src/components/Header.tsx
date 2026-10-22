@@ -54,7 +54,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
   }, []);
 
   const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('th-TH', {
+    return date.toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
@@ -71,7 +71,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
           <button
             onClick={onToggleMobileMenu}
             className="lg:hidden p-2 rounded-lg text-slate-300 hover:text-white bg-slate-900 border border-slate-700 shrink-0"
-            aria-label="เมนู"
+            aria-label="Toggle Menu"
           >
             <Menu className="w-5 h-5 text-cyan-400" />
           </button>
@@ -91,7 +91,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
             </span>
           </div>
           <p className="text-[11px] text-slate-400 font-sans hidden sm:block">
-            ระบบประเมินและคัดแยกพัสดุชำรุด • Neon PostgreSQL เชื่อมต่อพร้อมใช้งาน
+            Automated Damage Inspection & Diverter Control System
           </p>
         </div>
       </div>
@@ -101,13 +101,13 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
         {/* Neon DB Live Indicator */}
         <div className="flex items-center space-x-2 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-slate-400">Neon DB:</span>
-          <span className="text-emerald-400 font-bold">CONNECTED</span>
+          <span className="text-slate-400">Database:</span>
+          <span className="text-emerald-400 font-bold">ONLINE</span>
           <button 
             onClick={() => refreshDbRecords()} 
             disabled={isLoadingDb}
             className="text-slate-400 hover:text-cyan-400 transition ml-1"
-            title="รีเฟรชข้อมูลจาก Neon DB"
+            title="Refresh database records"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isLoadingDb ? 'animate-spin text-cyan-400' : ''}`} />
           </button>
@@ -115,15 +115,15 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
 
         {/* Conveyor & Actuator Status */}
         <div className="flex items-center space-x-2 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg text-slate-300">
-          <span>สายพาน:</span>
+          <span>Conveyor:</span>
           <span className={demoModeActive ? 'text-emerald-400 font-bold' : 'text-amber-400 font-bold'}>
-            {demoModeActive ? 'ทำงานปกติ' : 'หยุดชั่วคราว'}
+            {demoModeActive ? 'RUNNING' : 'PAUSED'}
           </span>
         </div>
 
         {/* Last Scanned Parcel */}
         <div className="bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg text-slate-400">
-          ล่าสุด: <span className="text-white font-bold">{latestParcel?.trackingNumber || '-'}</span>
+          Latest Box: <span className="text-white font-bold">{latestParcel?.trackingNumber || '-'}</span>
         </div>
       </div>
 
@@ -137,13 +137,13 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
               ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
               : 'bg-emerald-600 hover:bg-emerald-500 text-white'
           }`}
-          title={demoModeActive ? 'หยุดสายพานชั่วคราว' : 'เริ่มสายพาน'}
+          title={demoModeActive ? 'Pause Conveyor' : 'Resume Conveyor'}
         >
           {demoModeActive ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-          <span className="hidden sm:inline">{demoModeActive ? 'พักระบบ' : 'เริ่มระบบ'}</span>
+          <span className="hidden sm:inline">{demoModeActive ? 'Pause' : 'Resume'}</span>
         </button>
 
-        {/* Offline / Fail-Safe Toggle */}
+        {/* Offline / WAN Disconnect Fail-Safe Toggle */}
         <button
           onClick={toggleOfflineMode}
           className={`px-2.5 py-1.5 rounded-lg font-mono text-xs font-bold transition flex items-center space-x-1.5 border ${
@@ -151,10 +151,10 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
               ? 'bg-amber-600 text-white border-amber-400 shadow animate-pulse'
               : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-700'
           }`}
-          title="จำลองโหมดออฟไลน์ (Store-and-Forward)"
+          title="Toggle Network Offline Mode"
         >
           {isOfflineMode ? <WifiOff className="w-3.5 h-3.5" /> : <Wifi className="w-3.5 h-3.5" />}
-          <span className="hidden md:inline">{isOfflineMode ? 'ออฟไลน์' : 'ออนไลน์'}</span>
+          <span className="hidden md:inline">{isOfflineMode ? 'Offline Mode' : 'Online'}</span>
         </button>
 
         {/* Live Clock */}
@@ -173,8 +173,8 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
               }
             }}
             className="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-white transition relative shadow"
-            title="การแจ้งเตือนพัสดุชำรุด"
-            aria-label="แจ้งเตือน"
+            title="Quarantine Defect Alerts"
+            aria-label="Alerts"
           >
             <Bell className="w-4 h-4 text-amber-400" />
             {unreadNotificationCount > 0 && (
@@ -191,7 +191,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
                 <div className="flex items-center space-x-2">
                   <Bell className="w-4 h-4 text-amber-400" />
                   <span className="text-xs font-bold text-white font-mono uppercase">
-                    แจ้งเตือนพัสดุไม่ผ่าน (Quarantine)
+                    Quarantine Defect Queue
                   </span>
                 </div>
                 {notifications.length > 0 && (
@@ -199,7 +199,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
                     onClick={clearNotifications}
                     className="text-[10px] text-slate-400 hover:text-red-400 font-mono transition"
                   >
-                    ล้างทั้งหมด
+                    Clear All
                   </button>
                 )}
               </div>
@@ -208,7 +208,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
                 {notifications.length === 0 ? (
                   <div className="p-6 text-center text-xs text-slate-500 font-mono">
                     <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-emerald-500/50" />
-                    ไม่มีรายการแจ้งเตือนใหม่ ทุกกล่องผ่านเกณฑ์เรียบร้อย
+                    No unhandled defect alerts. Conveyor clear.
                   </div>
                 ) : (
                   notifications.map((n) => (
@@ -232,7 +232,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
 
               <div className="p-2 border-t border-slate-800 bg-slate-950 text-center">
                 <span className="text-[10px] text-slate-400 font-mono">
-                  คนงานสามารถดูรายละเอียดและคัดแยกกล่องได้ที่เมนู "กล่องรอจัดการ"
+                  Review and clear diverted packages in "Quarantine Bin"
                 </span>
               </div>
             </div>

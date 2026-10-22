@@ -18,18 +18,12 @@ export class SeededRandom {
 }
 
 export interface ParcelDistribution {
-  normalRatio: number;      // e.g. 0.80
-  dentRatio: number;        // e.g. 0.08
-  tearRatio: number;        // e.g. 0.07
-  waterStainRatio: number;  // e.g. 0.05
+  normalRatio: number;
+  dentRatio: number;
+  tearRatio: number;
+  waterStainRatio: number;
+  weightAnomalyRatio: number;
 }
-
-export const DEFAULT_DISTRIBUTION: ParcelDistribution = {
-  normalRatio: 0.80,
-  dentRatio: 0.08,
-  tearRatio: 0.07,
-  waterStainRatio: 0.05
-};
 
 export interface GeneratedParcelSpec {
   trackingNumber: string;
@@ -40,11 +34,16 @@ export interface GeneratedParcelSpec {
   brightness: number;
   barcodeReadable: boolean;
   isFalsePositivePattern?: boolean;
-  labelTag: string; // e.g. "box_good-157 95%" or "box_dent-204 89%"
+  labelTag: string; // e.g. "box_dent-204 89%"
 }
 
 let trackingCounter = 1250;
 
+/**
+ * Generates parcel inspection specifications on every belt traversal.
+ * Randomly generates defective parcels (DENT, TEAR, WATER_STAIN, WEIGHT_ANOMALY)
+ * along with normal passes for dynamic live monitoring.
+ */
 export function generateParcelSpec(
   rng: SeededRandom = new SeededRandom(Date.now()),
   forcedType?: DamageType,
@@ -59,11 +58,20 @@ export function generateParcelSpec(
   if (forcedType) {
     damageType = forcedType;
   } else {
+    // Dynamic random defect distribution:
+    // ~55% Normal, ~15% Dent, ~15% Tear, ~10% Water Stain, ~5% Weight Anomaly
     const roll = rng.next();
-    if (roll < 0.80) damageType = 'NORMAL';
-    else if (roll < 0.88) damageType = 'DENT';
-    else if (roll < 0.95) damageType = 'TEAR';
-    else damageType = 'WATER_STAIN';
+    if (roll < 0.55) {
+      damageType = 'NORMAL';
+    } else if (roll < 0.70) {
+      damageType = 'DENT';
+    } else if (roll < 0.85) {
+      damageType = 'TEAR';
+    } else if (roll < 0.95) {
+      damageType = 'WATER_STAIN';
+    } else {
+      damageType = 'WEIGHT_ANOMALY';
+    }
   }
 
   let aiConfidence = 0;
@@ -71,7 +79,6 @@ export function generateParcelSpec(
   const seqNum = Math.floor(rng.next() * 800) + 100;
 
   if (isFalsePositiveCase) {
-    // Printed pattern that resembles a tear: High-grade model PASSes (low confidence ~42%), Weak model flags tear
     aiConfidence = 42.0;
     labelTag = `box_pattern-${seqNum} ${aiConfidence.toFixed(0)}%`;
   } else if (damageType === 'NORMAL') {
@@ -94,10 +101,10 @@ export function generateParcelSpec(
   const expectedWeightKg = 2.40;
   let weightKg = expectedWeightKg;
   if (damageType === 'WEIGHT_ANOMALY') {
-    // deviation > 5% (e.g. 2.75kg or 2.1kg)
+    // Weight deviation > 5% tolerance (e.g. 2.68kg or 2.15kg)
     weightKg = rng.next() > 0.5 ? 2.68 : 2.15;
   } else {
-    // Normal small variation ±1.5%
+    // Normal acceptable variation ±1.5%
     weightKg = Number((2.37 + rng.next() * 0.07).toFixed(2));
   }
 

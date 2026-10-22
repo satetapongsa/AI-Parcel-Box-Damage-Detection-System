@@ -33,8 +33,8 @@ export const ArchitecturePage: React.FC = () => {
       status: systemStatus.irSensorStatus === 'FAULT' ? 'WARNING' : 'ONLINE',
       spec: 'NPN Photoelectric Sensor (Response < 2ms)',
       protocol: 'Digital GPIO (5V)',
-      role: 'ตรวจจับพัสดุเข้าสู่จุดตรวจและ trigger กล้องถ่ายทันทีเพื่อลดภาระ GPU',
-      input: 'ลำแสงอินฟราเรดถูกตัด',
+      role: 'Detects parcel arrival at inspection zone and immediately triggers cameras to minimize GPU load',
+      input: 'Infrared beam break',
       output: 'Digital Interrupt Trigger'
     },
     {
@@ -45,8 +45,8 @@ export const ArchitecturePage: React.FC = () => {
       status: faults.visionFaultDark || faults.dropSideCamera ? 'WARNING' : 'ONLINE',
       spec: '1080p Industrial Cameras with Ring LED',
       protocol: 'USB 3.0 UVC',
-      role: 'เก็บภาพรอบกล่องระยะใกล้เพื่อส่งให้ CiRA CORE',
-      input: 'Trigger จาก IR Breakbeam',
+      role: 'Captures high-resolution macro imagery for edge neural inference',
+      input: 'Trigger from IR breakbeam',
       output: 'Dual 1080p Image Frames'
     },
     {
@@ -57,9 +57,9 @@ export const ArchitecturePage: React.FC = () => {
       status: 'ONLINE',
       spec: 'CiRA CORE v1.9.4 on Industrial Edge PC',
       protocol: 'IPC / Shared Memory',
-      role: 'ตรวจจับความเสียหาย 2 คลาสหลัก (Dent, Tear) พร้อมคำนวณ confidence',
-      input: 'ภาพจากกล้องบน/ข้าง',
-      output: 'Class + Confidence (box_good-157 95%)'
+      role: 'Performs multi-defect classification (Dent, Tear, Water Stain) with confidence scoring',
+      input: 'Top & Side Camera Frames',
+      output: 'Class + Confidence (e.g., box_good 95%)'
     },
     {
       id: 'esp32-plc',
@@ -69,19 +69,19 @@ export const ArchitecturePage: React.FC = () => {
       status: 'ONLINE',
       spec: 'ESP32-WROOM-32 / Optocoupled Relays',
       protocol: 'UART Serial @ 115200 baud / Modbus',
-      role: 'รับ trigger จาก IR และคำสั่ง 1/2/3 ควบคุมตัวปัดและ Tower Light โดยไม่พึ่งเน็ต',
+      role: 'Processes IR triggers and dispatches divert pulses and tower light relays fully offline',
       input: 'UART Commands (1=PASS, 3=FAIL)',
       output: 'Solenoid Pulse + Tower Light Relays'
     },
     {
       id: 'actuator',
       title: 'Actuator (Pneumatic)',
-      subtitle: 'Reject Cylinder / Servo',
+      subtitle: 'Reject Cylinder / Diverter',
       category: 'PHYSICAL_CONTROL',
       status: systemStatus.actuatorStatus === 'FIRING' ? 'ONLINE' : 'ONLINE',
-      spec: 'SMC Pneumatic Cylinder / 6.0 Bar (รอทีมยืนยัน Servo vs Pneumatic)',
+      spec: 'SMC Pneumatic Cylinder / 6.0 Bar / 180ms Stroke',
       protocol: '5/2 Solenoid Air Pulse',
-      role: 'ปัดกล่อง REJECT ออกจากสายพานตามจังหวะ delay ที่ตั้งไว้',
+      role: 'Diverts rejected parcels off the main belt into the quarantine bin based on calibrated conveyor delay',
       input: 'Air pressure pulse',
       output: 'Stroke deflection (180ms delay)'
     },
@@ -93,7 +93,7 @@ export const ArchitecturePage: React.FC = () => {
       status: 'ONLINE',
       spec: 'Industrial 24V 3-Tier Tower Light with Buzzer',
       protocol: 'Digital 24V Relay Drive',
-      role: 'เขียว = PASS / แดง+เสียง = ชำรุด/กำลังปัด / เหลือง = ออฟไลน์หรือขัดข้อง',
+      role: 'Green = PASS, Red + Buzzer = REJECT / Diverting, Yellow = OFFLINE or System Fault',
       input: 'ESP32 Relay outputs',
       output: 'Visual & Audio Alerts'
     },
@@ -105,21 +105,21 @@ export const ArchitecturePage: React.FC = () => {
       status: 'ONLINE',
       spec: 'Python Bridge (bridge.py) + SQLite WAL',
       protocol: 'Local SQLite DB + Queue (max 500)',
-      role: 'บันทึกข้อมูลทุกกล่องลง Local SQLite ทันที ถ้าเน็ตหลุดจะเข้าคิวสำรองไว้',
-      input: 'CiRA CORE results & Barcode',
+      role: 'Immediately records inspection data locally; queues payloads if WAN connection drops',
+      input: 'Inference results & Barcode scan',
       output: 'Local DB records + Store-and-Forward queue'
     },
     {
       id: 'cloud-db',
-      title: 'Cloud DB & Ingestion',
-      subtitle: 'Supabase PostgreSQL',
+      title: 'Cloud Database',
+      subtitle: 'Neon Serverless PostgreSQL',
       category: 'CLOUD_DATA',
       status: isWanDown ? 'OFFLINE' : 'ONLINE',
-      spec: 'Supabase Cloud DB + Row Level Security (RLS)',
-      protocol: 'HTTPS POST /api/inspections + x-api-key',
-      role: 'จัดเก็บข้อมูลหลักฐานระยะยาวและส่งต่อไปยัง Realtime Dashboard',
+      spec: 'Neon Serverless PostgreSQL + Edge Ingestion',
+      protocol: 'Direct TLS / Pooler Connection',
+      role: 'Persists permanent inspection audit records and syncs with central operations dashboard',
       input: 'Bridge JSON Payloads',
-      output: 'Persistent Cloud Rows & Realtime Streams'
+      output: 'Persistent Cloud Records'
     },
     {
       id: 'web-dashboard',
@@ -127,9 +127,9 @@ export const ArchitecturePage: React.FC = () => {
       subtitle: 'Hub Operator & Manager UI',
       category: 'CLOUD_DATA',
       status: 'ONLINE',
-      spec: 'React 19 + TypeScript + Tailwind (ตัวแทน Grafana/Node-RED ในสไลด์)',
-      protocol: 'HTTPS / WSS Realtime',
-      role: 'แสดงผลสด ภาพหลักฐาน KPI และปรับจูนพารามิเตอร์โดยไม่แตะการตัดสินใจหน้างาน',
+      spec: 'React 19 + TypeScript + Tailwind CSS',
+      protocol: 'HTTPS / Realtime Streams',
+      role: 'Provides live telemetry, audit queries, quarantine resolution, and system calibration',
       input: 'Realtime State & Events',
       output: 'Operator Interface & Analytics'
     }
@@ -140,7 +140,7 @@ export const ArchitecturePage: React.FC = () => {
       {/* Page Header */}
       <PageHeader
         title="SPDI System Architecture & Real-Time Flow"
-        description="แผนภาพ System Flow ข้อ 3 และสไลด์ 5 แบบ Interactive เชื่อมต่อสถานะสดจากตัวจำลอง"
+        description="Interactive topology map linking physical trigger points, edge AI inference, and cloud database streams"
         badge="INTERACTIVE SCHEMATIC"
         badgeType="sky"
       />
@@ -152,7 +152,7 @@ export const ArchitecturePage: React.FC = () => {
           <div>
             <span className="font-bold text-emerald-300 block">REAL-TIME CONTROL PATH (PHYSICAL)</span>
             <span className="text-[10px] text-slate-300 font-sans">
-              IR &rarr; Camera &rarr; CiRA CORE &rarr; ESP32 &rarr; ตัวปัด (ทำงานที่ Edge 100% ไม่พึ่งเน็ต)
+              IR &rarr; Camera &rarr; CiRA CORE &rarr; ESP32 &rarr; Diverter (100% offline edge execution)
             </span>
           </div>
         </div>
@@ -162,7 +162,7 @@ export const ArchitecturePage: React.FC = () => {
           <div>
             <span className="font-bold text-cyan-300 block">LOCAL DATA PATH (EDGE)</span>
             <span className="text-[10px] text-slate-300 font-sans">
-              Local SQLite + Store-and-Forward คิวสูงสุด 500 records
+              Local SQLite + Store-and-Forward queue (up to 500 records)
             </span>
           </div>
         </div>
@@ -174,7 +174,7 @@ export const ArchitecturePage: React.FC = () => {
           <div>
             <span className="font-bold block">CLOUD DATA PATH</span>
             <span className="text-[10px] text-slate-300 font-sans">
-              {isWanDown ? 'WAN Severed — คิวรอส่งอัตโนมัติเมื่อต่อเน็ต' : 'Edge PC &rarr; Cloud DB &rarr; Web Dashboard'}
+              {isWanDown ? 'WAN Severed — automatic queue playback upon reconnect' : 'Edge PC &rarr; Cloud DB &rarr; Web Dashboard'}
             </span>
           </div>
         </div>

@@ -15,6 +15,9 @@ export interface DbParcelInspection {
   weight_kg: number;
   expected_weight_kg: number;
   reject_reason: string | null;
+  handled: boolean;
+  handled_reason: string | null;
+  handled_at: string | null;
   created_at: string;
 }
 
@@ -54,6 +57,29 @@ export async function saveInspectionToNeon(record: {
 }
 
 /**
+ * Updates a parcel record resolution status in Neon DB without deleting it
+ */
+export async function updateInspectionHandledInNeon(
+  trackingNo: string,
+  handledReason: string
+): Promise<boolean> {
+  try {
+    await sql`
+      UPDATE parcel_inspections
+      SET 
+        handled = true,
+        handled_reason = ${handledReason},
+        handled_at = CURRENT_TIMESTAMP
+      WHERE tracking_no = ${trackingNo};
+    `;
+    return true;
+  } catch (err) {
+    console.error('Failed to update handled state in Neon DB:', err);
+    return false;
+  }
+}
+
+/**
  * Fetches recent inspections directly from Neon DB
  */
 export async function fetchRecentInspectionsFromNeon(limit = 100): Promise<DbParcelInspection[]> {
@@ -69,6 +95,9 @@ export async function fetchRecentInspectionsFromNeon(limit = 100): Promise<DbPar
         weight_kg, 
         expected_weight_kg, 
         reject_reason, 
+        handled,
+        handled_reason,
+        handled_at,
         created_at
       FROM parcel_inspections
       ORDER BY id DESC
