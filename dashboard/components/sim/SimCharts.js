@@ -17,7 +17,7 @@ export function ThroughputChart({ data }) {
           <CartesianGrid stroke="#262d36" vertical={false} />
           <XAxis dataKey="t" tickFormatter={formatSimTime} stroke="#64748b" fontSize={11} tickLine={false} minTickGap={20} />
           <YAxis allowDecimals={false} stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
-          <Tooltip {...tooltipStyle} labelFormatter={(t) => `เวลาจำลอง ${formatSimTime(t)}`} />
+          <Tooltip {...tooltipStyle} labelFormatter={(t) => `Sim time ${formatSimTime(t)}`} />
           <Legend wrapperStyle={{ fontSize: 12 }} />
           <Bar dataKey="pass" name="PASS" stackId="a" fill="#22c55e" isAnimationActive={false} />
           <Bar dataKey="reject" name="REJECT" stackId="a" fill="#ef4444" radius={[3, 3, 0, 0]} isAnimationActive={false} />

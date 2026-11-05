@@ -17,7 +17,7 @@ export default function KpiCard({ title, subtitle, value, unit, note, tone = 'ne
       </div>
       <div
         className={`font-mono font-bold leading-tight tabular-nums ${TONES[tone]} ${
-          big ? 'mt-1 text-5xl sm:text-6xl' : 'mt-1 text-3xl'
+          big ? 'mt-1 text-4xl sm:text-5xl xl:text-6xl' : 'mt-1 text-2xl sm:text-3xl'
         }`}
       >
         {value}

@@ -32,7 +32,7 @@ export default function Pipeline({ health }) {
               className={`inline-flex items-center gap-1.5 rounded-md px-2 py-1 ${
                 ok ? 'text-slate-200' : 'bg-red-500/15 text-red-300'
               }`}
-              title={ok ? 'OK' : 'ไม่ทำงาน / Not running'}
+              title={ok ? 'OK' : 'Not running'}
             >
               <span className={`h-2.5 w-2.5 rounded-full ${ok ? 'bg-ok' : 'bg-bad'}`} />
               {n.label}

@@ -1,9 +1,9 @@
 'use client';
 
 const FILTERS = [
-  { key: 'ALL', label: 'All ทั้งหมด' },
-  { key: 'PASS', label: 'PASS ดี' },
-  { key: 'FAIL', label: 'FAIL เสีย' },
+  { key: 'ALL', label: 'All' },
+  { key: 'PASS', label: 'PASS' },
+  { key: 'FAIL', label: 'FAIL' },
 ];
 
 const time = (iso) =>
@@ -14,7 +14,7 @@ export default function EventsTable({ events, filter, onFilter, freshIds, error 
     <div className="rounded-lg border border-edge bg-panel">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-edge px-4 py-3">
         <h2 className="text-sm font-semibold text-slate-200">
-          Latest inspections <span className="font-normal text-slate-400">· รายการล่าสุด</span>
+          Latest inspections
         </h2>
         <div className="flex gap-1" role="tablist">
           {FILTERS.map((f) => (
@@ -50,7 +50,7 @@ export default function EventsTable({ events, filter, onFilter, freshIds, error 
             {events.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
-                  ยังไม่มีรายการ · No inspections yet
+                  No inspections yet
                 </td>
               </tr>
             ) : (

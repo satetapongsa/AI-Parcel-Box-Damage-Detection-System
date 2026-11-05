@@ -41,7 +41,7 @@ export function PerMinuteChart({ data }) {
             tickLine={false}
           />
           <YAxis allowDecimals={false} stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
-          <Tooltip {...tooltipStyle} labelFormatter={(t) => `${hhmm(t)} น.`} />
+          <Tooltip {...tooltipStyle} labelFormatter={(t) => hhmm(t)} />
           <Legend wrapperStyle={{ fontSize: 12 }} />
           <Bar dataKey="good" name="Good (PASS)" stackId="a" fill={GOOD} isAnimationActive={false} />
           <Bar dataKey="damaged" name="Damaged (FAIL)" stackId="a" fill={BAD} radius={[3, 3, 0, 0]} isAnimationActive={false} />

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createSim, step, snapshot, applySettings, getSettings, DEFAULT_SETTINGS } from './engine';
 
-const STORAGE_KEY = 'spdi.sim.settings.v1';
+const STORAGE_KEY = 'spdi.sim.settings.v2';
 
 /** Saved control-panel settings live in this browser only (localStorage). */
 export function loadSaved() {

@@ -14,9 +14,9 @@ import { CLASSES, formatSimTime } from '@/lib/sim/engine';
 import { useSim } from '@/lib/sim/useSim';
 
 const LIGHT_TEXT = {
-  green: { text: '● สายพานทำงานปกติ', cls: 'bg-green-600/20 text-green-300' },
-  yellow: { text: '● พบกล่องเสีย กำลังคัดออก', cls: 'bg-amber-500/20 text-amber-300' },
-  red: { text: '● สายพานหยุด', cls: 'bg-red-600/20 text-red-300' },
+  green: { text: '● Line running', cls: 'bg-green-600/20 text-green-300' },
+  yellow: { text: '● Damaged box — rejecting', cls: 'bg-amber-500/20 text-amber-300' },
+  red: { text: '● Line stopped', cls: 'bg-red-600/20 text-red-300' },
 };
 
 function Clock() {
@@ -27,7 +27,7 @@ function Clock() {
     return () => clearInterval(id);
   }, []);
   return (
-    <span className="font-mono text-2xl tabular-nums text-slate-200">
+    <span className="font-mono text-xl tabular-nums text-slate-200 sm:text-2xl">
       {now ? now.toLocaleTimeString('en-GB', { hour12: false }) : '--:--:--'}
     </span>
   );
@@ -36,25 +36,29 @@ function Clock() {
 function LastDecision({ ev }) {
   if (!ev) {
     return (
-      <div className="flex h-full flex-col justify-center rounded-lg border border-edge bg-panel px-4 py-3">
-        <div className="text-base font-semibold text-slate-300">กล่องล่าสุด</div>
-        <div className="mt-1 font-mono text-5xl font-bold text-muted">—</div>
-        <div className="mt-1 text-sm text-muted">รอกล่องผ่านเส้นตัดสิน</div>
+      <div className="col-span-2 flex h-full flex-col justify-center rounded-lg border border-edge bg-panel px-4 py-3 xl:col-span-1">
+        <div className="text-base font-semibold text-slate-300">Last box</div>
+        <div className="mt-1 font-mono text-4xl font-bold text-muted sm:text-5xl">—</div>
+        <div className="mt-1 text-sm text-muted">Waiting for a box to reach the decision line</div>
       </div>
     );
   }
   const reject = ev.result === 'REJECT';
   return (
-    <div className={`flex h-full items-center gap-3 rounded-lg px-4 py-3 text-white ${reject ? 'bg-red-600' : 'bg-green-600'}`}>
+    <div
+      className={`col-span-2 flex h-full items-center gap-3 rounded-lg px-4 py-3 text-white xl:col-span-1 ${
+        reject ? 'bg-red-600' : 'bg-green-600'
+      }`}
+    >
       <div className="min-w-0 flex-1">
-        <div className="text-base font-semibold opacity-90">กล่องล่าสุด</div>
-        <div className="mt-1 text-5xl font-bold leading-tight">{reject ? '✖ REJECT' : '✔ PASS'}</div>
+        <div className="text-base font-semibold opacity-90">Last box</div>
+        <div className="mt-1 text-4xl font-bold leading-tight sm:text-5xl">{reject ? '✖ REJECT' : '✔ PASS'}</div>
         <div className="mt-1 truncate text-sm opacity-90">
-          {CLASSES[ev.predicted].th} · {Math.round(ev.conf * 100)}% · {ev.tracking}
+          {CLASSES[ev.predicted].label} · {Math.round(ev.conf * 100)}% · {ev.tracking}
         </div>
       </div>
-      <div className="hidden rounded-md bg-white/15 p-1 sm:block">
-        <BoxThumb truth={ev.truth} seed={ev.seed} size={64} />
+      <div className="shrink-0 rounded-md bg-white/15 p-1">
+        <BoxThumb truth={ev.truth} seed={ev.seed} size={60} />
       </div>
     </div>
   );
@@ -66,16 +70,16 @@ export default function SimulationPage() {
   const light = LIGHT_TEXT[snap.light];
 
   return (
-    <main className="mx-auto max-w-7xl space-y-4 px-4 py-4 sm:px-6">
+    <main className="mx-auto max-w-7xl space-y-3 px-3 py-3 sm:space-y-4 sm:px-6 sm:py-4">
       {/* ---------- header ---------- */}
       <header className="rounded-lg border border-edge bg-panel px-4 py-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-xl font-bold text-slate-50">SPDI · ระบบคัดแยกพัสดุชำรุด</h1>
-            <p className="text-sm text-muted">Smart Parcel Defect Inspection · Edge AI (CiRA CORE) + IoT · ระบบจำลอง</p>
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0">
+            <h1 className="text-lg font-bold text-slate-50 sm:text-xl">SPDI · Parcel Defect Inspection</h1>
+            <p className="text-sm text-muted">Edge AI (CiRA CORE) + IoT · digital twin</p>
           </div>
           <NavTabs />
-          <div className="flex items-center gap-4">
+          <div className="flex items-center justify-between gap-3 sm:justify-start sm:gap-4">
             <span className={`rounded-md px-3 py-1.5 text-sm font-semibold ${light.cls}`}>{light.text}</span>
             <Clock />
           </div>
@@ -87,65 +91,63 @@ export default function SimulationPage() {
 
       {!snap.online ? (
         <div className="rounded-lg border border-amber-500/50 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
-          <b>อินเทอร์เน็ตหลุด</b> · สายพานและการคัดแยกยังทำงานต่อที่ Edge 100% · ข้อมูลเก็บใน SQLite ก่อน ({snap.queue}/500
-          รายการ) แล้วจะซิงค์ขึ้น Cloud เองเมื่อเน็ตกลับมา
+          <b>Internet offline.</b> The line keeps sorting at the edge. Results are stored in SQLite ({snap.queue}/500) and
+          sync to the cloud automatically when the connection is back.
         </div>
       ) : null}
 
       {/* ---------- conveyor + controls ---------- */}
       <section className="grid gap-3 lg:grid-cols-4">
-        <div className="overflow-hidden rounded-lg border border-edge bg-panel lg:col-span-3">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-edge px-4 py-2 text-sm">
-            <span className="font-semibold text-slate-200">สายพานลำเลียง · Line 1</span>
-            <span className="font-mono text-muted">
-              เวลาจำลอง {formatSimTime(snap.simTime)} · {snap.speed}x · CiRA {snap.framesTotal.toLocaleString()} frames
+        <div className="min-w-0 overflow-hidden rounded-lg border border-edge bg-panel lg:col-span-3">
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-edge px-4 py-2 text-sm">
+            <span className="font-semibold text-slate-200">Conveyor · Line 1</span>
+            <span className="font-mono text-xs text-muted sm:text-sm">
+              {formatSimTime(snap.simTime)} · {snap.speed}x · {snap.framesTotal.toLocaleString()} frames
             </span>
           </div>
-          <ConveyorScene sim={sim} />
+          {/* on phones the scene keeps a readable size and scrolls sideways */}
+          <div className="overflow-x-auto overscroll-x-contain">
+            <div className="min-w-[760px] sm:min-w-0">
+              <ConveyorScene sim={sim} />
+            </div>
+          </div>
+          <div className="px-4 pt-1 text-xs text-muted sm:hidden">← swipe to see the whole line →</div>
           <div className="flex flex-wrap gap-x-4 gap-y-1 border-t border-edge px-4 py-2 text-xs text-muted">
             <span>
               <span className="text-ok">■</span> box_good
             </span>
             <span>
-              <span className="text-amber-400">■</span> dent (บุบ)
+              <span className="text-amber-400">■</span> dent (crushed)
             </span>
             <span>
-              <span className="text-bad">■</span> tear (ฉีกขาด)
+              <span className="text-bad">■</span> tear (torn)
             </span>
-            <span>กรอบสี = ผลจาก CiRA CORE แต่ละเฟรม · ตัดสินครั้งเดียวที่เส้นตัดสินด้วยการโหวตหลายเฟรม</span>
+            <span className="hidden sm:inline">Box colour frame = CiRA CORE result per frame · decided once at the line by multi-frame vote</span>
           </div>
         </div>
         <ControlPanel sim={sim} snap={snap} refresh={refresh} />
       </section>
 
       {/* ---------- main counters ---------- */}
-      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <LastDecision ev={snap.events[0]} />
-        <KpiCard size="lg" title="ตรวจแล้ว" subtitle="Total" value={st.total} note={`PASS + REJECT = ${st.pass + st.reject} ✔`} />
-        <KpiCard size="lg" title="ผ่าน" subtitle="PASS" value={st.pass} tone="ok" note={`yield ${snap.yieldPct}%`} />
+        <KpiCard size="lg" title="Inspected" subtitle="total" value={st.total} note={`PASS + REJECT = ${st.pass + st.reject} ✔`} />
+        <KpiCard size="lg" title="Passed" subtitle="PASS" value={st.pass} tone="ok" note={`yield ${snap.yieldPct}%`} />
         <KpiCard
           size="lg"
-          title="คัดออก"
+          title="Rejected"
           subtitle="REJECT"
           value={st.reject}
           tone="bad"
-          note={`บุบ ${st.byClass.dent} · ฉีก ${st.byClass.tear} · ${snap.rejectPct}%`}
+          note={`dent ${st.byClass.dent} · tear ${st.byClass.tear} · ${snap.rejectPct}%`}
         />
       </section>
 
       <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <KpiCard title="ความเร็ว" subtitle="throughput" value={snap.perMin} unit="กล่อง/นาที" />
+        <KpiCard title="Throughput" value={snap.perMin} unit="boxes/min" />
+        <KpiCard title="Pusher strokes" subtitle="ESP32" value={snap.esp32Cmds} />
         <KpiCard
-          title="ความแม่นระบบ"
-          subtitle="เทียบของจริง"
-          value={st.total ? snap.accuracyPct : '—'}
-          unit={st.total ? '%' : ''}
-          note={`คัดผิด ${st.falseReject} · หลุด ${st.missedDefect}`}
-          noteTone={st.missedDefect ? 'bad' : undefined}
-        />
-        <KpiCard
-          title="ความมั่นใจ AI"
-          subtitle="เฉลี่ย"
+          title="Avg confidence"
           value={snap.avgConf === null ? '—' : (snap.avgConf * 100).toFixed(1)}
           unit={snap.avgConf === null ? '' : '%'}
         />
@@ -153,44 +155,44 @@ export default function SimulationPage() {
           title="Cloud sync"
           subtitle={snap.online ? 'online' : 'offline'}
           value={snap.synced}
-          unit="รายการ"
+          unit="records"
           tone={snap.online ? 'neutral' : 'bad'}
-          note={snap.queue ? `ค้างใน SQLite ${snap.queue}` : 'ซิงค์ครบ'}
+          note={snap.queue ? `${snap.queue} waiting in SQLite` : 'all synced'}
           noteTone={snap.queue && !snap.online ? 'bad' : undefined}
         />
       </section>
 
       {/* ---------- charts ---------- */}
       <section className="grid gap-3 lg:grid-cols-3">
-        <div className="rounded-lg border border-edge bg-panel p-4 lg:col-span-2">
+        <div className="min-w-0 rounded-lg border border-edge bg-panel p-4 lg:col-span-2">
           <h2 className="mb-2 text-base font-semibold text-slate-200">
-            ผลการตรวจทุก 10 วินาที <span className="text-sm font-normal text-muted">· เวลาจำลอง</span>
+            Results every 10 s <span className="text-sm font-normal text-muted">· sim time</span>
           </h2>
           <ThroughputChart data={snap.timeline} />
         </div>
-        <div className="rounded-lg border border-edge bg-panel p-4">
+        <div className="min-w-0 rounded-lg border border-edge bg-panel p-4">
           <h2 className="mb-2 text-base font-semibold text-slate-200">
-            สัดส่วนตาม class <span className="text-sm font-normal text-muted">· CiRA</span>
+            By class <span className="text-sm font-normal text-muted">· CiRA</span>
           </h2>
           <ClassDonut byClass={st.byClass} total={st.total} yieldPct={snap.yieldPct} />
-          <div className="mt-2 flex justify-center gap-4 text-sm">
-            <span className="text-ok">● ดี {st.byClass.box_good}</span>
-            <span className="text-amber-400">● บุบ {st.byClass.dent}</span>
-            <span className="text-bad">● ฉีก {st.byClass.tear}</span>
+          <div className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-1 text-sm">
+            <span className="text-ok">● good {st.byClass.box_good}</span>
+            <span className="text-amber-400">● dent {st.byClass.dent}</span>
+            <span className="text-bad">● tear {st.byClass.tear}</span>
           </div>
         </div>
       </section>
 
       {/* ---------- logs ---------- */}
       <section className="grid gap-3 lg:grid-cols-3">
-        <div className="lg:col-span-2">
+        <div className="min-w-0 lg:col-span-2">
           <EventLog events={snap.events} />
         </div>
         <MessageFeed messages={snap.messages} />
       </section>
 
       <footer className="pb-4 pt-1 text-center text-xs text-muted">
-        ระบบจำลองทำงานในเบราว์เซอร์ทั้งหมด (ไม่ต้องใช้ฐานข้อมูล) · ข้อมูลจริงจาก CiRA ดูที่แท็บ “ข้อมูลจริง”
+        The simulation runs entirely in your browser (no database needed) · real CiRA data is on the “Live” tab
       </footer>
     </main>
   );

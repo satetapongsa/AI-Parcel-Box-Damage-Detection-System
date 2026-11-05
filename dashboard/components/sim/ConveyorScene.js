@@ -148,7 +148,7 @@ export default function ConveyorScene({ sim }) {
         <polygon points={`${armX - 86},${FLOOR - 10} ${armX + 86},${FLOOR - 10} ${armX + 96},${FLOOR + 2} ${armX - 76},${FLOOR + 2}`} fill="#5b1d20" />
         <rect x={armX - 86} y={FLOOR - 10 + 12} width={172} height={74} rx={4} fill="#3b1416" stroke="#ef4444" strokeWidth={2} />
         <text x={armX} y={FLOOR + 26} textAnchor="middle" fontSize={13} fill="#fca5a5" fontWeight={700}>
-          REJECT · ถังคัดออก
+          REJECT BIN
         </text>
         <text x={armX} y={FLOOR + 56} textAnchor="middle" fontSize={26} fill="#fecaca" fontWeight={800} fontFamily="Consolas, monospace">
           {sim.stats.rejectedBin}
@@ -189,13 +189,13 @@ export default function ConveyorScene({ sim }) {
       {/* decision line on the belt */}
       <line x1={decX + 4} y1={SURF_BACK} x2={decX} y2={SURF_FRONT} stroke="#e6edf3" strokeDasharray="5 5" strokeWidth={2} opacity={0.75} />
       <text x={decX} y={FRAME_BOT + 18} textAnchor="middle" fontSize={11} fill="#c9d1d9">
-        เส้นตัดสิน · count once
+        Decision line · count once
       </text>
 
       {/* PASS exit */}
       <g>
         <text x={X1 + 54} y={SURF_BACK - 120} textAnchor="end" fontSize={13} fill="#86efac" fontWeight={700}>
-          PASS → คลังสินค้า
+          PASS → warehouse
         </text>
         <text x={X1 + 54} y={SURF_BACK - 94} textAnchor="end" fontSize={24} fill="#bbf7d0" fontWeight={800} fontFamily="Consolas, monospace">
           {sim.stats.accepted}
@@ -287,7 +287,7 @@ export default function ConveyorScene({ sim }) {
         <rect x={armX - 4} y={150} width={8} height={18 + ext * 62} fill="#d1d5db" />
         <rect x={armX - 50} y={166 + ext * 62} width={100} height={14} rx={3} fill={ext > 0.05 ? '#ef4444' : '#9ca3af'} stroke="#374151" />
         <text x={armX} y={78} textAnchor="middle" fontSize={11} fill="#c9d1d9">
-          แขนปัด (pneumatic)
+          Pneumatic pusher
         </text>
       </g>
 
@@ -314,7 +314,7 @@ export default function ConveyorScene({ sim }) {
         <g>
           <rect x={0} y={0} width={W} height={H} fill="#000" opacity={0.35} />
           <text x={W / 2} y={H / 2 - 40} textAnchor="middle" fontSize={34} fill="#fff" fontWeight={800}>
-            ⏸ หยุดสายพาน
+            ⏸ Belt stopped
           </text>
         </g>
       ) : null}

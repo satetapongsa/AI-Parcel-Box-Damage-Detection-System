@@ -59,9 +59,9 @@ function LatestBox({ event }) {
   if (!event) {
     return (
       <div className="flex h-full flex-col justify-center rounded-lg border border-edge bg-panel px-4 py-3">
-        <div className="text-base font-semibold text-slate-300">กล่องล่าสุด · Last box</div>
+        <div className="text-base font-semibold text-slate-300">Last box</div>
         <div className="mt-1 font-mono text-5xl font-bold text-muted sm:text-6xl">—</div>
-        <div className="mt-1 text-sm text-muted">ยังไม่มีข้อมูล</div>
+        <div className="mt-1 text-sm text-muted">No data yet</div>
       </div>
     );
   }
@@ -70,10 +70,10 @@ function LatestBox({ event }) {
     <div
       className={`flex h-full flex-col justify-center rounded-lg px-4 py-3 text-white ${fail ? 'bg-red-600' : 'bg-green-600'}`}
     >
-      <div className="text-base font-semibold opacity-90">กล่องล่าสุด · Last box</div>
+      <div className="text-base font-semibold opacity-90">Last box</div>
       <div className="mt-1 text-5xl font-bold leading-tight sm:text-6xl">{fail ? '✖ FAIL' : '✔ PASS'}</div>
       <div className="mt-1 text-sm opacity-90">
-        {fail ? 'กล่องเสียหาย' : 'กล่องดี'} · {Math.round((event.confidence || 0) * 100)}% · {clock(event.ts)}
+        {fail ? 'Damaged' : 'Good'} · {Math.round((event.confidence || 0) * 100)}% · {clock(event.ts)}
       </div>
     </div>
   );
@@ -192,8 +192,8 @@ export default function LiveDashboardPage() {
       <header className="rounded-lg border border-edge bg-panel px-4 py-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-xl font-bold text-slate-50">SPDI · ระบบตรวจกล่องพัสดุเสียหาย</h1>
-            <p className="text-sm text-muted">Smart Parcel Defect Inspection · ข้อมูลจริงจาก CiRA CORE · Line {st?.line || 'line1'}</p>
+            <h1 className="text-xl font-bold text-slate-50">SPDI · Parcel Defect Inspection</h1>
+            <p className="text-sm text-muted">Live data from CiRA CORE · Line {st?.line || 'line1'}</p>
           </div>
           <NavTabs />
           <div className="flex items-center gap-4">
@@ -202,7 +202,7 @@ export default function LiveDashboardPage() {
                 allOk ? 'bg-green-600/20 text-green-300' : 'bg-red-600/20 text-red-300'
               }`}
             >
-              {allOk ? '● ระบบทำงานปกติ' : `● ${down.map((k) => STAGE_NAMES[k]).join(', ')} ไม่ทำงาน`}
+              {allOk ? '● All systems running' : `● ${down.map((k) => STAGE_NAMES[k]).join(', ')} down`}
             </span>
             <LiveClock />
           </div>
@@ -220,7 +220,7 @@ export default function LiveDashboardPage() {
         >
           <div className="flex items-start justify-between gap-3">
             <div>
-              <div className="text-lg font-bold">พบกล่องเสียหาย · Damaged parcel</div>
+              <div className="text-lg font-bold">Damaged parcel detected</div>
               <div className="text-sm opacity-90">
                 {alert.className} · {Math.round((alert.confidence || 0) * 100)}% · {alert.ts ? clock(alert.ts) : ''}
               </div>
@@ -240,24 +240,24 @@ export default function LiveDashboardPage() {
       {/* ---------- error state ---------- */}
       {statsError ? (
         <div className="rounded-lg border border-red-500/50 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-          <b>เชื่อมต่อฐานข้อมูลไม่ได้</b> · {statsError}
+          <b>Cannot reach the database</b> · {statsError}
           <div className="mt-1 text-xs text-red-300/80">
-            ตรวจ MONGODB_URI และ Atlas Network Access · ลองใหม่อัตโนมัติทุก 2 วินาที
-            {stats ? ' · ตัวเลขด้านล่างเป็นข้อมูลล่าสุดที่โหลดได้' : ''}
+            Check MONGODB_URI and Atlas Network Access · retrying every 2 s
+            {stats ? ' · numbers below are the last data loaded' : ''}
           </div>
         </div>
       ) : null}
 
       {/* ---------- loading ---------- */}
       {!stats && !statsError ? (
-        <div className="rounded-lg border border-edge bg-panel p-10 text-center text-muted">กำลังโหลด…</div>
+        <div className="rounded-lg border border-edge bg-panel p-10 text-center text-muted">Loading…</div>
       ) : null}
 
       {c ? (
         <>
           {empty ? (
             <div className="rounded-lg border border-edge bg-panel px-4 py-3 text-sm text-slate-300">
-              ยังไม่มีข้อมูลการตรวจ — เริ่ม CiRA CORE หรือรัน <code className="font-mono">npm run demo:sim</code>
+              No inspections yet — start CiRA CORE or run <code className="font-mono">npm run demo:sim</code>
             </div>
           ) : null}
 
@@ -266,47 +266,47 @@ export default function LiveDashboardPage() {
             <LatestBox event={stats.lastEvent} />
             <KpiCard
               size="lg"
-              title="ตรวจแล้ว"
+              title="Inspected"
               subtitle="Total"
               value={c.total.toLocaleString()}
-              note={stats.invariantOk ? 'ดี + เสีย = ทั้งหมด ✔' : 'ตัวเลขไม่ตรงกัน ✖'}
+              note={stats.invariantOk ? 'good + damaged = total ✔' : 'totals do not match ✖'}
               noteTone={stats.invariantOk ? undefined : 'bad'}
             />
             <KpiCard
               size="lg"
-              title="กล่องดี"
+              title="Good"
               subtitle="PASS"
               value={c.good.toLocaleString()}
               tone="ok"
-              note={`${c.passRate}% ของทั้งหมด`}
+              note={`${c.passRate}% of total`}
             />
             <KpiCard
               size="lg"
-              title="กล่องเสีย"
+              title="Damaged"
               subtitle="FAIL"
               value={c.damaged.toLocaleString()}
               tone="bad"
-              note={`${c.failRate}% ของทั้งหมด`}
+              note={`${c.failRate}% of total`}
             />
           </section>
 
           {/* ---------- secondary figures ---------- */}
           <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            <KpiCard title="อัตราผ่าน" subtitle="Yield" value={c.passRate} unit="%" />
-            <KpiCard title="ความเร็ว" subtitle="1 นาทีล่าสุด" value={c.perMin} unit="กล่อง/นาที" />
+            <KpiCard title="Yield" value={c.passRate} unit="%" />
+            <KpiCard title="Throughput" subtitle="last minute" value={c.perMin} unit="boxes/min" />
             <KpiCard
-              title="ความมั่นใจ AI"
-              subtitle="เฉลี่ย"
+              title="Avg confidence"
+              subtitle="AI"
               value={c.avgConf === null ? '—' : (c.avgConf * 100).toFixed(1)}
               unit={c.avgConf === null ? '' : '%'}
             />
             <KpiCard
               title="CiRA"
-              subtitle="เฟรม/วินาที"
+              subtitle="frames/s"
               value={health.cira && st ? st.fps : 0}
               unit="fps"
               tone={health.cira ? 'neutral' : 'bad'}
-              note={health.cira ? null : 'ไม่มีภาพเข้ามา'}
+              note={health.cira ? null : 'no frames coming in'}
               noteTone="bad"
             />
           </section>
@@ -315,18 +315,18 @@ export default function LiveDashboardPage() {
           <section className="grid gap-3 lg:grid-cols-3">
             <div className="rounded-lg border border-edge bg-panel p-4 lg:col-span-2">
               <h2 className="mb-2 text-base font-semibold text-slate-200">
-                จำนวนกล่องต่อนาที <span className="text-sm font-normal text-muted">· 60 นาทีล่าสุด</span>
+                Boxes per minute <span className="text-sm font-normal text-muted">· last 60 min</span>
               </h2>
               <PerMinuteChart data={stats.timeline} />
             </div>
             <div className="rounded-lg border border-edge bg-panel p-4">
               <h2 className="mb-2 text-base font-semibold text-slate-200">
-                สัดส่วน ดี / เสีย <span className="text-sm font-normal text-muted">· PASS vs FAIL</span>
+                Good vs damaged <span className="text-sm font-normal text-muted">· PASS vs FAIL</span>
               </h2>
               <PassFailDonut good={c.good} damaged={c.damaged} passRate={c.passRate} />
               <div className="mt-2 flex justify-center gap-4 text-sm">
-                <span className="text-ok">● ดี {c.good}</span>
-                <span className="text-bad">● เสีย {c.damaged}</span>
+                <span className="text-ok">● good {c.good}</span>
+                <span className="text-bad">● damaged {c.damaged}</span>
               </div>
             </div>
           </section>
@@ -348,8 +348,8 @@ export default function LiveDashboardPage() {
       ) : null}
 
       <footer className="pb-4 pt-1 text-center text-xs text-muted">
-        อัปเดตอัตโนมัติทุก {POLL_MS / 1000} วินาที
-        {st && st.pendingWrites > 0 ? ` · รอบันทึก ${st.pendingWrites} รายการ` : ''}
+        Auto-refresh every {POLL_MS / 1000} s
+        {st && st.pendingWrites > 0 ? ` · ${st.pendingWrites} writes pending` : ''}
       </footer>
     </main>
   );

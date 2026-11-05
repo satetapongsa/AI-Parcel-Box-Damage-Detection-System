@@ -10,9 +10,9 @@
  */
 
 export const CLASSES = {
-  box_good: { key: 'box_good', th: 'กล่องดี', color: '#22c55e', defect: false },
-  dent: { key: 'dent', th: 'บุบ', color: '#f59e0b', defect: true },
-  tear: { key: 'tear', th: 'ฉีกขาด', color: '#ef4444', defect: true },
+  box_good: { key: 'box_good', label: 'Good', color: '#22c55e', defect: false },
+  dent: { key: 'dent', label: 'Dented', color: '#f59e0b', defect: true },
+  tear: { key: 'tear', label: 'Torn', color: '#ef4444', defect: true },
 };
 export const CLASS_KEYS = Object.keys(CLASSES);
 
@@ -65,8 +65,9 @@ export function createSim() {
     running: true,
     simTime: 0,
     speed: 1,
-    defectRate: 0.3,
-    failRatio: 0.3,
+    dentRate: 0.15, // share of crushed / dented boxes
+    tearRate: 0.15, // share of torn boxes
+    failRatio: 0.3, // bridge: FAIL if damaged votes >= 30% (fixed, not a user setting)
     online: true,
     beltOffset: 0,
     boxes: [],
@@ -101,8 +102,10 @@ function pushMessage(s, topic, payload, kind = 'info') {
 
 /* ------------------------------------------------------------------ spawning */
 function pickTruth(s) {
-  if (Math.random() >= s.defectRate) return 'box_good';
-  return Math.random() < 0.55 ? 'dent' : 'tear';
+  const r = Math.random();
+  if (r < s.dentRate) return 'dent';
+  if (r < s.dentRate + s.tearRate) return 'tear';
+  return 'box_good';
 }
 
 function spaceAvailable(s) {
@@ -343,18 +346,18 @@ export function setOnline(s, online) {
 }
 
 /** Control-panel settings that can be saved in the browser. */
-export const DEFAULT_SETTINGS = { speed: 1, defectRate: 0.3, failRatio: 0.3 };
+export const DEFAULT_SETTINGS = { speed: 1, dentRate: 0.15, tearRate: 0.15 };
 
 export function getSettings(s) {
-  return { speed: s.speed, defectRate: s.defectRate, failRatio: s.failRatio };
+  return { speed: s.speed, dentRate: s.dentRate, tearRate: s.tearRate };
 }
 
 export function applySettings(s, obj) {
   if (!obj || typeof obj !== 'object') return;
   const num = (v, lo, hi, d) => (typeof v === 'number' && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d);
   s.speed = num(obj.speed, 0.5, 4, s.speed);
-  s.defectRate = num(obj.defectRate, 0, 0.8, s.defectRate);
-  s.failRatio = num(obj.failRatio, 0.1, 0.9, s.failRatio);
+  s.dentRate = num(obj.dentRate, 0, 0.5, s.dentRate);
+  s.tearRate = num(obj.tearRate, 0, 0.5, s.tearRate);
 }
 
 export function addBox(s, truth) {
@@ -363,7 +366,7 @@ export function addBox(s, truth) {
 
 export function resetSim(s) {
   const fresh = createSim();
-  const keep = { speed: s.speed, defectRate: s.defectRate, failRatio: s.failRatio, online: s.online };
+  const keep = { speed: s.speed, dentRate: s.dentRate, tearRate: s.tearRate, online: s.online };
   Object.assign(s, fresh, keep);
 }
 
@@ -383,8 +386,8 @@ export function snapshot(s) {
     running: s.running,
     simTime: s.simTime,
     speed: s.speed,
-    defectRate: s.defectRate,
-    aiRange: AI_ACCURACY,
+    dentRate: s.dentRate,
+    tearRate: s.tearRate,
     online: s.online,
     stats: { ...st, byClass: { ...st.byClass } },
     yieldPct: st.total ? Math.round((st.pass / st.total) * 1000) / 10 : 0,

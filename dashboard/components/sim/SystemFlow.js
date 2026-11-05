@@ -25,7 +25,7 @@ const Arrow = () => (
 export default function SystemFlow({ snap }) {
   const run = snap.running;
   return (
-    <div className="space-y-2 text-sm">
+    <div className="space-y-2 text-xs sm:text-sm">
       <div className="flex flex-wrap items-center gap-x-1 gap-y-2">
         <span className="mr-1 text-xs font-semibold uppercase tracking-wide text-muted">Edge</span>
         <Node label="Camera" ok={run} />
@@ -34,17 +34,17 @@ export default function SystemFlow({ snap }) {
         <Arrow />
         <Node label="MQTT" ok={run} />
         <Arrow />
-        <Node label="Bridge" sub="นับครั้งเดียว" ok={run} />
+        <Node label="Bridge" sub="counts once" ok={run} />
         <Arrow />
         <Node label="ESP32" sub={`${snap.esp32Cmds} cmd`} ok={run} />
         <Arrow />
-        <Node label="แขนปัด" ok={run} />
+        <Node label="Pusher" ok={run} />
       </div>
       <div className="flex flex-wrap items-center gap-x-1 gap-y-2">
         <span className="mr-1 text-xs font-semibold uppercase tracking-wide text-muted">Data</span>
         <Node label="Bridge" ok={run} />
         <Arrow />
-        <Node label="SQLite" sub={`คิว ${snap.queue}/500`} ok warn={snap.queue > 0} />
+        <Node label="SQLite" sub={`queue ${snap.queue}/500`} ok warn={snap.queue > 0} />
         <Arrow />
         <Node label="Cloud DB" sub={snap.online ? `${snap.synced} synced` : 'offline'} ok={snap.online} />
         <Arrow />

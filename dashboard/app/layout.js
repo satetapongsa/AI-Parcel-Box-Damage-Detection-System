@@ -11,7 +11,7 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="th">
+    <html lang="en">
       <body className="font-sans antialiased">{children}</body>
     </html>
   );
