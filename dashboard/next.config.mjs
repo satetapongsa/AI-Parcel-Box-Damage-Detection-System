@@ -7,7 +7,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
-  agentRules: false, // do not auto-generate AGENTS.md
+  agentRules: false,
   // dashboard/ is its own app inside the monorepo (also the Vercel Root Directory)
   turbopack: { root: here },
   outputFileTracingRoot: here,
