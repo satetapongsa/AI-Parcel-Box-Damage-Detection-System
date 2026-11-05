@@ -25,6 +25,9 @@ export const ZONE = {
   end: 1.07,
 };
 
+/** CiRA CORE per-frame accuracy is fixed by the trained model (not a user setting). */
+export const AI_ACCURACY = { min: 0.9, max: 1.0 };
+
 export const LIMITS = { queueMax: 500, events: 200, messages: 40, timelineBuckets: 30 };
 
 const CIRA_FPS = 15; // detections per simulated second
@@ -63,7 +66,6 @@ export function createSim() {
     simTime: 0,
     speed: 1,
     defectRate: 0.3,
-    aiAccuracy: 0.92,
     failRatio: 0.3,
     online: true,
     beltOffset: 0,
@@ -127,6 +129,7 @@ function spawnBox(s, truth) {
     state: 'belt', // belt | rejecting | gone
     rejectT: 0,
     seed: Math.random(),
+    acc: rand(AI_ACCURACY.min, AI_ACCURACY.max), // model accuracy for this box
   });
 }
 
@@ -147,7 +150,7 @@ function ciraFrame(s) {
       continue;
     }
     if (Math.random() < 0.03) continue; // missed frame
-    const ok = Math.random() < s.aiAccuracy;
+    const ok = Math.random() < b.acc;
     const cls = ok ? b.truth : wrongClass(b.truth);
     const conf = ok ? rand(0.8, 0.98) : rand(0.5, 0.74);
     b.votes[cls] += 1;
@@ -340,10 +343,10 @@ export function setOnline(s, online) {
 }
 
 /** Control-panel settings that can be saved in the browser. */
-export const DEFAULT_SETTINGS = { speed: 1, defectRate: 0.3, aiAccuracy: 0.92, failRatio: 0.3 };
+export const DEFAULT_SETTINGS = { speed: 1, defectRate: 0.3, failRatio: 0.3 };
 
 export function getSettings(s) {
-  return { speed: s.speed, defectRate: s.defectRate, aiAccuracy: s.aiAccuracy, failRatio: s.failRatio };
+  return { speed: s.speed, defectRate: s.defectRate, failRatio: s.failRatio };
 }
 
 export function applySettings(s, obj) {
@@ -351,7 +354,6 @@ export function applySettings(s, obj) {
   const num = (v, lo, hi, d) => (typeof v === 'number' && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d);
   s.speed = num(obj.speed, 0.5, 4, s.speed);
   s.defectRate = num(obj.defectRate, 0, 0.8, s.defectRate);
-  s.aiAccuracy = num(obj.aiAccuracy, 0.6, 1, s.aiAccuracy);
   s.failRatio = num(obj.failRatio, 0.1, 0.9, s.failRatio);
 }
 
@@ -361,7 +363,7 @@ export function addBox(s, truth) {
 
 export function resetSim(s) {
   const fresh = createSim();
-  const keep = { speed: s.speed, defectRate: s.defectRate, aiAccuracy: s.aiAccuracy, failRatio: s.failRatio, online: s.online };
+  const keep = { speed: s.speed, defectRate: s.defectRate, failRatio: s.failRatio, online: s.online };
   Object.assign(s, fresh, keep);
 }
 
@@ -382,7 +384,7 @@ export function snapshot(s) {
     simTime: s.simTime,
     speed: s.speed,
     defectRate: s.defectRate,
-    aiAccuracy: s.aiAccuracy,
+    aiRange: AI_ACCURACY,
     online: s.online,
     stats: { ...st, byClass: { ...st.byClass } },
     yieldPct: st.total ? Math.round((st.pass / st.total) * 1000) / 10 : 0,

@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { addBox, resetSim, setOnline, getSettings } from '@/lib/sim/engine';
+import { addBox, resetSim, setOnline, getSettings, DEFAULT_SETTINGS } from '@/lib/sim/engine';
 import { loadSaved, saveSettings, clearSaved } from '@/lib/sim/useSim';
 
-const KEYS = ['speed', 'defectRate', 'aiAccuracy', 'failRatio'];
+const KEYS = ['speed', 'defectRate', 'failRatio'];
 const same = (a, b) => !!a && !!b && KEYS.every((k) => Math.abs((a[k] ?? 0) - (b[k] ?? 0)) < 1e-9);
 
 function SaveBar({ sim, snap, refresh }) {
@@ -17,8 +17,8 @@ function SaveBar({ sim, snap, refresh }) {
     return () => clearTimeout(t);
   }, [msg]);
 
-  const current = { speed: snap.speed, defectRate: snap.defectRate, aiAccuracy: snap.aiAccuracy, failRatio: sim.failRatio };
-  const dirty = !same(current, saved);
+  const current = { speed: snap.speed, defectRate: snap.defectRate, failRatio: sim.failRatio };
+  const dirty = !same(current, saved || DEFAULT_SETTINGS);
 
   const onSave = () => {
     if (saveSettings(sim)) {
@@ -102,6 +102,16 @@ export default function ControlPanel({ sim, snap, refresh }) {
         แผงควบคุม <span className="text-sm font-normal text-muted">· Control</span>
       </h2>
 
+      <div className="flex items-center justify-between rounded-md border border-edge bg-slate-800/40 px-3 py-2" aria-disabled="true" title="ค่าจากโมเดลที่เทรนแล้ว แก้ไม่ได้">
+        <div className="text-sm">
+          <div className="font-semibold text-slate-500">ความแม่น AI (CiRA CORE)</div>
+          <div className="text-xs text-slate-600">ค่าคงที่จากโมเดล · แก้ไม่ได้</div>
+        </div>
+        <span className="font-mono text-base font-bold text-slate-500">
+          🔒 {Math.round(snap.aiRange.min * 100)}–{Math.round(snap.aiRange.max * 100)}%
+        </span>
+      </div>
+
       <div className="grid grid-cols-2 gap-2">
         <button
           type="button"
@@ -140,7 +150,6 @@ export default function ControlPanel({ sim, snap, refresh }) {
 
       <Slider label="ความเร็ว" sub="speed" value={snap.speed} min={0.5} max={4} step={0.5} format={(v) => `${v}x`} onChange={(v) => set(() => (sim.speed = v))} />
       <Slider label="กล่องเสีย" sub="defect rate" value={snap.defectRate} min={0} max={0.8} step={0.05} format={(v) => `${Math.round(v * 100)}%`} onChange={(v) => set(() => (sim.defectRate = v))} />
-      <Slider label="ความแม่น AI" sub="per frame" value={snap.aiAccuracy} min={0.6} max={1} step={0.01} format={(v) => `${Math.round(v * 100)}%`} onChange={(v) => set(() => (sim.aiAccuracy = v))} />
 
       <div className="flex items-center justify-between rounded-md border border-edge px-3 py-2">
         <div className="text-sm">
