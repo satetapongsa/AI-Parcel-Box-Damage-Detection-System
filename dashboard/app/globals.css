@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+/* Plain factory-monitor palette: neutral dark, only green = OK and red = problem */
+@theme {
+  --color-bg: #0e1116;
+  --color-panel: #161b22;
+  --color-edge: #262d36;
+  --color-muted: #8b949e;
+  --color-ok: #22c55e;
+  --color-bad: #ef4444;
+  --font-sans: "Segoe UI", "Leelawadee UI", "Noto Sans Thai", system-ui, sans-serif;
+  --font-mono: "Cascadia Mono", Consolas, ui-monospace, monospace;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  background-color: #0e1116;
+  color: #e6edf3;
+  min-height: 100vh;
+}
+
+/* new table rows fade from a soft tint */
+@keyframes row-new {
+  from {
+    background-color: rgba(34, 197, 94, 0.18);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+@keyframes row-new-fail {
+  from {
+    background-color: rgba(239, 68, 68, 0.3);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+.row-new {
+  animation: row-new 2s ease-out;
+}
+.row-new-fail {
+  animation: row-new-fail 2s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .row-new,
+  .row-new-fail {
+    animation: none;
+  }
+}

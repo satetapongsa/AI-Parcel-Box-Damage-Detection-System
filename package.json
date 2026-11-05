@@ -1,33 +1,27 @@
 {
-  "name": "ai-parcel-box-inspection",
+  "name": "spdi",
+  "version": "1.0.0",
   "private": true,
-  "version": "0.0.0",
-  "type": "module",
+  "description": "SPDI - Smart Parcel Damage Inspector (CiRA CORE -> MQTT -> Bridge -> MongoDB -> Next.js)",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "lint": "oxlint",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "@neondatabase/serverless": "^1.2.0",
-    "clsx": "^2.1.1",
-    "lucide-react": "^1.49.0",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8",
-    "recharts": "^3.10.1",
-    "tailwind-merge": "^3.7.0"
+    "setup": "npm install && npm --prefix bridge install && npm --prefix dashboard install",
+    "broker": "mosquitto -c broker/mosquitto.conf -v",
+    "broker:node": "npm --prefix bridge run broker",
+    "bridge": "npm --prefix bridge start",
+    "bridge:nodb": "npm --prefix bridge run start:nodb",
+    "sim": "npm --prefix bridge run sim",
+    "sim:events": "npm --prefix bridge run sim:events",
+    "sniff": "npm --prefix bridge run sniff",
+    "reset": "npm --prefix bridge run reset",
+    "dashboard": "npm --prefix dashboard run dev",
+    "demo:sim": "concurrently -k -n bridge,sim,dash -c green,yellow,cyan \"npm:bridge\" \"npm:sim\" \"npm:dashboard\"",
+    "demo:sim:nobroker": "concurrently -k -n broker,bridge,sim,dash -c magenta,green,yellow,cyan \"npm:broker:node\" \"npm:bridge\" \"npm:sim\" \"npm:dashboard\"",
+    "demo:cira": "concurrently -k -n bridge,dash -c green,cyan \"npm:bridge\" \"npm:dashboard\"",
+    "demo:cira:nobroker": "concurrently -k -n broker,bridge,dash -c magenta,green,cyan \"npm:broker:node\" \"npm:bridge\" \"npm:dashboard\"",
+    "setup:env": "node tools/setup-env.js",
+    "test": "npm --prefix bridge test"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "^4.3.3",
-    "@types/node": "^24.13.3",
-    "@types/react": "^19.2.18",
-    "@types/react-dom": "^19.2.7",
-    "@vitejs/plugin-react": "^6.1.1",
-    "oxlint": "^1.81.0",
-    "tailwindcss": "^4.3.3",
-    "typescript": "~6.0.2",
-    "vite": "^8.3.0",
-    "vitest": "^5.0.5"
+    "concurrently": "^10.0.6"
   }
 }

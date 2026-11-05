@@ -1,24 +1,36 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+# secrets
+.env
+.env.local
+.env.*.local
+!.env.example
 
-node_modules
-dist
-dist-ssr
-*.local
+# dependencies / builds
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+# media (large files)
+*.mp4
+*.avi
+*.mov
+
+# python
+__pycache__/
+.venv/
+
+# os / editor
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+Thumbs.db
+.vscode/
+*.log
+.vercel
+
+# AI models / labeling outputs
+*.pt
+*.weights
+_preview/
+weights/
+spdidamaged/
+damaged/

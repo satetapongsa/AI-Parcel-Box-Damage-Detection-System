@@ -1,0 +1,27 @@
+{
+  "name": "spdi-bridge",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SPDI bridge: MQTT detections -> tracked & counted box events -> MongoDB",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node index.js",
+    "start:nodb": "node index.js --no-db",
+    "sim": "node simulator.js frames",
+    "sim:events": "node simulator.js events",
+    "sniff": "node sniff.js",
+    "reset": "node reset.js",
+    "broker": "node dev-broker.js",
+    "test": "node --test tests/tracker.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "aedes": "^1.2.0",
+    "dotenv": "^18.0.9",
+    "mongodb": "^7.8.0",
+    "mqtt": "^5.16.1"
+  }
+}
