@@ -54,11 +54,11 @@ function LastDecision({ ev }) {
         <div className="text-base font-semibold opacity-90">Last box</div>
         <div className="mt-1 text-4xl font-bold leading-tight sm:text-5xl">{reject ? '✖ REJECT' : '✔ PASS'}</div>
         <div className="mt-1 truncate text-sm opacity-90">
-          {CLASSES[ev.predicted].label} · {Math.round(ev.conf * 100)}% · {ev.tracking}
+          #{ev.no} · {CLASSES[ev.predicted].label} · {Math.round(ev.conf * 100)}%{ev.reworked ? ' · reworked' : ''}
         </div>
       </div>
       <div className="shrink-0 rounded-md bg-white/15 p-1">
-        <BoxThumb truth={ev.truth} seed={ev.seed} size={60} />
+        <BoxThumb truth={ev.truth} seed={ev.seed} size={60} reworked={ev.reworked > 0} />
       </div>
     </div>
   );
@@ -131,7 +131,7 @@ export default function SimulationPage() {
       {/* ---------- main counters ---------- */}
       <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <LastDecision ev={snap.events[0]} />
-        <KpiCard size="lg" title="Inspected" subtitle="total" value={st.total} note={`PASS + REJECT = ${st.pass + st.reject} ✔`} />
+        <KpiCard size="lg" title="Inspections" subtitle="incl. re-checks" value={st.total} note={`PASS + REJECT = ${st.pass + st.reject} ✔`} />
         <KpiCard size="lg" title="Passed" subtitle="PASS" value={st.pass} tone="ok" note={`yield ${snap.yieldPct}%`} />
         <KpiCard
           size="lg"
@@ -141,6 +141,34 @@ export default function SimulationPage() {
           tone="bad"
           note={`dent ${st.byClass.dent} · tear ${st.byClass.tear} · ${snap.rejectPct}%`}
         />
+      </section>
+
+      {/* ---------- line balance: where every physical unit is right now ---------- */}
+      <section className="rounded-lg border border-edge bg-panel p-4">
+        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-base font-semibold text-slate-200">
+            Line balance <span className="text-sm font-normal text-muted">· every numbered box is in exactly one place</span>
+          </h2>
+          <span className={`rounded-md px-2.5 py-1 text-sm font-semibold ${snap.balanceOk ? 'bg-green-600/20 text-green-300' : 'bg-red-600/20 text-red-300'}`}>
+            {snap.balanceOk ? '✔ balanced' : '✖ mismatch'}
+          </span>
+        </div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          <KpiCard title="Boxes in" subtitle="new units" value={snap.unitsIn} />
+          <KpiCard
+            title="Shipped"
+            value={snap.shipped}
+            tone="ok"
+            note={snap.shippedRecent.length ? `last #${snap.shippedRecent[0].no}${snap.shippedRecent[0].reworked ? ' (reworked)' : ''}` : 'none yet'}
+          />
+          <KpiCard title="Dented bin" value={snap.bins.dent} tone={snap.bins.dent ? 'bad' : 'neutral'} note="waiting to be fixed" />
+          <KpiCard title="Torn bin" value={snap.bins.tear} tone={snap.bins.tear ? 'bad' : 'neutral'} note="waiting to be repacked" />
+          <KpiCard title="On the belt" value={snap.onBelt + snap.returning} note={snap.returning ? `${snap.returning} reworked queued` : 'in transit'} />
+          <KpiCard title="Reworked" subtitle="sent back" value={snap.stats.reworked} />
+        </div>
+        <p className="mt-3 font-mono text-xs text-muted">
+          {snap.unitsIn} in = {snap.shipped} shipped + {snap.bins.dent} dented + {snap.bins.tear} torn + {snap.onBelt + snap.returning} on belt
+        </p>
       </section>
 
       <section className="grid grid-cols-2 gap-3 md:grid-cols-4">

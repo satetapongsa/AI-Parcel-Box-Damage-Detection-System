@@ -55,8 +55,9 @@ function emptyStats() {
     falseReject: 0, // good box rejected
     missedDefect: 0, // damaged box passed
     confSum: 0,
-    accepted: 0, // reached PASS end of belt
-    rejectedBin: 0, // pushed into reject bin
+    accepted: 0, // reached PASS end of belt (shipped)
+    rejectedBin: 0, // pushed into a reject bin (all time)
+    reworked: 0, // boxes fixed / repacked from the bins and sent back to the belt
   };
 }
 
@@ -73,7 +74,12 @@ export function createSim() {
     boxes: [],
     nextId: 1,
     spawnTimer: 0.4,
-    manual: [], // queued manual spawns
+    manual: [], // queued manual spawns: { truth }
+    returning: [], // reworked units waiting to re-enter the belt: { truth, no, tracking, reworked }
+    nextNo: 1, // physical unit number (#1, #2, ...) stays with the box for its whole life
+    unitsIn: 0, // new units that entered the line
+    bins: { dent: [], tear: [] }, // boxes sitting in the two reject bins
+    shipped: [], // most recent shipped units (for the exit display)
     detAcc: 0,
     framesTotal: 0,
     events: [],
@@ -112,11 +118,19 @@ function spaceAvailable(s) {
   return !s.boxes.some((b) => b.state === 'belt' && b.x < ZONE.spawn + MIN_GAP);
 }
 
-function spawnBox(s, truth) {
+function spawnBox(s, spec) {
   const id = s.nextId++;
+  const truth = spec.truth;
+  let no = spec.no;
+  if (!no) {
+    no = s.nextNo++;
+    s.unitsIn += 1;
+  }
   s.boxes.push({
     id,
-    tracking: trackingNo(id),
+    no,
+    reworked: spec.reworked || 0,
+    tracking: spec.tracking || trackingNo(no),
     truth,
     x: ZONE.spawn,
     lane: rand(-6, 6), // small sideways offset in px for realism
@@ -213,6 +227,8 @@ function decide(s, b) {
 
   const ev = {
     eventId: `line1-${b.id}`,
+    no: b.no,
+    reworked: b.reworked,
     tracking: b.tracking,
     at: Date.now(),
     simTime: s.simTime,
@@ -241,6 +257,7 @@ function decide(s, b) {
     'spdi/line1/counted',
     {
       eventId: ev.eventId,
+      unit: b.no,
       tracking: ev.tracking,
       result,
       className: predicted,
@@ -276,9 +293,10 @@ export function step(s, dtReal) {
   // spawn (manual requests first)
   s.spawnTimer -= dt;
   if (spaceAvailable(s)) {
-    if (s.manual.length) spawnBox(s, s.manual.shift());
+    if (s.returning.length) spawnBox(s, s.returning.shift());
+    else if (s.manual.length) spawnBox(s, s.manual.shift());
     else if (s.spawnTimer <= 0) {
-      spawnBox(s, pickTruth(s));
+      spawnBox(s, { truth: pickTruth(s) });
       s.spawnTimer = rand(1.4, 2.6);
     }
   }
@@ -300,6 +318,8 @@ export function step(s, dtReal) {
       if (b.x >= ZONE.end) {
         b.state = 'gone';
         s.stats.accepted += 1;
+        s.shipped.unshift({ no: b.no, reworked: b.reworked });
+        if (s.shipped.length > 8) s.shipped.length = 8;
       }
     } else if (b.state === 'rejecting') {
       b.rejectT += dt / 0.55;
@@ -307,6 +327,8 @@ export function step(s, dtReal) {
       if (b.rejectT >= 1) {
         b.state = 'gone';
         s.stats.rejectedBin += 1;
+        const bin = b.predicted === 'tear' ? 'tear' : 'dent';
+        s.bins[bin].push({ no: b.no, tracking: b.tracking, truth: b.truth, seed: b.seed, reworked: b.reworked });
       }
     }
   }
@@ -361,7 +383,29 @@ export function applySettings(s, obj) {
 }
 
 export function addBox(s, truth) {
-  if (s.manual.length < 5) s.manual.push(truth);
+  if (s.manual.length < 5) s.manual.push({ truth });
+}
+
+/**
+ * Operator handles a reject bin: dented boxes are fixed, torn boxes are repacked into a new carton.
+ * Every unit keeps its number, becomes a normal box and goes back to the start of the belt
+ * to be inspected again. Returns how many boxes were sent back.
+ */
+export function reworkBin(s, kind) {
+  const items = s.bins[kind].splice(0);
+  for (const it of items) {
+    s.returning.push({ truth: 'box_good', no: it.no, tracking: it.tracking, reworked: (it.reworked || 0) + 1 });
+  }
+  s.stats.reworked += items.length;
+  if (items.length) {
+    pushMessage(
+      s,
+      'spdi/line1/rework',
+      { bin: kind, action: kind === 'tear' ? 'repack' : 'fix', count: items.length, units: items.map((i) => i.no) },
+      'sync'
+    );
+  }
+  return items.length;
 }
 
 export function resetSim(s) {
@@ -402,6 +446,14 @@ export function snapshot(s) {
     synced: s.synced,
     dropped: s.dropped,
     esp32Cmds: s.esp32Cmds,
+    unitsIn: s.unitsIn,
+    shipped: st.accepted,
+    shippedRecent: s.shipped.slice(0, 6),
+    bins: { dent: s.bins.dent.length, tear: s.bins.tear.length },
+    returning: s.returning.length,
+    onBelt: s.boxes.length,
+    // every unit is in exactly one place: shipped, in a bin, on the belt or waiting to re-enter
+    balanceOk: s.unitsIn === st.accepted + s.bins.dent.length + s.bins.tear.length + s.boxes.length + s.returning.length,
     timeline: [...s.timeline.values()].map((r) => ({ ...r })),
     light: lightOf(s),
   };

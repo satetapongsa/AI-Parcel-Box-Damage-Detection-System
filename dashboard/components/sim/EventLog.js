@@ -41,6 +41,7 @@ export default function EventLog({ events }) {
           <thead className="sticky top-0 bg-panel text-xs uppercase text-muted">
             <tr>
               <th className="px-3 py-2 font-medium sm:px-4">Photo</th>
+              <th className="px-2 py-2 font-medium">No.</th>
               <th className="hidden px-2 py-2 font-medium sm:table-cell">Tracking</th>
               <th className="px-2 py-2 font-medium">Result</th>
               <th className="px-2 py-2 font-medium">Detected</th>
@@ -52,7 +53,7 @@ export default function EventLog({ events }) {
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-muted">
+                <td colSpan={8} className="px-4 py-8 text-center text-muted">
                   No inspections yet
                 </td>
               </tr>
@@ -60,7 +61,11 @@ export default function EventLog({ events }) {
               rows.map((e) => (
                 <tr key={e.eventId} className={`border-t border-edge/60 ${e.result === 'REJECT' ? 'row-new-fail' : 'row-new'}`}>
                   <td className="px-3 py-1.5 sm:px-4">
-                    <BoxThumb truth={e.truth} seed={e.seed} />
+                    <BoxThumb truth={e.truth} seed={e.seed} reworked={e.reworked > 0} />
+                  </td>
+                  <td className="px-2 py-1.5 font-mono text-sm font-bold text-slate-200">
+                    #{e.no}
+                    {e.reworked ? <span className="ml-1 rounded bg-blue-600/30 px-1 text-[10px] font-semibold text-blue-200">R</span> : null}
                   </td>
                   <td className="hidden px-2 py-1.5 font-mono text-xs text-slate-300 sm:table-cell">{e.tracking}</td>
                   <td className="px-2 py-1.5">

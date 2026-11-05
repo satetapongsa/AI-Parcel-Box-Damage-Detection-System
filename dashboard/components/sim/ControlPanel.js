@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { addBox, resetSim, setOnline } from '@/lib/sim/engine';
+import { addBox, resetSim, setOnline, reworkBin } from '@/lib/sim/engine';
 import { saveSettings } from '@/lib/sim/useSim';
 
 function Slider({ label, hint, value, min, max, step, format, onChange, accent }) {
@@ -95,6 +95,37 @@ export default function ControlPanel({ sim, snap, refresh }) {
             + Torn
           </button>
         </div>
+      </div>
+
+      <div>
+        <div className="mb-1 text-sm font-semibold text-slate-200">
+          Reject bins <span className="font-normal text-muted">(operator)</span>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            disabled={!snap.bins.dent}
+            onClick={() => act(() => reworkBin(sim, 'dent'))}
+            className={`rounded-md px-2 py-2.5 text-left text-sm font-semibold ${
+              snap.bins.dent ? 'bg-amber-500/25 text-amber-200 hover:bg-amber-500/35' : 'cursor-not-allowed bg-slate-800 text-slate-500'
+            }`}
+          >
+            🔧 Fix dented
+            <span className="block text-xs font-normal opacity-80">{snap.bins.dent} in bin → back to belt</span>
+          </button>
+          <button
+            type="button"
+            disabled={!snap.bins.tear}
+            onClick={() => act(() => reworkBin(sim, 'tear'))}
+            className={`rounded-md px-2 py-2.5 text-left text-sm font-semibold ${
+              snap.bins.tear ? 'bg-red-600/25 text-red-200 hover:bg-red-600/35' : 'cursor-not-allowed bg-slate-800 text-slate-500'
+            }`}
+          >
+            📦 Repack torn
+            <span className="block text-xs font-normal opacity-80">{snap.bins.tear} in bin → back to belt</span>
+          </button>
+        </div>
+        <p className="mt-1 text-xs text-muted">Boxes become normal cartons (blue repair tape), keep their number and are inspected again.</p>
       </div>
 
       <Slider

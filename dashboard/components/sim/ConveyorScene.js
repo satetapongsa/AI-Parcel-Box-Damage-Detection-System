@@ -15,6 +15,51 @@ const FRAME_BOT = 292; // bottom of the front frame
 const FLOOR = 352; // floor line (legs end here)
 const BOX_BASE = 252; // bottom of a box front face (sits on the belt)
 const px = (x) => X0 + x * BW;
+const BIN_W = 150;
+const BIN_TOP = 358;
+const BIN_H = 74;
+const BIN_OFFSET = 82; // tear bin left of the pusher, dent bin right
+const BIN_SHOW = 6; // boxes drawn inside a bin (the rest is a "+n")
+
+/** One reject bin with the rejected boxes piled inside. */
+function RejectBin({ cx, kind, items }) {
+  const left = cx - BIN_W / 2;
+  const tear = kind === 'tear';
+  const stroke = tear ? '#ef4444' : '#f59e0b';
+  const shown = items.slice(-BIN_SHOW);
+  const extra = items.length - shown.length;
+  return (
+    <g>
+      <rect x={left} y={BIN_TOP} width={BIN_W} height={BIN_H} rx={4} fill={tear ? '#2a1012' : '#2a1d08'} stroke={stroke} strokeWidth={2} />
+      {shown.map((it, i) => {
+        const col = i % 3;
+        const row = Math.floor(i / 3);
+        const bx = left + 8 + col * 47;
+        const by = BIN_TOP + BIN_H - 34 - row * 20;
+        return (
+          <g key={`${it.no}-${i}`} transform={`translate(${bx} ${by})`}>
+            <BoxGlyph w={36} h={26} truth={it.truth} seed={it.seed} shadow={false} />
+            <text x={18} y={20} textAnchor="middle" fontSize={9} fontWeight={800} fill="#111827">
+              #{it.no}
+            </text>
+          </g>
+        );
+      })}
+      <rect x={left} y={BIN_TOP + 44} width={BIN_W} height={BIN_H - 44} rx={3} fill={tear ? '#4c1518' : '#4a3209'} opacity={0.93} />
+      <text x={left + 10} y={BIN_TOP + 63} fontSize={12} fontWeight={800} fill={tear ? '#fecaca' : '#fde68a'}>
+        {tear ? 'TORN · scrap' : 'DENTED · fix'}
+      </text>
+      <text x={left + BIN_W - 10} y={BIN_TOP + 64} textAnchor="end" fontSize={18} fontWeight={800} fill="#fff" fontFamily="Consolas, monospace">
+        {items.length}
+      </text>
+      {extra > 0 ? (
+        <text x={left + BIN_W - 8} y={BIN_TOP + 14} textAnchor="end" fontSize={10} fill="#e5e7eb">
+          +{extra}
+        </text>
+      ) : null}
+    </g>
+  );
+}
 
 function Defs() {
   return (
@@ -116,6 +161,8 @@ export default function ConveyorScene({ sim }) {
   const armX = px(ZONE.arm);
   const ext = sim.arm.active ? Math.sin(Math.PI * Math.min(sim.arm.t * 1.6, 1)) : 0;
   const light = lightOf(sim);
+  const falling = sim.boxes.find((b) => b.state === 'rejecting');
+  const divert = falling ? (falling.predicted === 'tear' ? 'tear' : 'dent') : 'dent';
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="block h-auto w-full" role="img" aria-label="Conveyor simulation">
@@ -142,18 +189,13 @@ export default function ConveyorScene({ sim }) {
       <rect x={camL - 34} y={28} width={camR - camL + 68} height={10} rx={2} fill="#6b7280" />
       <polygon points={`${camC - 14},70 ${camC + 14},70 ${camR},${SURF_FRONT} ${camL},${SURF_FRONT}`} fill="url(#sc-cone)" />
 
-      {/* ---------- reject chute + bin (below the front of the belt) ---------- */}
-      <polygon points={`${armX - 62},${SURF_FRONT} ${armX + 62},${SURF_FRONT} ${armX + 74},${FLOOR - 4} ${armX - 74},${FLOOR - 4}`} fill="url(#sc-chute)" opacity={0.9} />
-      <g>
-        <polygon points={`${armX - 86},${FLOOR - 10} ${armX + 86},${FLOOR - 10} ${armX + 96},${FLOOR + 2} ${armX - 76},${FLOOR + 2}`} fill="#5b1d20" />
-        <rect x={armX - 86} y={FLOOR - 10 + 12} width={172} height={74} rx={4} fill="#3b1416" stroke="#ef4444" strokeWidth={2} />
-        <text x={armX} y={FLOOR + 26} textAnchor="middle" fontSize={13} fill="#fca5a5" fontWeight={700}>
-          REJECT BIN
-        </text>
-        <text x={armX} y={FLOOR + 56} textAnchor="middle" fontSize={26} fill="#fecaca" fontWeight={800} fontFamily="Consolas, monospace">
-          {sim.stats.rejectedBin}
-        </text>
-      </g>
+      {/* ---------- reject chute + two bins (below the front of the belt) ---------- */}
+      <polygon points={`${armX - 52},${SURF_FRONT} ${armX + 52},${SURF_FRONT} ${armX + 40},${BIN_TOP - 6} ${armX - 40},${BIN_TOP - 6}`} fill="url(#sc-chute)" opacity={0.9} />
+      {/* diverter flap points at the bin of the box that is falling */}
+      <line x1={armX} y1={BIN_TOP - 30} x2={armX + (divert === 'tear' ? -34 : 34)} y2={BIN_TOP - 4} stroke="#d1d5db" strokeWidth={5} strokeLinecap="round" />
+      <circle cx={armX} cy={BIN_TOP - 30} r={4} fill="#9ca3af" />
+      <RejectBin cx={armX - BIN_OFFSET} kind="tear" items={sim.bins.tear} />
+      <RejectBin cx={armX + BIN_OFFSET} kind="dent" items={sim.bins.dent} />
 
       {/* ---------- belt ---------- */}
       {/* legs */}
@@ -192,13 +234,22 @@ export default function ConveyorScene({ sim }) {
         Decision line · count once
       </text>
 
-      {/* PASS exit */}
+      {/* PASS exit: shipped counter with the latest unit numbers */}
       <g>
-        <text x={X1 + 54} y={SURF_BACK - 120} textAnchor="end" fontSize={13} fill="#86efac" fontWeight={700}>
-          PASS → warehouse
+        <text x={X1 + 54} y={SURF_BACK - 124} textAnchor="end" fontSize={13} fill="#86efac" fontWeight={700}>
+          SHIPPED → warehouse
         </text>
-        <text x={X1 + 54} y={SURF_BACK - 94} textAnchor="end" fontSize={24} fill="#bbf7d0" fontWeight={800} fontFamily="Consolas, monospace">
+        <text x={X1 + 54} y={SURF_BACK - 96} textAnchor="end" fontSize={26} fill="#bbf7d0" fontWeight={800} fontFamily="Consolas, monospace">
           {sim.stats.accepted}
+        </text>
+        <text x={X1 + 54} y={SURF_BACK - 76} textAnchor="end" fontSize={12} fill="#9ca3af" fontFamily="Consolas, monospace">
+          {sim.shipped.length ? `last ${sim.shipped.slice(0, 4).map((u) => `#${u.no}${u.reworked ? 'R' : ''}`).join(' ')}` : 'last —'}
+        </text>
+        {/* exit count sensor */}
+        <rect x={X1 - 34} y={SURF_BACK - 26} width={10} height={20} rx={2} fill="#374151" stroke="#6b7280" />
+        <line x1={X1 - 29} y1={SURF_BACK - 6} x2={X1 - 33} y2={SURF_FRONT} stroke="#22c55e" strokeWidth={1.5} strokeDasharray="3 4" opacity={0.8} />
+        <text x={X1 - 29} y={SURF_BACK - 32} textAnchor="middle" fontSize={10} fill="#9ca3af">
+          count
         </text>
       </g>
 
@@ -211,11 +262,20 @@ export default function ConveyorScene({ sim }) {
         let y = BOX_BASE - h + b.lane * 0.6;
         let rot = 0;
         let opacity = 1;
+        let bw = w;
+        let bh = h;
         if (b.state === 'rejecting') {
           const t = Math.min(b.rejectT, 1);
-          y += t * 105;
-          x += t * 8;
-          rot = t * 22;
+          const target = armX + (b.predicted === 'tear' ? -BIN_OFFSET : BIN_OFFSET);
+          const startC = px(b.x);
+          const cx = startC + (target - startC) * t;
+          const bottom = BOX_BASE + (BIN_TOP + 40 - BOX_BASE) * t;
+          const sc = 1 - 0.55 * t;
+          bw = w * sc;
+          bh = h * sc;
+          x = cx - bw / 2;
+          y = bottom - bh;
+          rot = Math.sin(t * Math.PI) * 18;
         }
         if (b.x > ZONE.end - 0.04) opacity = Math.max(0, (ZONE.end - b.x) / 0.04);
         const inCam = b.seen && b.state === 'belt' && b.x >= ZONE.camStart && b.x <= ZONE.camEnd;
@@ -224,8 +284,13 @@ export default function ConveyorScene({ sim }) {
         const top = y - d * 0.45;
         return (
           <g key={b.id} opacity={opacity}>
-            <g transform={`translate(${x} ${y}) rotate(${rot} ${w / 2} ${h})`}>
-              <BoxGlyph w={w} h={h} truth={b.truth} seed={b.seed} />
+            <g transform={`translate(${x} ${y}) rotate(${rot} ${bw / 2} ${bh})`}>
+              <BoxGlyph w={bw} h={bh} truth={b.truth} seed={b.seed} reworked={b.reworked > 0} />
+              {/* unit number sticker */}
+              <rect x={bw * 0.54} y={bh * 0.5} width={bw * 0.4} height={bh * 0.24} rx={2} fill={b.reworked ? '#bfdbfe' : '#f8fafc'} stroke="#1f2937" strokeWidth={0.6} />
+              <text x={bw * 0.74} y={bh * 0.68} textAnchor="middle" fontSize={bh * 0.19} fontWeight={800} fill="#111827" fontFamily="Consolas, monospace">
+                #{b.no}
+              </text>
             </g>
             {inCam ? (
               <g>

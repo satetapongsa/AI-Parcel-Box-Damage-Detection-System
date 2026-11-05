@@ -138,7 +138,7 @@ function TornBox({ w, h, dx, dy, tx, tapeW, seed }) {
   );
 }
 
-export default function BoxGlyph({ w = 90, h = 70, truth = 'box_good', seed = 0.5, shadow = true }) {
+export default function BoxGlyph({ w = 90, h = 70, truth = 'box_good', seed = 0.5, shadow = true, reworked = false }) {
   const d = Math.min(w, h) * 0.45;
   const dx = d * 0.55;
   const dy = d * 0.45;
@@ -150,16 +150,23 @@ export default function BoxGlyph({ w = 90, h = 70, truth = 'box_good', seed = 0.
       {truth === 'dent' ? <DentedBox w={w} h={h} dx={dx} dy={dy} seed={seed} /> : null}
       {truth === 'tear' ? <TornBox w={w} h={h} dx={dx} dy={dy} tx={tx} tapeW={tapeW} seed={seed} /> : null}
       {truth !== 'dent' && truth !== 'tear' ? <GoodBox w={w} h={h} dx={dx} dy={dy} tx={tx} tapeW={tapeW} /> : null}
+      {reworked ? (
+        // repaired / repacked: blue rework tape around the box
+        <g>
+          <rect x={0} y={h * 0.16} width={w} height={h * 0.1} fill="#2563eb" opacity={0.9} />
+          <polygon points={`${w},${h * 0.16} ${w + dx},${h * 0.16 - dy} ${w + dx},${h * 0.26 - dy} ${w},${h * 0.26}`} fill="#1d4ed8" opacity={0.9} />
+        </g>
+      ) : null}
     </g>
   );
 }
 
 /** Small standalone thumbnail (used as "proof of condition" in the log). */
-export function BoxThumb({ truth, seed, size = 44 }) {
+export function BoxThumb({ truth, seed, size = 44, reworked = false }) {
   return (
     <svg width={size} height={size * 0.85} viewBox="-4 -30 112 108" aria-hidden="true">
       <BoxDefs />
-      <BoxGlyph truth={truth} seed={seed} shadow={false} />
+      <BoxGlyph truth={truth} seed={seed} shadow={false} reworked={reworked} />
     </svg>
   );
 }
