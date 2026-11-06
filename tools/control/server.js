@@ -172,7 +172,48 @@ async function startPreset(name) {
     await sleep(1200); // let the broker bind first
   }
   for (const id of ids) if (id !== 'broker') startService(id);
+  if (name === 'allcira') openCira(); // real system: also bring up CiRA CORE with our project
   return { ok: true };
+}
+
+// ---------------------------------------------------------------- CiRA CORE
+const CIRA_PROJECT = path.join(ROOT, 'project.npj');
+const CIRA_LAUNCHER = process.env.CIRA_LAUNCHER || 'C:\\CiRA-CORE\\exec\\ciracore_launch.exe';
+
+// is a CiRA CORE window already open? (its helper "cira-module-*" programs do not count)
+function ciraIsOpen() {
+  return new Promise((resolve) => {
+    if (process.platform !== 'win32') return resolve(false);
+    execFile('tasklist', ['/fo', 'csv', '/nh'], { windowsHide: true }, (err, out) => {
+      if (err) return resolve(false);
+      resolve(out.split(/\r?\n/).some((l) => /^"(cira|ciracore)[^"]*\.exe"/i.test(l) && !/cira-module/i.test(l)));
+    });
+  });
+}
+
+async function openCira() {
+  const id = 'tool:cira';
+  if (mon.frames.some((f) => f[1] === 'CiRA CORE') || (await ciraIsOpen())) {
+    addLog(id, 'CiRA CORE is already open - press Run in CiRA if no frames arrive');
+    return { ok: true, already: true };
+  }
+  if (!fs.existsSync(CIRA_PROJECT)) {
+    addLog(id, `ERROR project file not found: ${CIRA_PROJECT}`);
+    return { ok: false, error: 'project.npj not found' };
+  }
+  addLog(id, `Opening CiRA CORE with ${path.basename(CIRA_PROJECT)} - press Run in CiRA when it has loaded`);
+  try {
+    if (fs.existsSync(CIRA_LAUNCHER)) {
+      spawn(CIRA_LAUNCHER, ['--file', CIRA_PROJECT], { cwd: path.dirname(CIRA_LAUNCHER), detached: true, stdio: 'ignore' }).unref();
+    } else {
+      // fall back to whatever program Windows uses for .npj files
+      spawn('cmd', ['/c', 'start', '', CIRA_PROJECT], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
+    }
+    return { ok: true };
+  } catch (err) {
+    addLog(id, `ERROR could not open CiRA CORE: ${err.message}`);
+    return { ok: false, error: err.message };
+  }
 }
 
 function stopAll() {
@@ -527,6 +568,7 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, { ok: true, log: 'tool:fresh' });
     }
     if (a === 'stopall') return json(res, 200, stopAll());
+    if (a === 'cira' && b === 'open') return json(res, 200, await openCira());
     if (a === 'autorestart') {
       autoRestart = !!body.on;
       broadcast('autorestart', { on: autoRestart });
