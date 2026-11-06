@@ -61,6 +61,11 @@ pub.on('connect', () => {
   pub.publish(T.status, 'online', { retain: true, qos: 1 });
   pub.subscribe(T.ack);
 });
+// say "online" again every 10 s: an older relay that was stopped or killed may have
+// left a retained "offline" behind, which would make the ESP32 think the bridge is down
+const statusTimer = setInterval(() => {
+  if (pub.connected) pub.publish(T.status, 'online', { retain: true, qos: 1 });
+}, 10_000);
 pub.on('reconnect', () => console.log('🌐 reconnecting to public broker...'));
 pub.on('error', (err) => console.log(`❌ public broker: ${err.code || err.message}`));
 pub.on('message', (topic, buf) => {
@@ -132,6 +137,7 @@ console.log(
 
 function shutdown() {
   clearInterval(timer);
+  clearInterval(statusTimer);
   console.log(`\n👋 relay stopped (sent ${stats.sent}, ESP32 acks ${stats.acks})`);
   const done = () => process.exit(0);
   if (local) local.end(true);
