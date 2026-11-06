@@ -6,191 +6,282 @@
 <title>SPDI Control Center</title>
 <style>
   :root {
-    --bg: #0d1117; --panel: #161b22; --panel2: #1c232d; --line: #2a323d;
-    --text: #e6edf3; --muted: #8b949e; --green: #3fb950; --red: #f85149;
-    --amber: #d29922; --blue: #58a6ff; --violet: #bc8cff;
+    --bg: #0b0f14; --panel: #131920; --panel2: #1a222c; --line: #26303b; --line2: #33404e;
+    --text: #e6edf3; --muted: #8b98a5; --dim: #5d6975;
+    --green: #3fb950; --green-bg: #11261a; --red: #f85149; --red-bg: #2b1416;
+    --amber: #e3b341; --amber-bg: #2a2310; --blue: #58a6ff; --blue-bg: #122238; --violet: #bc8cff;
     color-scheme: dark;
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--text);
     font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-  header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-    padding: 12px 20px; border-bottom: 1px solid var(--line); background: var(--panel); position: sticky; top: 0; z-index: 3; }
-  header h1 { font-size: 17px; margin: 0; font-weight: 650; letter-spacing: .2px; }
-  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto; }
-  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border: 1px solid var(--line);
+  svg.i { width: 18px; height: 18px; flex: none; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  svg.i.sm { width: 15px; height: 15px; }
+  svg.i.lg { width: 22px; height: 22px; }
+
+  header { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 12px 22px;
+    border-bottom: 1px solid var(--line); background: var(--panel); position: sticky; top: 0; z-index: 3; }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand .logo { width: 34px; height: 34px; border-radius: 9px; background: #2a1f12; color: #e0ae73; display: grid; place-items: center; }
+  .brand h1 { font-size: 16px; margin: 0; font-weight: 650; }
+  .brand .sub { color: var(--muted); font-size: 12px; }
+  .hright { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto; align-items: center; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border: 1px solid var(--line);
     border-radius: 999px; background: var(--panel2); color: var(--muted); font-size: 12.5px; white-space: nowrap; }
-  .chip b { color: var(--text); font-weight: 600; }
-  .dot { width: 9px; height: 9px; border-radius: 50%; background: #4a525c; flex: none; }
-  .dot.running, .dot.ok { background: var(--green); box-shadow: 0 0 8px #3fb95088; }
-  .dot.crashed, .dot.down, .dot.error { background: var(--red); box-shadow: 0 0 8px #f8514988; }
-  .dot.stopping, .dot.starting, .dot.restarting, .dot.warn { background: var(--amber); }
-  main { padding: 16px 20px 28px; max-width: 1500px; margin: 0 auto; }
+  .pill b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .clock { font: 600 15px ui-monospace, "Cascadia Mono", Consolas, monospace; color: var(--text); padding: 0 4px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--dim); flex: none; }
+  .dot.ok { background: var(--green); box-shadow: 0 0 0 3px #3fb95026; }
+  .dot.error { background: var(--red); }
+  .dot.warn { background: var(--amber); }
+  .live .dot.ok { animation: pulse 1s ease-in-out infinite; }
+  @keyframes pulse { 50% { box-shadow: 0 0 0 5px #3fb95010; } }
 
-  /* summary banner */
-  .summary { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; margin-bottom: 12px;
-    border: 1px solid var(--line); background: var(--panel); font-weight: 600; font-size: 15px; }
-  .summary.ok { border-color: #2ea04388; background: #12261a; }
-  .summary.warn { border-color: #d2992288; background: #2a2210; }
-  .summary.error { border-color: #f8514988; background: #2d1414; }
-  .summary .sub { color: var(--muted); font-weight: 400; font-size: 13px; }
+  main { padding: 18px 22px 30px; max-width: 1560px; margin: 0 auto; }
+  .banner { display: none; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 10px; margin-bottom: 16px;
+    border: 1px solid #f8514966; background: var(--red-bg); color: #ffb1ab; }
+  .banner.show { display: flex; }
+  .banner b { color: #ffd3cf; }
 
-  /* pipeline */
-  .pipe { display: flex; align-items: stretch; gap: 0; margin-bottom: 16px; overflow-x: auto; padding-bottom: 2px; }
-  .stage { flex: 1 1 0; min-width: 128px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; }
-  .stage.ok { border-color: #2ea04366; }
-  .stage.warn { border-color: #d2992266; }
-  .stage.error { border-color: #f8514988; }
-  .stage .top { display: flex; align-items: center; gap: 7px; font-weight: 600; font-size: 13px; white-space: nowrap; }
-  .stage .detail { color: var(--muted); font-size: 12px; margin-top: 3px; }
-  .arrow { flex: none; align-self: center; color: #4a525c; padding: 0 5px; font-size: 15px; }
-  .arrow.ok { color: var(--green); }
+  /* the two modes */
+  .modes { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 18px; }
+  .mode { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; display: flex; flex-direction: column; }
+  .mode.active { border-color: #2ea04399; box-shadow: 0 0 0 1px #2ea04333 inset; }
+  .mode.mixed { border-color: #f8514999; }
+  .mhead { display: flex; gap: 12px; align-items: flex-start; }
+  .micon { width: 42px; height: 42px; border-radius: 11px; display: grid; place-items: center; flex: none; }
+  .sim .micon { background: var(--blue-bg); color: var(--blue); }
+  .real .micon { background: #241a35; color: var(--violet); }
+  .mtitle { font-size: 16px; font-weight: 650; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .mdesc { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+  .badge { font-size: 11px; font-weight: 700; letter-spacing: .6px; padding: 2px 8px; border-radius: 6px; border: 1px solid var(--line2); color: var(--muted); }
+  .badge.active { color: var(--green); border-color: #2ea04388; background: var(--green-bg); }
+  .badge.mixed { color: var(--red); border-color: #f8514988; background: var(--red-bg); }
+  .progress { margin: 14px 0 6px; display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: var(--muted); }
+  .bar { flex: 1; height: 6px; border-radius: 6px; background: var(--panel2); overflow: hidden; }
+  .bar > span { display: block; height: 100%; width: 0; background: var(--green); transition: width .4s; }
+  .progress b { color: var(--text); font-variant-numeric: tabular-nums; }
 
-  .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
-  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
-  .seg button { border: 0; border-radius: 0; padding: 10px 14px; background: var(--panel2); color: var(--muted); }
-  .seg button.on { background: #1f3a5f; color: var(--text); }
-  button { font: inherit; color: var(--text); background: var(--panel2); border: 1px solid var(--line);
-    border-radius: 8px; padding: 7px 12px; cursor: pointer; }
-  button:hover { border-color: #44505e; background: #222b36; }
+  .checks { list-style: none; margin: 8px 0 14px; padding: 0; }
+  .check { display: grid; grid-template-columns: 22px 20px 1fr auto; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); }
+  .check:first-child { border-top: 0; }
+  .check .step { width: 22px; height: 22px; border-radius: 50%; background: var(--panel2); color: var(--muted); font-size: 11.5px; font-weight: 700; display: grid; place-items: center; }
+  .check .ic { color: var(--muted); }
+  .check .nm { font-weight: 600; }
+  .check .nm small { color: var(--dim); font-weight: 500; margin-left: 6px; font-size: 11.5px; }
+  .check .dt { color: var(--muted); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+  .check .dt.hint { color: var(--amber); }
+  .state { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px;
+    border: 1px solid var(--line2); color: var(--muted); white-space: nowrap; }
+  .state.ok { color: var(--green); border-color: #2ea04366; background: var(--green-bg); }
+  .state.warn { color: var(--amber); border-color: #e3b34166; background: var(--amber-bg); }
+  .state.error { color: var(--red); border-color: #f8514966; background: var(--red-bg); }
+  .check.ok .step { background: var(--green-bg); color: var(--green); }
+  .check.ok .ic { color: var(--green); }
+
+  .mfoot { margin-top: auto; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .mlinks { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 10px; font-size: 12.5px; }
+  .mlinks a { color: var(--blue); text-decoration: none; display: inline-flex; gap: 5px; align-items: center; }
+  .mlinks a:hover { text-decoration: underline; }
+
+  button { font: inherit; color: var(--text); background: var(--panel2); border: 1px solid var(--line2);
+    border-radius: 8px; padding: 7px 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; }
+  button:hover { border-color: #4a5867; background: #212b37; }
   button:disabled { opacity: .45; cursor: default; }
-  button.big { padding: 10px 18px; font-weight: 600; font-size: 14.5px; }
-  button.go { background: #1f6f3a; border-color: #2ea043; }
-  button.go:hover { background: #238645; }
-  button.stop { background: #5a1d1d; border-color: #8e2b2b; }
-  button.stop:hover { background: #6e2222; }
-  button.fresh { background: #2b2f6b; border-color: #4b50b0; }
-  button.fresh:hover { background: #34398a; }
+  button.primary { background: #1f6f3a; border-color: #2ea043; font-weight: 600; padding: 9px 16px; }
+  button.primary:hover { background: #238645; }
+  button.danger { background: #4a1a1c; border-color: #8e2b2b; }
+  button.danger:hover { background: #5e2023; }
   button.ghost { background: transparent; }
-  .toggle { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: 13px; margin-left: auto; cursor: pointer; }
-  a.btn { color: var(--blue); text-decoration: none; border: 1px solid var(--line); border-radius: 8px;
-    padding: 7px 12px; background: var(--panel2); display: inline-block; }
-  a.btn:hover { border-color: #44505e; }
-  .grid { display: grid; grid-template-columns: minmax(0, 430px) minmax(0, 1fr); gap: 16px; align-items: start; }
-  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; }
-  .card h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .9px; color: var(--muted); margin: 0 0 10px; font-weight: 600; }
-  .svc { display: grid; grid-template-columns: 12px 1fr auto; gap: 10px; align-items: center;
-    padding: 9px 0; border-top: 1px solid var(--line); }
+  button.sm { padding: 4px 9px; font-size: 12.5px; }
+
+  .grid { display: grid; grid-template-columns: minmax(0, 440px) minmax(0, 1fr); gap: 16px; align-items: start; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; margin-bottom: 16px; }
+  .card h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .9px; color: var(--muted); margin: 0 0 12px; font-weight: 650;
+    display: flex; align-items: center; gap: 8px; }
+  .card h2 .r { margin-left: auto; text-transform: none; letter-spacing: 0; font-weight: 500; }
+  .svc { display: grid; grid-template-columns: 10px 1fr auto; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); }
   .svc:first-of-type { border-top: 0; }
   .svc .name { font-weight: 600; }
-  .svc .hint { color: var(--muted); font-size: 12.5px; }
-  .svc .state { font-size: 12px; color: var(--muted); margin-left: 6px; font-weight: 400; }
-  .svc .state.bad { color: #ff7b72; }
+  .svc .meta { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .svc .meta.bad { color: #ff7b72; }
   .svc .btns { display: flex; gap: 6px; }
-  .svc button { padding: 5px 10px; min-width: 62px; }
-  .links { display: flex; gap: 8px; flex-wrap: wrap; }
-  .topic { margin-top: 10px; color: var(--muted); font-size: 12.5px; }
-  .topic code { color: var(--violet); background: var(--panel2); padding: 2px 6px; border-radius: 5px; user-select: all; }
+  .toggle { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: 12.5px; cursor: pointer; }
+  .kv { color: var(--muted); font-size: 12.5px; margin-bottom: 10px; }
+  .kv code { color: var(--violet); background: var(--panel2); padding: 2px 6px; border-radius: 5px; user-select: all; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .tool { border-top: 1px solid var(--line); padding: 10px 0; }
   .tool:first-of-type { border-top: 0; padding-top: 0; }
-  .tool .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-  .tool .title { font-weight: 600; margin-bottom: 6px; }
-  .tool .hint { color: var(--muted); font-size: 12.5px; margin: -3px 0 6px; }
-  input[type=text] { font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line);
+  .tool .title { font-weight: 600; margin-bottom: 4px; }
+  .tool .hint { color: var(--muted); font-size: 12.5px; margin-bottom: 7px; }
+  input[type=text] { font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line2);
     border-radius: 7px; padding: 6px 9px; min-width: 0; flex: 1 1 180px; }
   input[type=text]:focus { outline: none; border-color: var(--blue); }
-  details summary { cursor: pointer; font-weight: 600; list-style: none; }
+  details summary { cursor: pointer; font-weight: 600; list-style: none; display: flex; align-items: center; gap: 6px; }
   details summary::-webkit-details-marker { display: none; }
-  details summary::before { content: "▸ "; color: var(--muted); }
-  details[open] summary::before { content: "▾ "; }
+  details summary .chev { transition: transform .15s; color: var(--muted); }
+  details[open] summary .chev { transform: rotate(90deg); }
   details .body { margin-top: 8px; display: grid; gap: 7px; }
-  .console { background: #0a0d12; border: 1px solid var(--line); border-radius: 12px; display: flex; flex-direction: column;
-    height: calc(100vh - 150px); min-height: 420px; position: sticky; top: 70px; }
+
+  .console { background: #080b0f; border: 1px solid var(--line); border-radius: 14px; display: flex; flex-direction: column;
+    height: calc(100vh - 110px); min-height: 440px; position: sticky; top: 72px; }
   .tabs { display: flex; gap: 4px; padding: 8px; border-bottom: 1px solid var(--line); flex-wrap: wrap; align-items: center; }
   .tab { padding: 4px 10px; border-radius: 6px; border: 1px solid transparent; background: transparent; color: var(--muted); font-size: 12.5px; }
-  .tab.on { color: var(--text); background: var(--panel2); border-color: var(--line); }
+  .tab.on { color: var(--text); background: var(--panel2); border-color: var(--line2); }
   .tabs .spacer { flex: 1; }
-  .tabs label { color: var(--muted); font-size: 12.5px; display: flex; gap: 5px; align-items: center; }
-  pre { margin: 0; padding: 10px 12px; overflow: auto; flex: 1; font: 12.5px/1.5 ui-monospace, "Cascadia Mono", Consolas, monospace;
+  pre { margin: 0; padding: 10px 12px; overflow: auto; flex: 1; font: 12.5px/1.55 ui-monospace, "Cascadia Mono", Consolas, monospace;
     white-space: pre-wrap; word-break: break-word; }
-  pre .src { color: var(--muted); }
+  pre .src { color: var(--dim); }
   pre .l-err { color: #ff7b72; } pre .l-ok { color: #7ee787; } pre .l-warn { color: #e3b341; }
-  .toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: #2d1414; border: 1px solid #8e2b2b;
+  .toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--red-bg); border: 1px solid #8e2b2b;
     color: #ffb1ab; padding: 9px 14px; border-radius: 8px; display: none; z-index: 5; max-width: 90vw; }
   .muted { color: var(--muted); }
+  @media (max-width: 1050px) { .modes { grid-template-columns: 1fr; } }
   @media (max-width: 900px) {
     .grid { grid-template-columns: 1fr; }
     .console { position: static; height: 60vh; }
-    header { position: static; }
+    header { position: static; padding: 12px 16px; }
     main { padding: 14px 16px 24px; }
-    .pipe { flex-wrap: wrap; gap: 8px; }
-    .arrow { display: none; }
-    .stage { flex: 1 1 140px; }
-    .toggle { margin-left: 0; }
+    .check { grid-template-columns: 22px 1fr auto; }
+    .check .ic { display: none; }
   }
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-box" viewBox="0 0 24 24"><path d="M21 8 12 3 3 8v8l9 5 9-5V8z"/><path d="m3 8 9 5 9-5M12 13v8"/></symbol>
+    <symbol id="i-flask" viewBox="0 0 24 24"><path d="M9 3h6M10 3v6L4.5 18.5A1.7 1.7 0 0 0 6 21h12a1.7 1.7 0 0 0 1.5-2.5L14 9V3"/><path d="M7.5 15h9"/></symbol>
+    <symbol id="i-camera" viewBox="0 0 24 24"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="m16 10 6-3v10l-6-3z"/></symbol>
+    <symbol id="i-radio" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8a6 6 0 0 1 0 8.4M7.8 16.2a6 6 0 0 1 0-8.4M19.1 4.9a10 10 0 0 1 0 14.2M4.9 19.1a10 10 0 0 1 0-14.2"/></symbol>
+    <symbol id="i-flow" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><path d="M6.5 10v3.5a3 3 0 0 0 3 3H14"/></symbol>
+    <symbol id="i-db" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></symbol>
+    <symbol id="i-monitor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></symbol>
+    <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M17.5 19a4.5 4.5 0 1 0-1.3-8.8A6 6 0 0 0 4.1 12 4 4 0 0 0 5 19.9z"/></symbol>
+    <symbol id="i-chip" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1.5"/><rect x="9.5" y="9.5" width="5" height="5"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z"/></symbol>
+    <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1.5"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 6.3"/><path d="M20 4v7h-7"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12.5 2.7 2.7L16 9.7"/></symbol>
+    <symbol id="i-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></symbol>
+    <symbol id="i-external" viewBox="0 0 24 24"><path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6"/></symbol>
+    <symbol id="i-terminal" viewBox="0 0 24 24"><path d="m4 17 6-5-6-5M12 19h8"/></symbol>
+    <symbol id="i-tool" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
+    <symbol id="i-test" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="m8 12 3 3 5-6"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 17v5M9 3h6l-1 6 4 4H6l4-4z"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+    <symbol id="i-sparkle" viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"/></symbol>
+  </defs>
+</svg>
+
 <header>
-  <h1>📦 SPDI Control Center</h1>
-  <span class="chip"><span id="conn" class="dot"></span><span id="connText">connecting…</span></span>
-  <div class="chips">
-    <span class="chip">Boxes <b id="cTotal">–</b></span>
-    <span class="chip">Pass <b id="cGood" style="color:var(--green)">–</b></span>
-    <span class="chip">Reject <b id="cBad" style="color:var(--red)">–</b></span>
+  <div class="brand">
+    <div class="logo"><svg class="i lg"><use href="#i-box"/></svg></div>
+    <div><h1>SPDI Control Center</h1><div class="sub">this computer · live, updates every second</div></div>
+  </div>
+  <div class="hright">
+    <span class="clock" id="clock">--:--:--</span>
+    <span class="pill live"><span id="conn" class="dot"></span><span id="connText">connecting</span></span>
+    <span class="pill">Boxes <b id="cTotal">–</b></span>
+    <span class="pill">Pass <b id="cGood" style="color:var(--green)">–</b></span>
+    <span class="pill">Reject <b id="cBad" style="color:var(--red)">–</b></span>
   </div>
 </header>
 
 <main>
-  <div class="summary" id="summary"><span class="dot" id="sumDot"></span><div><div id="sumText">Checking…</div><div class="sub" id="sumSub"></div></div></div>
-  <div class="pipe" id="pipe"></div>
+  <div class="banner" id="conflict">
+    <svg class="i lg"><use href="#i-alert"/></svg>
+    <div><b>Simulator and CiRA CORE are both sending boxes.</b> The counts will mix. Use one: press Stop in Simulation, or stop Run in CiRA CORE.</div>
+  </div>
 
-  <div class="actions">
-    <div class="seg" id="mode">
-      <button data-mode="all" class="on">🧪 Simulator</button>
-      <button data-mode="allcira">🎥 Real CiRA CORE</button>
-    </div>
-    <button class="big go" id="startAll">▶ Start everything</button>
-    <button class="big fresh" id="fresh" title="Stop all, empty the database, start again">🧹 Fresh demo</button>
-    <button class="big stop" id="stopAll">■ Stop all</button>
-    <label class="toggle"><input type="checkbox" id="autoRestart" checked> Auto-restart crashed parts</label>
+  <div class="modes">
+    <section class="mode sim" id="panel-sim">
+      <div class="mhead">
+        <div class="micon"><svg class="i lg"><use href="#i-flask"/></svg></div>
+        <div>
+          <div class="mtitle">Simulation <span class="badge" id="badge-sim">OFF</span></div>
+          <div class="mdesc">Ready to use, no camera needed. Fake CiRA frames run through the real pipeline.</div>
+        </div>
+      </div>
+      <div class="progress"><div class="bar"><span id="bar-sim"></span></div><span><b id="prog-sim">0/5</b> connected</span></div>
+      <ul class="checks" id="checks-sim"></ul>
+      <div class="mfoot">
+        <button class="primary" data-run="all"><svg class="i sm"><use href="#i-play"/></svg>Run simulation</button>
+        <button data-fresh="all" title="Stop, empty the database, start again"><svg class="i sm"><use href="#i-refresh"/></svg>Fresh start</button>
+        <button class="danger" data-stop><svg class="i sm"><use href="#i-stop"/></svg>Stop</button>
+      </div>
+      <div class="mlinks">
+        <a href="http://localhost:3000/live" target="_blank" rel="noopener"><svg class="i sm"><use href="#i-external"/></svg>Live page</a>
+        <a href="http://localhost:3000" target="_blank" rel="noopener"><svg class="i sm"><use href="#i-external"/></svg>Digital twin (runs in the browser)</a>
+      </div>
+    </section>
+
+    <section class="mode real" id="panel-real">
+      <div class="mhead">
+        <div class="micon"><svg class="i lg"><use href="#i-camera"/></svg></div>
+        <div>
+          <div class="mtitle">Real system <span class="badge" id="badge-real">OFF</span></div>
+          <div class="mdesc">Camera + AI. Start the services here, then open CiRA CORE and press Run.</div>
+        </div>
+      </div>
+      <div class="progress"><div class="bar"><span id="bar-real"></span></div><span><b id="prog-real">0/5</b> connected</span></div>
+      <ul class="checks" id="checks-real"></ul>
+      <div class="mfoot">
+        <button class="primary" data-run="allcira"><svg class="i sm"><use href="#i-play"/></svg>Start real system</button>
+        <button data-fresh="allcira" title="Stop, empty the database, start again"><svg class="i sm"><use href="#i-refresh"/></svg>Fresh start</button>
+        <button class="danger" data-stop><svg class="i sm"><use href="#i-stop"/></svg>Stop</button>
+      </div>
+      <div class="mlinks">
+        <a href="http://localhost:3000/live" target="_blank" rel="noopener"><svg class="i sm"><use href="#i-external"/></svg>Live page</a>
+        <a href="https://boxdetections.vercel.app/live" target="_blank" rel="noopener"><svg class="i sm"><use href="#i-external"/></svg>Live on Vercel</a>
+      </div>
+    </section>
   </div>
 
   <div class="grid">
     <div>
       <section class="card">
-        <h2>Services</h2>
+        <h2><svg class="i sm"><use href="#i-chip"/></svg>ESP32 on Wokwi</h2>
+        <div class="kv">TOPIC_BASE in the sketch: <code id="topic">–</code></div>
+        <div class="row">
+          <button id="copySketch"><svg class="i sm"><use href="#i-copy"/></svg>Copy ESP32 code</button>
+          <a id="wokwi" href="#" target="_blank" rel="noopener" style="text-decoration:none"><button><svg class="i sm"><use href="#i-external"/></svg>Open Wokwi</button></a>
+          <button id="espTest"><svg class="i sm"><use href="#i-sparkle"/></svg>Send test boxes</button>
+        </div>
+        <div class="muted" style="font-size:12px;margin-top:8px">Copy puts the code with your topic in the clipboard: paste into sketch.ino in Wokwi, press Save, then Play.</div>
+      </section>
+
+      <section class="card">
+        <h2><svg class="i sm"><use href="#i-list"/></svg>Services
+          <label class="toggle r"><input type="checkbox" id="autoRestart" checked> auto-restart</label></h2>
         <div id="services"></div>
       </section>
 
       <section class="card">
-        <h2>Open</h2>
-        <div class="links">
-          <a class="btn" href="http://localhost:3000" target="_blank" rel="noopener">Simulation dashboard</a>
-          <a class="btn" href="http://localhost:3000/live" target="_blank" rel="noopener">Live (CiRA)</a>
-          <a class="btn" id="wokwi" href="#" target="_blank" rel="noopener">ESP32 on Wokwi</a>
-          <a class="btn" href="https://boxdetections.vercel.app" target="_blank" rel="noopener">Vercel</a>
-        </div>
-        <div class="topic">Wokwi <code>TOPIC_BASE</code> must be: <code id="topic">–</code></div>
-        <div class="row" style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
-          <button id="copySketch">📋 Copy ESP32 code</button>
-          <span class="muted" style="font-size:12.5px">topic already filled in → paste into sketch.ino in Wokwi, then Save</span>
-        </div>
-      </section>
-
-      <section class="card">
-        <h2>Tools</h2>
-
+        <h2><svg class="i sm"><use href="#i-tool"/></svg>Tools</h2>
         <div class="tool">
           <div class="row">
-            <button data-tool="tests">Run unit tests</button>
-            <button data-tool="shortcut">Desktop shortcut</button>
-            <button data-tool="setup">Setup / reinstall</button>
+            <button data-tool="tests"><svg class="i sm"><use href="#i-test"/></svg>Run tests</button>
+            <button data-tool="shortcut"><svg class="i sm"><use href="#i-pin"/></svg>Desktop shortcut</button>
+            <button data-tool="setup"><svg class="i sm"><use href="#i-terminal"/></svg>Setup</button>
           </div>
         </div>
-
         <div class="tool">
           <div class="title">Reset database</div>
           <div class="hint">Deletes ALL inspection records in MongoDB. Type RESET to confirm.</div>
           <div class="row">
             <input type="text" id="resetConfirm" placeholder="RESET" autocomplete="off">
-            <button data-tool="reset" class="stop">Delete all</button>
+            <button data-tool="reset" class="danger"><svg class="i sm"><use href="#i-trash"/></svg>Delete all</button>
           </div>
         </div>
-
         <div class="tool">
           <details>
-            <summary>Auto-label images for CiRA</summary>
+            <summary><svg class="i sm chev"><use href="#i-chev"/></svg>Auto-label images for CiRA</summary>
             <div class="body">
               <input type="text" id="labelFolder" placeholder="image folder (empty = box_good\dataset_frames)">
               <input type="text" id="labelOpts" value="--preview" placeholder="options, e.g. --preview --min-area 0.05">
@@ -198,20 +289,18 @@
             </div>
           </details>
         </div>
-
         <div class="tool">
           <details>
-            <summary>Convert text .gt to CiRA format</summary>
+            <summary><svg class="i sm chev"><use href="#i-chev"/></svg>Convert text .gt to CiRA format</summary>
             <div class="body">
               <input type="text" id="convFolder" placeholder="folder with .gt files (empty = box_good\dataset_frames)">
               <div class="row"><button data-tool="convert">Convert</button></div>
             </div>
           </details>
         </div>
-
         <div class="tool">
           <details>
-            <summary>Mix damaged boxes into a video</summary>
+            <summary><svg class="i sm chev"><use href="#i-chev"/></svg>Mix damaged boxes into a video</summary>
             <div class="body">
               <input type="text" id="vidIn" placeholder="conveyor video, e.g. C:\videos\conveyor_good.mp4">
               <input type="text" id="vidImgs" placeholder="folder with damaged-box images">
@@ -220,15 +309,15 @@
             </div>
           </details>
         </div>
-        <div class="muted" style="font-size:12px;margin-top:6px">Tip: in File Explorer, Shift + right-click a file or folder → “Copy as path”, then paste here.</div>
+        <div class="muted" style="font-size:12px;margin-top:6px">Tip: Shift + right-click a file or folder in Explorer, "Copy as path", then paste here.</div>
       </section>
     </div>
 
     <section class="console">
       <div class="tabs" id="tabs">
         <span class="spacer"></span>
-        <label><input type="checkbox" id="follow" checked> follow</label>
-        <button class="ghost" id="clear" style="padding:3px 9px;font-size:12.5px">Clear</button>
+        <label class="toggle"><input type="checkbox" id="follow" checked> follow</label>
+        <button class="ghost sm" id="clear">Clear</button>
       </div>
       <pre id="log"></pre>
     </section>
@@ -238,11 +327,28 @@
 
 <script>
 const $ = (s) => document.querySelector(s);
-const state = { services: {}, logs: {}, all: [], view: 'all' };
+const icon = (name, cls = 'sm') => `<svg class="i ${cls}"><use href="#i-${name}"/></svg>`;
+const state = { services: {}, logs: {}, all: [], view: 'all', pipe: null };
 const MAX = 800;
 const seenTabs = new Set();
-let mode = 'all';
-try { mode = localStorage.getItem('spdi.control.mode') || 'all'; } catch {}
+
+// what each panel needs, in order. optional = nice to have (ESP32)
+const PARTS = {
+  sim:    { name: 'Simulator',      sub: 'fake CiRA',  icon: 'flask' },
+  cira:   { name: 'CiRA CORE',      sub: 'camera + AI', icon: 'camera' },
+  broker: { name: 'MQTT broker',    sub: '',           icon: 'radio' },
+  bridge: { name: 'Bridge',         sub: 'counts boxes', icon: 'flow' },
+  db:     { name: 'MongoDB Atlas',  sub: '',           icon: 'db' },
+  dash:   { name: 'Dashboard',      sub: '',           icon: 'monitor' },
+  relay:  { name: 'Relay to cloud', sub: 'optional',   icon: 'cloud' },
+  esp32:  { name: 'ESP32 on Wokwi', sub: 'optional',   icon: 'chip' },
+};
+const PANEL = {
+  sim:  { list: ['sim', 'broker', 'bridge', 'db', 'dash', 'relay', 'esp32'], required: 5 },
+  real: { list: ['cira', 'broker', 'bridge', 'db', 'dash', 'relay', 'esp32'], required: 5 },
+};
+const STATE_TEXT = { ok: 'Connected', warn: 'Starting', off: 'Off', error: 'Error' };
+const STATE_ICON = { ok: 'check', warn: 'clock', off: 'circle', error: 'alert' };
 
 function toast(msg) {
   const t = $('#toast');
@@ -258,72 +364,74 @@ async function post(url, body) {
     const j = await r.json();
     if (!j.ok) toast(j.error || 'failed');
     return j;
-  } catch (e) {
+  } catch {
     toast('Control Center is not running (start runall.bat)');
     return { ok: false };
   }
 }
 
 function fmtAge(ms) {
-  const s = Math.floor(ms / 1000);
+  const s = Math.max(0, Math.floor(ms / 1000));
   if (s < 60) return s + 's';
   const m = Math.floor(s / 60);
-  return m < 60 ? m + 'm' : Math.floor(m / 60) + 'h ' + (m % 60) + 'm';
+  return m < 60 ? m + 'm ' + (s % 60) + 's' : Math.floor(m / 60) + 'h ' + (m % 60) + 'm';
 }
 
-// ------------------------------------------------------------ pipeline
-function renderPipeline(stages) {
-  const pipe = $('#pipe');
-  pipe.innerHTML = '';
-  stages.forEach((s, i) => {
-    if (i) {
-      const a = document.createElement('div');
-      a.className = 'arrow' + (s.state === 'ok' && stages[i - 1].state === 'ok' ? ' ok' : '');
-      a.textContent = '➜';
-      pipe.appendChild(a);
+// ------------------------------------------------------------ the two panels
+function renderPanel(key, p) {
+  const ul = $('#checks-' + key);
+  const cfg = PANEL[key];
+  let okRequired = 0;
+  ul.innerHTML = '';
+  cfg.list.forEach((part, i) => {
+    const c = (p && p.checks && p.checks[part]) || { state: 'off', detail: '' };
+    if (i < cfg.required && c.state === 'ok') okRequired++;
+    const meta = PARTS[part];
+    const li = document.createElement('li');
+    li.className = 'check ' + c.state;
+    li.innerHTML = `<span class="step">${i + 1}</span>${icon(meta.icon, 'ic')}
+      <div><div class="nm"></div><div class="dt"></div></div>
+      <span class="state ${c.state}">${icon(STATE_ICON[c.state] || 'circle')}<span></span></span>`;
+    const nm = li.querySelector('.nm');
+    nm.textContent = meta.name;
+    if (meta.sub) {
+      const sm = document.createElement('small');
+      sm.textContent = meta.sub;
+      nm.appendChild(sm);
     }
-    const el = document.createElement('div');
-    el.className = 'stage ' + s.state;
-    el.innerHTML = '<div class="top"><span class="dot"></span><span class="nm"></span></div><div class="detail"></div>';
-    el.querySelector('.dot').className = 'dot ' + s.state;
-    el.querySelector('.nm').textContent = s.name;
-    el.querySelector('.detail').textContent = s.detail;
-    pipe.appendChild(el);
+    const dt = li.querySelector('.dt');
+    dt.textContent = c.detail;
+    if (part === 'cira' && c.state !== 'ok') dt.classList.add('hint');
+    li.querySelector('.state span:last-child').textContent = STATE_TEXT[c.state] || c.state;
+    ul.appendChild(li);
   });
-
-  // one-line summary of the whole line
-  const core = stages.filter((s) => s.id !== 'relay' && s.id !== 'esp32');
-  const bad = stages.find((s) => s.state === 'error');
-  const coreOk = core.every((s) => s.state === 'ok');
-  const espOk = stages.filter((s) => s.id === 'relay' || s.id === 'esp32').every((s) => s.state === 'ok');
-  const anyOn = Object.values(state.services).some((s) => ['running', 'restarting', 'stopping'].includes(s.state));
-  let cls, text, sub;
-  if (bad) {
-    cls = 'error'; text = `Problem: ${bad.name}`; sub = bad.detail;
-  } else if (coreOk && espOk) {
-    cls = 'ok'; text = 'Everything is running — boxes flow from camera to ESP32'; sub = 'All 7 parts are green.';
-  } else if (coreOk) {
-    cls = 'ok'; text = 'Inspection line is running'; sub = 'Not yet: ' + stages.filter((s) => s.id === 'relay' || s.id === 'esp32').filter((s) => s.state !== 'ok').map((s) => `${s.name} – ${s.detail}`).join(' · ');
-  } else if (anyOn) {
-    const wait = stages.filter((s) => s.state !== 'ok');
-    cls = 'warn'; text = 'Starting up / not complete'; sub = wait.map((s) => `${s.name}: ${s.detail}`).join(' · ');
-  } else {
-    cls = ''; text = 'Nothing is running'; sub = 'Press ▶ Start everything.';
-  }
-  $('#summary').className = 'summary ' + cls;
-  $('#sumDot').className = 'dot ' + (cls || '');
-  $('#sumText').textContent = text;
-  $('#sumSub').textContent = sub;
+  $('#prog-' + key).textContent = `${okRequired}/${cfg.required}`;
+  $('#bar-' + key).style.width = (okRequired / cfg.required) * 100 + '%';
 }
 
-function renderHealth(h) {
-  const c = (h && h.counts) || {};
+function renderPipeline(p) {
+  state.pipe = p;
+  renderPanel('sim', p);
+  renderPanel('real', p);
+  const mode = p && p.mode;
+  for (const [key, m] of [['sim', 'sim'], ['real', 'cira']]) {
+    const panel = $('#panel-' + key);
+    const badge = $('#badge-' + key);
+    const active = mode === m;
+    const mixed = mode === 'both';
+    panel.classList.toggle('active', active);
+    panel.classList.toggle('mixed', mixed);
+    badge.className = 'badge' + (mixed ? ' mixed' : active ? ' active' : '');
+    badge.textContent = mixed ? 'MIXED' : active ? 'ACTIVE' : 'OFF';
+  }
+  $('#conflict').classList.toggle('show', !!(p && p.conflict));
+  const c = (p && p.health && p.health.counts) || {};
   $('#cTotal').textContent = c.total ?? '–';
   $('#cGood').textContent = c.good ?? '–';
   $('#cBad').textContent = c.damaged ?? '–';
 }
 
-// ------------------------------------------------------------ services
+// ------------------------------------------------------------ services (manual control)
 function renderServices() {
   const box = $('#services');
   box.innerHTML = '';
@@ -331,21 +439,19 @@ function renderServices() {
     const row = document.createElement('div');
     row.className = 'svc';
     const running = ['running', 'stopping', 'restarting'].includes(s.state);
-    const label = { running: 'running', stopping: 'stopping…', crashed: 'crashed', stopped: 'off', restarting: 'restarting…' }[s.state] || s.state;
-    row.innerHTML = `<span class="dot ${s.state}"></span>
-      <div><div class="name"></div><div class="hint"></div></div>
-      <div class="btns"><button class="tog"></button><button class="ghost lg">log</button></div>`;
+    const dot = { running: 'ok', restarting: 'warn', stopping: 'warn', crashed: 'error' }[s.state] || '';
+    const label = { running: 'running', stopping: 'stopping', crashed: 'crashed', stopped: 'off', restarting: 'restarting' }[s.state] || s.state;
+    row.innerHTML = `<span class="dot ${dot}"></span>
+      <div><div class="name"></div><div class="meta"></div></div>
+      <div class="btns"><button class="sm tog"></button><button class="sm ghost lg" title="show log">${icon('terminal')}</button></div>`;
+    row.dataset.id = id;
     row.querySelector('.name').textContent = s.label;
-    const st = document.createElement('span');
-    st.className = 'state' + (s.state === 'crashed' ? ' bad' : '');
-    let txt = label + (s.state === 'running' && s.since ? ' · ' + fmtAge(Date.now() - s.since) : '');
-    if (s.restarts) txt += ` · restarted ${s.restarts}×`;
-    st.textContent = txt;
-    row.querySelector('.name').appendChild(st);
-    row.querySelector('.hint').textContent = s.hint;
+    const meta = row.querySelector('.meta');
+    meta.textContent = metaText(s, label);
+    if (s.state === 'crashed') meta.classList.add('bad');
     const tog = row.querySelector('.tog');
-    tog.textContent = running ? 'Stop' : 'Start';
-    tog.className = 'tog ' + (running ? 'stop' : 'go');
+    tog.innerHTML = running ? icon('stop') + 'Stop' : icon('play') + 'Start';
+    tog.classList.add(running ? 'danger' : 'primary');
     tog.disabled = s.state === 'stopping';
     tog.onclick = () => post(`/api/${running ? 'stop' : 'start'}/${id}`);
     row.querySelector('.lg').onclick = () => setView(id);
@@ -353,7 +459,33 @@ function renderServices() {
   }
 }
 
+function metaText(s, label) {
+  label = label || { running: 'running', stopping: 'stopping', crashed: 'crashed', stopped: 'off', restarting: 'restarting' }[s.state] || s.state;
+  let txt = label + (s.state === 'running' && s.since ? ' · ' + fmtAge(Date.now() - s.since) : '');
+  if (s.restarts) txt += ` · restarted ${s.restarts}x`;
+  return txt + ' · ' + s.hint;
+}
+// update only the running times (rebuilding the rows would eat clicks)
+function updateUptimes() {
+  document.querySelectorAll('.svc').forEach((row) => {
+    const s = state.services[row.dataset.id];
+    if (s) row.querySelector('.meta').textContent = metaText(s);
+  });
+}
+
 // ------------------------------------------------------------ logs
+const EMOJI = /[\p{Extended_Pictographic}\u{FE0F}\u{200D}\u{20E3}]/gu;
+function cleanLine(line) {
+  return line.replace(EMOJI, '').replace(/[ \t]{2,}/g, ' ').trim();
+}
+function lineClass(raw, line) {
+  if (/expect (PASS|FAIL)|PASS \d+ \/ FAIL \d+|expected so far/.test(raw)) return ''; // statistics, not results
+  if (/❌|🟥|\bERROR\b|\bFAIL\b|failed|crashed|EADDRINUSE/i.test(raw)) return 'l-err';
+  if (/⚠️|\bWARN|RESTART/i.test(raw)) return 'l-warn';
+  if (/✅|✓|\bPASS\b|\bDONE\b|connected|ready|listening/i.test(raw)) return 'l-ok';
+  return '';
+}
+
 function renderTabs() {
   const tabs = $('#tabs');
   tabs.querySelectorAll('.tab').forEach((t) => t.remove());
@@ -362,27 +494,22 @@ function renderTabs() {
   for (const id of [...new Set(ids)]) {
     const b = document.createElement('button');
     b.className = 'tab' + (state.view === id ? ' on' : '');
-    b.textContent = id === 'all' ? 'All' : id.replace('tool:', '🛠 ');
+    b.textContent = id === 'all' ? 'All' : id.replace('tool:', 'tool: ');
     b.onclick = () => setView(id);
     tabs.insertBefore(b, spacer);
   }
 }
 
-function lineClass(line) {
-  if (/❌|error|failed|crashed|EADDRINUSE/i.test(line)) return 'l-err';
-  if (/⚠️|warn|🔁/i.test(line)) return 'l-warn';
-  if (/✅|✓|connected|ready|listening/i.test(line)) return 'l-ok';
-  return '';
-}
-
-function appendLine(pre, id, line) {
+function appendLine(pre, id, raw) {
+  const line = cleanLine(raw);
+  if (!line) return;
   const div = document.createElement('div');
-  const cls = lineClass(line);
+  const cls = lineClass(raw, line);
   if (cls) div.className = cls;
   if (state.view === 'all') {
     const src = document.createElement('span');
     src.className = 'src';
-    src.textContent = '[' + id.replace('tool:', '') + '] ';
+    src.textContent = id.replace('tool:', '').padEnd(10, ' ') + ' ';
     div.appendChild(src);
   }
   div.appendChild(document.createTextNode(line));
@@ -422,51 +549,45 @@ function onLog({ id, line }) {
 
 // ------------------------------------------------------------ load + live stream
 async function load() {
-  const r = await fetch('/api/state');
-  const s = await r.json();
+  const s = await (await fetch('/api/state')).json();
   state.services = s.services;
   state.logs = s.logs || {};
   state.all = [];
   for (const [id, lines] of Object.entries(state.logs)) for (const line of lines.slice(-150)) state.all.push({ id, line });
-  $('#topic').textContent = s.relayTopic || '(run the ESP32 relay once to create it)';
+  $('#topic').textContent = s.relayTopic || '(starts with the first relay run)';
   $('#wokwi').href = s.wokwiUrl;
   $('#autoRestart').checked = !!s.autoRestart;
   renderServices();
   renderTabs();
   renderLog();
-  renderHealth(s.health);
-  if (s.stages) renderPipeline(s.stages);
+  renderPipeline(s);
   setBusy(s.busy);
   for (const t of s.tasks || []) setTaskBusy(t, true);
 }
 
 function setTaskBusy(name, busy) {
   document.querySelectorAll(`[data-tool="${name}"]`).forEach((b) => {
-    if (busy) b.dataset.label ||= b.textContent;
+    if (busy && !b.dataset.html) b.dataset.html = b.innerHTML;
     b.disabled = busy;
-    b.textContent = busy ? 'Running…' : b.dataset.label || b.textContent;
+    b.innerHTML = busy ? icon('clock') + 'Running' : b.dataset.html || b.innerHTML;
   });
 }
 
 function setBusy(busy) {
-  for (const id of ['#startAll', '#fresh', '#stopAll']) $(id).disabled = !!busy;
-  $('#fresh').textContent = busy ? '🧹 Working…' : '🧹 Fresh demo';
+  document.querySelectorAll('[data-run],[data-fresh],[data-stop]').forEach((b) => (b.disabled = !!busy));
 }
 
 function connect() {
   const es = new EventSource('/api/stream');
   es.onopen = () => {
     $('#conn').className = 'dot ok';
-    $('#connText').textContent = 'connected';
+    $('#connText').textContent = 'live';
     load().catch(() => {});
   };
   es.onerror = () => {
-    $('#conn').className = 'dot down';
+    $('#conn').className = 'dot error';
     $('#connText').textContent = 'Control Center stopped';
-    renderPipeline([]);
-    $('#summary').className = 'summary error';
-    $('#sumText').textContent = 'Control Center is not running';
-    $('#sumSub').textContent = 'Double-click runall.bat (or the SPDI icon on the desktop).';
+    renderPipeline(null);
   };
   es.addEventListener('log', (e) => onLog(JSON.parse(e.data)));
   es.addEventListener('status', (e) => {
@@ -474,11 +595,7 @@ function connect() {
     state.services[d.id] = { ...state.services[d.id], ...d };
     renderServices();
   });
-  es.addEventListener('pipeline', (e) => {
-    const d = JSON.parse(e.data);
-    renderPipeline(d.stages);
-    renderHealth(d.health);
-  });
+  es.addEventListener('pipeline', (e) => renderPipeline(JSON.parse(e.data)));
   es.addEventListener('task', (e) => {
     const d = JSON.parse(e.data);
     setTaskBusy(d.name, d.running);
@@ -488,39 +605,33 @@ function connect() {
 }
 
 // ------------------------------------------------------------ buttons
-function setMode(m) {
-  mode = m;
-  try { localStorage.setItem('spdi.control.mode', m); } catch {}
-  document.querySelectorAll('#mode button').forEach((b) => b.classList.toggle('on', b.dataset.mode === m));
-}
-document.querySelectorAll('#mode button').forEach((b) => (b.onclick = () => setMode(b.dataset.mode)));
-setMode(mode);
-
-$('#startAll').onclick = () => post('/api/preset/' + mode);
-$('#stopAll').onclick = () => post('/api/stopall');
-$('#fresh').onclick = async () => {
-  const what = mode === 'all' ? 'the simulator' : 'real CiRA CORE';
-  if (!confirm(`Fresh demo:\n\n1. stop everything\n2. DELETE all inspection records in MongoDB\n3. start everything again with ${what}\n\nContinue?`)) return;
-  const r = await post('/api/fresh/' + mode, { confirm: true });
-  if (r.ok) setView('tool:fresh');
-};
+document.querySelectorAll('[data-run]').forEach((b) => (b.onclick = () => post('/api/preset/' + b.dataset.run)));
+document.querySelectorAll('[data-stop]').forEach((b) => (b.onclick = () => post('/api/stopall')));
+document.querySelectorAll('[data-fresh]').forEach((b) => {
+  b.onclick = async () => {
+    const what = b.dataset.fresh === 'all' ? 'the simulation' : 'the real system';
+    if (!confirm(`Fresh start for ${what}:\n\n1. stop everything\n2. DELETE all inspection records in MongoDB\n3. start ${what} again\n\nContinue?`)) return;
+    const r = await post('/api/fresh/' + b.dataset.fresh, { confirm: true });
+    if (r.ok) setView('tool:fresh');
+  };
+});
+$('#autoRestart').onchange = (e) => post('/api/autorestart', { on: e.target.checked });
+$('#espTest').onclick = () => post('/api/start/relaytest');
 $('#copySketch').onclick = async () => {
+  const b = $('#copySketch');
   try {
     const j = await (await fetch('/api/sketch')).json();
     if (!j.ok) return toast(j.error || 'could not read sketch.ino');
     await navigator.clipboard.writeText(j.code);
-    const b = $('#copySketch');
-    b.textContent = '✅ Copied (' + (j.topic || 'no topic yet') + ')';
-    setTimeout(() => (b.textContent = '📋 Copy ESP32 code'), 3000);
+    b.innerHTML = icon('check') + 'Copied';
+    setTimeout(() => (b.innerHTML = icon('copy') + 'Copy ESP32 code'), 2500);
   } catch (e) {
     toast('Copy failed: ' + e.message);
   }
 };
-$('#autoRestart').onchange =(e) => post('/api/autorestart', { on: e.target.checked });
 $('#clear').onclick = () => {
-  if (state.view === 'all') {
-    state.all = [];
-  } else {
+  if (state.view === 'all') state.all = [];
+  else {
     state.logs[state.view] = [];
     post('/api/clear/' + encodeURIComponent(state.view));
   }
@@ -548,7 +659,16 @@ document.querySelectorAll('[data-tool]').forEach((b) => {
   };
 });
 
-setInterval(renderServices, 5000); // keep uptimes fresh
+// clock + running times tick every second
+function tick() {
+  $('#clock').textContent = new Date().toLocaleTimeString('en-GB');
+}
+setInterval(() => {
+  tick();
+  updateUptimes();
+}, 1000);
+tick();
+renderPipeline(null);
 load().catch(() => toast('Control Center is not running (start runall.bat)'));
 connect();
 </script>
