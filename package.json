@@ -20,6 +20,7 @@
     "demo:sim:nobroker": "concurrently -k -n broker,bridge,sim,dash -c magenta,green,yellow,cyan \"npm:broker:node\" \"npm:bridge\" \"npm:sim\" \"npm:dashboard\"",
     "demo:cira": "concurrently -k -n bridge,dash -c green,cyan \"npm:bridge\" \"npm:dashboard\"",
     "demo:cira:nobroker": "concurrently -k -n broker,bridge,dash -c magenta,green,cyan \"npm:broker:node\" \"npm:bridge\" \"npm:dashboard\"",
+    "control": "node tools/control/server.js",
     "all": "concurrently -k -n broker,bridge,sim,dash,esp32 -c magenta,green,yellow,cyan,blue \"npm:broker:node\" \"npm:bridge\" \"npm:sim\" \"npm:dashboard\" \"npm:relay\"",
     "all:cira": "concurrently -k -n broker,bridge,dash,esp32 -c magenta,green,cyan,blue \"npm:broker:node\" \"npm:bridge\" \"npm:dashboard\" \"npm:relay\"",
     "setup:env": "node tools/setup-env.js",
