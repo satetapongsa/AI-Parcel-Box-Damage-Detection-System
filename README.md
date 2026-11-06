@@ -34,7 +34,7 @@ Deploy ขึ้น Vercel ได้เลย — หน้าจำลองไ
 
 | ไฟล์ | ทำเมื่อไร | ทำอะไร |
 |---|---|---|
-| **`runall.bat`** | ใช้อันนี้อันเดียวพอ | ดับเบิลคลิกแล้ว**รันทุกอย่างในหน้าต่างเดียว** (broker + bridge + ตัวจำลอง + dashboard + relay ESP32) แล้วเปิดเบราว์เซอร์ให้เอง · กด **C** = ใช้ CiRA จริงแทนตัวจำลอง · กด **M** = เมนูเครื่องมือ (reset, auto-label, ทำวิดีโอ, test) |
+| **`runall.bat`** | ใช้อันนี้อันเดียวพอ | ดับเบิลคลิก → เปิด **Control Center** บนเว็บ (http://localhost:3100 ธีมมืด) และรันทุกอย่างให้เลย (broker + bridge + ตัวจำลอง + dashboard + relay ESP32) · ในเว็บมีปุ่ม Start/Stop ทีละตัว, ดู log สด, ปุ่มเครื่องมือ (test, reset, auto-label, แปลง .gt, ทำวิดีโอ) · หน้าต่าง terminal ยังโชว์ log ทุกตัว ปิดหน้าต่าง = หยุดทุกอย่าง · กด **C** = ใช้ CiRA จริง, **W** = เปิดเว็บอย่างเดียว, **M** = เมนูเดิมใน terminal |
 | `1-SETUP.bat` | ครั้งแรกครั้งเดียว | ติดตั้งทุกอย่าง + ถามให้วาง connection string |
 | `2-DEMO-SIM.bat` | อยากลองระบบ (ไม่ต้องเปิด CiRA) | จำลองกล่องวิ่ง → เปิดหน้าเว็บให้เอง |
 | `3-DEMO-CIRA.bat` | ใช้กับ CiRA จริง | เปิดตัวรับข้อมูล + หน้าเว็บ แล้วไปกด Run ใน CiRA |
@@ -56,7 +56,7 @@ CiRA CORE --MQTT JSON--> Mosquitto --> Node.js Bridge (นับกล่อง�
 | `dashboard/` | Next.js + Tailwind + Recharts |
 | `cira/` | โค้ดวางใน JavaScript node ของ CiRA + คู่มือ |
 | `esp32/` | firmware ESP32 + วงจร Wokwi (จำลอง ไม่ต้องมีบอร์ด) |
-| `tools/` | `make_video.py` ผสมรูปกล่องเสียลงวิดีโอสายพาน |
+| `tools/` | `make_video.py` ผสมรูปกล่องเสียลงวิดีโอสายพาน · `auto_label/` ตีกรอบอัตโนมัติ · `control/` หน้าเว็บ Control Center |
 | `docs/` | สถาปัตยกรรม, สคริปต์ demo, troubleshooting |
 
 ## สิ่งที่ต้องติดตั้ง
@@ -128,6 +128,7 @@ Terminal 1: `npm run broker` · Terminal 2: `npm run demo:cira` · แล้ว�
 | `npm run demo:sim` | bridge + sim + dashboard พร้อมกัน |
 | `npm run demo:sim:nobroker` | dev broker + bridge + sim + dashboard |
 | `npm run demo:cira` | bridge + dashboard (CiRA ส่งข้อมูลจริง) |
+| `npm run control` | เปิด Control Center บนเว็บ (ไม่สตาร์ตอะไรเอง) |
 | `npm run all` | ทุกอย่าง: broker + bridge + sim + dashboard + relay ESP32 (ที่ runall.bat ใช้) |
 | `npm run all:cira` | ทุกอย่างแบบใช้ CiRA จริง (ไม่มีตัวจำลอง) |
 | `npm test` | unit tests ของ tracker |
