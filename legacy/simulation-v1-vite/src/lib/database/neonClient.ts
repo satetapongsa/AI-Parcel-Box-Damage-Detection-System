@@ -1,7 +1,7 @@
 import { neon } from '@neondatabase/serverless';
 
-// Neon PostgreSQL connection
-const NEON_CONNECTION_STRING = 'postgresql://neondb_owner:npg_QjI8V7vPWKoc@ep-withered-fire-azqk8g3a-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require';
+// Neon PostgreSQL connection (set VITE_NEON_DATABASE_URL in .env.local — never commit it)
+const NEON_CONNECTION_STRING = import.meta.env.VITE_NEON_DATABASE_URL ?? '';
 
 const sql = neon(NEON_CONNECTION_STRING);
 
