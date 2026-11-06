@@ -1,14 +1,15 @@
 'use strict';
 /**
  * SPDI Control Center: a small local web page to start / stop every part of
- * the system and run the tools. No extra packages needed.
+ * the system, see the whole pipeline live and run the tools.
  *
  *   node tools/control/server.js            open the panel
  *   node tools/control/server.js --all      open the panel and start everything (simulator)
  *   node tools/control/server.js --all-cira open the panel and start everything for real CiRA
+ *   add --no-open to skip opening the browser
  *
  * Listens on 127.0.0.1 only (this computer). Every log line is also printed in
- * the terminal with a [name] prefix.
+ * the terminal with a [name] prefix. Uses the mqtt package already installed in bridge/.
  */
 const http = require('http');
 const fs = require('fs');
@@ -23,26 +24,43 @@ const NODE = process.execPath;
 const MAX_LINES = 500;
 const WOKWI_URL = 'https://wokwi.com/projects/479947280939592705';
 
+let mqtt = null;
+try {
+  mqtt = require(path.join(BRIDGE, 'node_modules', 'mqtt'));
+} catch {
+  console.log('⚠️  bridge/node_modules/mqtt not found (run 1-SETUP.bat) - pipeline checks for MQTT/ESP32 are off');
+}
+
 // ---------------------------------------------------------------- what can run
 const SERVICES = {
-  broker:    { label: 'MQTT broker',            hint: 'dev broker on :1883 (uses Mosquitto if it already runs)', cwd: BRIDGE, args: ['dev-broker.js'] },
-  bridge:    { label: 'Bridge',                 hint: 'tracks + counts boxes, saves to MongoDB',                 cwd: BRIDGE, args: ['index.js'] },
-  sim:       { label: 'Simulator',              hint: 'fake CiRA frames (box_good / dent / tear)',               cwd: BRIDGE, args: ['simulator.js', 'frames'] },
-  dashboard: { label: 'Dashboard',              hint: 'Next.js web on http://localhost:3000',                    cwd: DASH,   args: [path.join(DASH, 'node_modules', 'next', 'dist', 'bin', 'next'), 'dev', '-p', '3000'] },
-  relay:     { label: 'ESP32 relay',            hint: 'forwards real results to Wokwi',                          cwd: BRIDGE, args: ['relay.js'], conflicts: ['relaytest'] },
-  relaytest: { label: 'ESP32 test',             hint: 'fake PASS/FAIL every 3 s to Wokwi',                       cwd: BRIDGE, args: ['relay.js', '--test'], conflicts: ['relay'] },
-  sniff:     { label: 'MQTT sniff',             hint: 'prints every message on spdi/#',                          cwd: BRIDGE, args: ['sniff.js'] },
+  broker:    { label: 'MQTT broker', hint: 'dev broker on :1883 (uses Mosquitto if it already runs)', cwd: BRIDGE, args: ['dev-broker.js'] },
+  bridge:    { label: 'Bridge',      hint: 'tracks + counts boxes, saves to MongoDB',                 cwd: BRIDGE, args: ['index.js'] },
+  sim:       { label: 'Simulator',   hint: 'fake CiRA frames (box_good / dent / tear)',               cwd: BRIDGE, args: ['simulator.js', 'frames'] },
+  dashboard: { label: 'Dashboard',   hint: 'Next.js web on http://localhost:3000',                    cwd: DASH,   args: [path.join(DASH, 'node_modules', 'next', 'dist', 'bin', 'next'), 'dev', '-p', '3000'] },
+  relay:     { label: 'ESP32 relay', hint: 'forwards real results to Wokwi',                          cwd: BRIDGE, args: ['relay.js'], conflicts: ['relaytest'] },
+  relaytest: { label: 'ESP32 test',  hint: 'fake PASS/FAIL every 3 s to Wokwi',                       cwd: BRIDGE, args: ['relay.js', '--test'], conflicts: ['relay'] },
+  sniff:     { label: 'MQTT sniff',  hint: 'prints every message on spdi/#',                          cwd: BRIDGE, args: ['sniff.js'] },
 };
 const PRESETS = {
   all:     ['broker', 'bridge', 'sim', 'dashboard', 'relay'],
   allcira: ['broker', 'bridge', 'dashboard', 'relay'],
 };
 
+// auto-restart: a service that dies on its own is started again (with a pause),
+// at most MAX_RESTARTS times per RESTART_WINDOW_MS
+let autoRestart = true;
+const MAX_RESTARTS = 5;
+const RESTART_WINDOW_MS = 60_000;
+const RESTART_DELAY_MS = 2_000;
+
 const procs = {};   // id -> child process
 const logs = {};    // id -> [lines]
-const status = {};  // id -> { state, pid, since, code }
-for (const id of Object.keys(SERVICES)) status[id] = { state: 'stopped' };
-const tasks = {};   // running one-shot tools: id -> child
+const status = {};  // id -> { state, pid, since, code, restarts }
+const restartLog = {}; // id -> [timestamps]
+const restartTimers = {};
+for (const id of Object.keys(SERVICES)) status[id] = { state: 'stopped', restarts: 0 };
+const tasks = {};   // running one-shot tools: name -> child
+let busy = null;    // "fresh demo" in progress
 
 // ---------------------------------------------------------------- live updates (SSE)
 const clients = new Set();
@@ -71,34 +89,57 @@ function setStatus(id, patch) {
 }
 
 // ---------------------------------------------------------------- process control
-function run(id, cmd, args, cwd, onExit) {
-  const child = spawn(cmd, args, { cwd, env: { ...process.env, FORCE_COLOR: '0' }, windowsHide: true });
-  child.stdout.on('data', (d) => addLog(id, d));
-  child.stderr.on('data', (d) => addLog(id, d));
-  child.on('error', (err) => addLog(id, `❌ could not start: ${err.message}`));
-  child.on('exit', (code, signal) => onExit(code, signal));
-  return child;
-}
-
-function startService(id) {
+function startService(id, { fromRestart = false } = {}) {
   const svc = SERVICES[id];
   if (!svc) return { ok: false, error: 'unknown service' };
   if (procs[id]) return { ok: true, already: true };
+  clearTimeout(restartTimers[id]);
+  if (!fromRestart) {
+    restartLog[id] = [];
+    status[id].restarts = 0;
+  }
   for (const other of svc.conflicts || []) if (procs[other]) stopService(other);
   if (id === 'dashboard' && !fs.existsSync(svc.args[0])) {
     addLog(id, '❌ dashboard is not installed yet: run 1-SETUP.bat (or the Setup button)');
+    setStatus(id, { state: 'crashed' });
     return { ok: false, error: 'not installed' };
   }
   addLog(id, `▶ start: ${svc.label}`);
-  const child = run(id, NODE, svc.args, svc.cwd, (code, signal) => {
+  const child = spawn(NODE, svc.args, { cwd: svc.cwd, env: { ...process.env, FORCE_COLOR: '0' }, windowsHide: true });
+  child.stdout.on('data', (d) => addLog(id, d));
+  child.stderr.on('data', (d) => addLog(id, d));
+  child.on('error', (err) => addLog(id, `❌ could not start: ${err.message}`));
+  child.on('exit', (code, signal) => {
     delete procs[id];
     const wanted = status[id].state === 'stopping';
-    addLog(id, wanted ? '■ stopped' : `⚠️ exited (code ${code ?? signal})`);
-    setStatus(id, { state: wanted || code === 0 ? 'stopped' : 'crashed', pid: null, code });
+    if (wanted || exiting) {
+      addLog(id, '■ stopped');
+      setStatus(id, { state: 'stopped', pid: null, code });
+      return;
+    }
+    addLog(id, `⚠️ exited by itself (code ${code ?? signal})`);
+    scheduleRestart(id, code);
   });
   procs[id] = child;
   setStatus(id, { state: 'running', pid: child.pid, since: Date.now(), code: null });
   return { ok: true };
+}
+
+function scheduleRestart(id, code) {
+  const now = Date.now();
+  const recent = (restartLog[id] || []).filter((t) => now - t < RESTART_WINDOW_MS);
+  restartLog[id] = recent;
+  if (!autoRestart || recent.length >= MAX_RESTARTS) {
+    if (autoRestart) addLog(id, `❌ crashed ${MAX_RESTARTS} times in a minute - not restarting. Check the log above.`);
+    setStatus(id, { state: 'crashed', pid: null, code });
+    return;
+  }
+  recent.push(now);
+  setStatus(id, { state: 'restarting', pid: null, code, restarts: (status[id].restarts || 0) + 1 });
+  addLog(id, `🔁 auto-restart in ${RESTART_DELAY_MS / 1000} s (${recent.length}/${MAX_RESTARTS})`);
+  restartTimers[id] = setTimeout(() => {
+    if (status[id].state === 'restarting') startService(id, { fromRestart: true });
+  }, RESTART_DELAY_MS);
 }
 
 function killTree(child) {
@@ -108,9 +149,10 @@ function killTree(child) {
 }
 
 function stopService(id) {
+  clearTimeout(restartTimers[id]);
   const child = procs[id];
   if (!child) {
-    if (status[id]?.state === 'crashed') setStatus(id, { state: 'stopped' });
+    if (['crashed', 'restarting'].includes(status[id]?.state)) setStatus(id, { state: 'stopped' });
     return { ok: true, already: true };
   }
   setStatus(id, { state: 'stopping' });
@@ -118,23 +160,68 @@ function stopService(id) {
   return { ok: true };
 }
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 async function startPreset(name) {
   const ids = PRESETS[name];
   if (!ids) return { ok: false, error: 'unknown preset' };
   // a preset is the whole line-up: stop what is not part of it (e.g. the simulator for CiRA)
-  for (const id of Object.keys(procs)) if (!ids.includes(id) && id !== 'sniff') stopService(id);
+  for (const id of Object.keys(SERVICES)) if (!ids.includes(id) && id !== 'sniff') stopService(id);
   if (ids.includes('broker')) {
     startService('broker');
-    await new Promise((r) => setTimeout(r, 1200)); // let the broker bind first
+    await sleep(1200); // let the broker bind first
   }
   for (const id of ids) if (id !== 'broker') startService(id);
   return { ok: true };
 }
 
 function stopAll() {
-  for (const id of Object.keys(procs)) stopService(id);
+  for (const id of Object.keys(SERVICES)) stopService(id);
   for (const t of Object.values(tasks)) killTree(t);
   return { ok: true };
+}
+
+async function waitAllStopped(timeoutMs = 8000) {
+  const end = Date.now() + timeoutMs;
+  while (Object.keys(procs).length && Date.now() < end) await sleep(200);
+}
+
+// "Fresh demo": stop everything, empty the database, start the chosen line-up
+async function freshDemo(preset) {
+  if (!PRESETS[preset]) return { ok: false, error: 'unknown preset' };
+  if (busy) return { ok: false, error: 'already busy: ' + busy };
+  busy = 'fresh demo';
+  broadcast('busy', { busy });
+  const id = 'tool:fresh';
+  logs[id] = [];
+  try {
+    addLog(id, '🧹 Fresh demo: stopping everything ...');
+    stopAll();
+    await waitAllStopped();
+    addLog(id, '🗑️  emptying the database ...');
+    const code = await runToEnd(id, NODE, ['reset.js', '--yes'], BRIDGE);
+    if (code !== 0) addLog(id, '⚠️ reset failed (see above) - starting anyway');
+    addLog(id, `▶ starting: ${PRESETS[preset].join(', ')}`);
+    await startPreset(preset);
+    addLog(id, '✅ fresh demo is running');
+    return { ok: true };
+  } finally {
+    busy = null;
+    broadcast('busy', { busy });
+  }
+}
+
+function runToEnd(id, cmd, args, cwd) {
+  return new Promise((resolve) => {
+    const child = spawn(cmd, args, { cwd, env: { ...process.env, FORCE_COLOR: '0' }, windowsHide: true });
+    child.stdout.on('data', (d) => addLog(id, d));
+    child.stderr.on('data', (d) => addLog(id, d));
+    child.on('error', (err) => {
+      addLog(id, `❌ ${err.message}`);
+      resolve(1);
+    });
+    child.on('close', (code) => resolve(code));
+  });
 }
 
 // ---------------------------------------------------------------- one-shot tools
@@ -170,6 +257,8 @@ function startTask(name, body) {
     if (!isDir(images)) return { ok: false, error: `images folder not found: ${images || '(empty)'}` };
     cmd = 'py';
     args = [path.join(ROOT, 'tools', 'make_video.py'), '--input', input, '--images', images, '--output', output];
+  } else if (name === 'shortcut') {
+    args = [path.join(__dirname, 'make-shortcut.js')];
   } else if (name === 'setup') {
     cmd = 'npm run setup'; args = []; shell = true; // fixed command, no user input
   } else {
@@ -193,16 +282,94 @@ function startTask(name, body) {
   return { ok: true, log: id };
 }
 
-// ---------------------------------------------------------------- health of the running system
-let health = { dashboard: null, checkedAt: 0 };
-function readRelayTopic() {
+// ---------------------------------------------------------------- pipeline monitor
+function readEnv(key) {
   try {
-    const m = fs.readFileSync(path.join(BRIDGE, '.env'), 'utf8').match(/^RELAY_TOPIC=(.*)$/m);
+    const m = fs.readFileSync(path.join(BRIDGE, '.env'), 'utf8').match(new RegExp(`^${key}=(.*)$`, 'm'));
     return m ? m[1].trim() : '';
   } catch {
     return '';
   }
 }
+const LINE_ID = readEnv('LINE_ID') || 'line1';
+const LOCAL_MQTT = readEnv('MQTT_URL') || 'mqtt://127.0.0.1:1883';
+const RELAY_URL = readEnv('RELAY_URL') || 'mqtt://broker.hivemq.com:1883';
+
+const mon = {
+  local: false,
+  frames: [],            // [ts, source] for the last few seconds
+  lastSourceName: null,
+  lastCountedAt: 0,
+  public: false,
+  relayTopic: '',
+  relayStatus: null,     // 'online' | 'offline' (retained, from relay.js)
+  esp32: null,           // 'online' | 'offline'
+  esp32Seen: 0,
+  esp32Info: null,
+  lastAckAt: 0,
+};
+
+let localClient = null;
+let publicClient = null;
+if (mqtt) {
+  localClient = mqtt.connect(LOCAL_MQTT, { clientId: `spdi-control-${process.pid}`, reconnectPeriod: 2000, connectTimeout: 4000 });
+  localClient.on('connect', () => {
+    mon.local = true;
+    localClient.subscribe([`spdi/${LINE_ID}/detections`, `spdi/${LINE_ID}/counted`]);
+  });
+  localClient.on('close', () => (mon.local = false));
+  localClient.on('error', () => {});
+  localClient.on('message', (topic, buf) => {
+    const now = Date.now();
+    if (topic.endsWith('/counted')) {
+      mon.lastCountedAt = now;
+      return;
+    }
+    // cheap check without parsing (CiRA frames can carry a whole JPEG)
+    const head = buf.subarray(0, 400).toString();
+    const src = head.includes('"source":"simulator"') || head.includes('"device":"sim') ? 'Simulator' : 'CiRA CORE';
+    mon.frames.push([now, src]);
+    mon.lastSourceName = src;
+    while (mon.frames.length && now - mon.frames[0][0] > 3000) mon.frames.shift();
+  });
+}
+
+function connectPublic() {
+  const topic = readEnv('RELAY_TOPIC');
+  if (!mqtt || !topic || topic === mon.relayTopic) return;
+  if (publicClient) publicClient.end(true);
+  mon.relayTopic = topic;
+  mon.relayStatus = null;
+  mon.esp32 = null;
+  publicClient = mqtt.connect(RELAY_URL, { clientId: `spdi-control-${process.pid}-${Date.now() % 1e5}`, reconnectPeriod: 5000, connectTimeout: 10000 });
+  publicClient.on('connect', () => {
+    mon.public = true;
+    publicClient.subscribe([`${topic}/status`, `${topic}/esp32`, `${topic}/ack`]);
+  });
+  publicClient.on('close', () => (mon.public = false));
+  publicClient.on('error', () => {});
+  publicClient.on('message', (t, buf) => {
+    const s = buf.toString();
+    if (t.endsWith('/status')) mon.relayStatus = s;
+    else if (t.endsWith('/ack')) {
+      mon.lastAckAt = Date.now();
+      mon.esp32Seen = Date.now();
+      mon.esp32 = 'online';
+    } else if (t.endsWith('/esp32')) {
+      if (s === 'offline') {
+        mon.esp32 = 'offline';
+        return;
+      }
+      mon.esp32 = 'online';
+      mon.esp32Seen = Date.now();
+      try { mon.esp32Info = JSON.parse(s); } catch { mon.esp32Info = null; }
+    }
+  });
+}
+connectPublic();
+setInterval(connectPublic, 10_000).unref(); // RELAY_TOPIC appears after the first relay run
+
+let health = { dashboard: null, checkedAt: 0 };
 function checkHealth() {
   const req = http.get({ host: '127.0.0.1', port: 3000, path: '/api/stats', timeout: 4000 }, (res) => {
     let body = '';
@@ -210,20 +377,66 @@ function checkHealth() {
     res.on('end', () => {
       try {
         const j = JSON.parse(body);
-        health = { dashboard: j.ok ? 'ok' : 'error', counts: j.counts, error: j.ok ? null : j.error, checkedAt: Date.now() };
+        health = { dashboard: j.ok ? 'ok' : 'error', counts: j.counts, status: j.status, error: j.ok ? null : j.error, checkedAt: Date.now() };
       } catch {
         health = { dashboard: 'starting', checkedAt: Date.now() };
       }
-      broadcast('health', health);
     });
   });
   req.on('timeout', () => req.destroy());
-  req.on('error', () => {
-    health = { dashboard: 'down', checkedAt: Date.now() };
-    broadcast('health', health);
-  });
+  req.on('error', () => (health = { dashboard: 'down', checkedAt: Date.now() }));
 }
-setInterval(checkHealth, 4000).unref();
+
+const ago = (t) => {
+  if (!t) return 'never';
+  const s = Math.round((Date.now() - t) / 1000);
+  return s < 60 ? `${s}s ago` : `${Math.round(s / 60)}m ago`;
+};
+
+function pipeline() {
+  const now = Date.now();
+  const running = (id) => !!procs[id];
+  const fps = mon.frames.length / 3;
+  const st = health.status;
+  const bridgeAge = st && st.updatedAt ? now - Date.parse(st.updatedAt) : Infinity;
+  const espAge = mon.esp32Seen ? now - mon.esp32Seen : Infinity;
+  const relayOn = running('relay') || running('relaytest');
+
+  const stages = [];
+  stages.push(
+    fps > 0
+      ? { id: 'source', name: mon.lastSourceName || 'Camera', state: 'ok', detail: `${fps.toFixed(0)} frames/s` }
+      : { id: 'source', name: running('sim') ? 'Simulator' : 'CiRA CORE', state: running('sim') ? 'warn' : 'off',
+          detail: running('sim') ? 'starting…' : 'no frames - press Run in CiRA' }
+  );
+  stages.push(mon.local
+    ? { id: 'broker', name: 'MQTT broker', state: 'ok', detail: ':1883 reachable' }
+    : { id: 'broker', name: 'MQTT broker', state: running('broker') ? 'warn' : 'error', detail: 'not reachable on :1883' });
+  stages.push(bridgeAge < 10_000
+    ? { id: 'bridge', name: 'Bridge', state: 'ok', detail: `heartbeat ${ago(Date.parse(st.updatedAt))}${mon.lastCountedAt ? ' · box ' + ago(mon.lastCountedAt) : ''}` }
+    : { id: 'bridge', name: 'Bridge', state: running('bridge') ? 'warn' : 'off', detail: running('bridge') ? 'waiting for heartbeat' : 'not running' });
+  stages.push(health.dashboard === 'ok'
+    ? { id: 'db', name: 'MongoDB', state: 'ok', detail: `${health.counts?.total ?? 0} boxes stored` }
+    : health.dashboard === 'error'
+      ? { id: 'db', name: 'MongoDB', state: 'error', detail: String(health.error || 'cannot connect').slice(0, 60) }
+      : { id: 'db', name: 'MongoDB', state: 'off', detail: 'checked through the dashboard' });
+  stages.push(health.dashboard === 'ok' || health.dashboard === 'error'
+    ? { id: 'dash', name: 'Dashboard', state: 'ok', detail: 'localhost:3000' }
+    : { id: 'dash', name: 'Dashboard', state: running('dashboard') ? 'warn' : 'off', detail: running('dashboard') ? 'starting…' : 'not running' });
+  stages.push(mon.relayStatus === 'online' && relayOn
+    ? { id: 'relay', name: 'Relay → cloud', state: 'ok', detail: running('relaytest') ? 'test boxes every 3 s' : 'HiveMQ connected' }
+    : { id: 'relay', name: 'Relay → cloud', state: relayOn ? 'warn' : 'off', detail: relayOn ? 'connecting to HiveMQ…' : 'not running' });
+  stages.push(mon.esp32 === 'online' && espAge < 30_000
+    ? { id: 'esp32', name: 'ESP32 (Wokwi)', state: 'ok', detail: `seen ${ago(mon.esp32Seen)}${mon.esp32Info ? ` · D${mon.esp32Info.dent ?? 0} T${mon.esp32Info.tear ?? 0}` : ''}` }
+    : { id: 'esp32', name: 'ESP32 (Wokwi)', state: mon.esp32 === 'online' ? 'warn' : 'off',
+        detail: mon.esp32 === 'online' ? `quiet, seen ${ago(mon.esp32Seen)}` : 'press ▶ in Wokwi' });
+  return stages;
+}
+
+setInterval(() => {
+  checkHealth();
+  broadcast('pipeline', { stages: pipeline(), health });
+}, 2000).unref();
 
 // ---------------------------------------------------------------- http
 function readBody(req) {
@@ -248,7 +461,10 @@ function snapshot() {
     tasks: Object.keys(tasks),
     logs,
     health,
-    relayTopic: readRelayTopic(),
+    stages: pipeline(),
+    autoRestart,
+    busy,
+    relayTopic: readEnv('RELAY_TOPIC'),
     wokwiUrl: WOKWI_URL,
   };
 }
@@ -264,7 +480,22 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
     return fs.createReadStream(PAGE).pipe(res);
   }
+  if (req.method === 'GET' && url.pathname === '/favicon.ico' && fs.existsSync(path.join(__dirname, 'spdi.ico'))) {
+    res.writeHead(200, { 'Content-Type': 'image/x-icon' });
+    return fs.createReadStream(path.join(__dirname, 'spdi.ico')).pipe(res);
+  }
   if (req.method === 'GET' && url.pathname === '/api/state') return json(res, 200, snapshot());
+  if (req.method === 'GET' && url.pathname === '/api/sketch') {
+    // the Wokwi sketch with this computer's RELAY_TOPIC filled in, ready to paste
+    try {
+      const topic = readEnv('RELAY_TOPIC');
+      let code = fs.readFileSync(path.join(ROOT, 'esp32', 'wokwi', 'sketch.ino'), 'utf8');
+      if (topic) code = code.replace(/#define TOPIC_BASE\s+"[^"]*"/, `#define TOPIC_BASE   "${topic}"`);
+      return json(res, 200, { ok: true, code, topic });
+    } catch (err) {
+      return json(res, 200, { ok: false, error: err.message });
+    }
+  }
   if (req.method === 'GET' && url.pathname === '/api/stream') {
     res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', Connection: 'keep-alive' });
     res.write(': hello\n\n');
@@ -276,12 +507,22 @@ const server = http.createServer(async (req, res) => {
     const origin = req.headers.origin;
     if (origin && !/^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(origin)) return json(res, 403, { ok: false, error: 'bad origin' });
     const body = await readBody(req);
-    const [, kind, a, b] = url.pathname.split('/'); // /api/<kind>/<a>/<b>
+    const [, kind, a, b] = url.pathname.split('/'); // /api/<a>/<b>
     if (kind !== 'api') return json(res, 404, { ok: false });
     if (a === 'start' && b) return json(res, 200, startService(b));
     if (a === 'stop' && b) return json(res, 200, stopService(b));
     if (a === 'preset' && b) return json(res, 200, await startPreset(b));
+    if (a === 'fresh' && b) {
+      if (body.confirm !== true) return json(res, 200, { ok: false, error: 'not confirmed' });
+      freshDemo(b); // runs in the background, progress goes to the "fresh" log
+      return json(res, 200, { ok: true, log: 'tool:fresh' });
+    }
     if (a === 'stopall') return json(res, 200, stopAll());
+    if (a === 'autorestart') {
+      autoRestart = !!body.on;
+      broadcast('autorestart', { on: autoRestart });
+      return json(res, 200, { ok: true, on: autoRestart });
+    }
     if (a === 'tool' && b) return json(res, 200, startTask(b, body));
     if (a === 'clear' && b) {
       logs[b] = [];
@@ -325,6 +566,8 @@ function shutdown() {
   exiting = true;
   console.log('\n👋 stopping everything ...');
   stopAll();
+  if (localClient) localClient.end(true);
+  if (publicClient) publicClient.end(true);
   setTimeout(() => process.exit(0), 1500);
 }
 process.on('SIGINT', shutdown);
