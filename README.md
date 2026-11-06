@@ -22,6 +22,8 @@ npm run dashboard
 Deploy ขึ้น Vercel ได้เลย — หน้าจำลองไม่ต้องใช้ env ใด ๆ · โค้ดจำลองอยู่ที่ `dashboard/lib/sim/engine.js`
 > ⚠️ Vercel → Project Settings → Build and Deployment: **Framework = Next.js**, **Root Directory = `dashboard`** (ของเดิมตั้งเป็น Vite ที่ root จะ build ไม่ผ่าน)
 
+**ESP32 จำลอง (ไฟ 3 สี + แขนปัด + จอ LCD) บน Wokwi:** [esp32/README.md](esp32/README.md) — รับผล PASS/FAIL จริงจาก bridge ผ่าน `npm run relay`
+
 **ตีกรอบกล่องอัตโนมัติสำหรับ CiRA:** [tools/auto_label](tools/auto_label/README.md) — AI หา "cardboard box" แล้วเขียนไฟล์ `.gt` ข้างทุกรูป
 
 **เวอร์ชันเก่า:** เว็บ Vite + React + TypeScript ตัวเดิม (Neon DB) ย้ายไปเก็บไว้ที่ [legacy/simulation-v1-vite](legacy/simulation-v1-vite/) ครบทุกไฟล์พร้อมประวัติ commit
@@ -52,6 +54,7 @@ CiRA CORE --MQTT JSON--> Mosquitto --> Node.js Bridge (นับกล่อง�
 | `bridge/` | Node.js: รับ MQTT → tracking/นับ → MongoDB (+ simulator, sniff, reset, dev broker) |
 | `dashboard/` | Next.js + Tailwind + Recharts |
 | `cira/` | โค้ดวางใน JavaScript node ของ CiRA + คู่มือ |
+| `esp32/` | firmware ESP32 + วงจร Wokwi (จำลอง ไม่ต้องมีบอร์ด) |
 | `tools/` | `make_video.py` ผสมรูปกล่องเสียลงวิดีโอสายพาน |
 | `docs/` | สถาปัตยกรรม, สคริปต์ demo, troubleshooting |
 
@@ -117,6 +120,8 @@ Terminal 1: `npm run broker` · Terminal 2: `npm run demo:cira` · แล้ว�
 | `npm run sim` | simulator ส่งเฟรมเหมือน CiRA (~15 fps, เสีย ~25%) |
 | `npm run sim:events` | simulator ส่ง event ที่นับแล้ว |
 | `npm run sniff` | ดูทุกข้อความใน `spdi/#` |
+| `npm run relay` | ส่งผลที่นับแล้วต่อไปให้ ESP32 บน Wokwi |
+| `npm run relay:test` | ส่ง PASS/FAIL ปลอมทุก 3 วิ ทดสอบ ESP32 (ไม่ต้องมี broker) |
 | `npm run reset` | ลบข้อมูลการตรวจทั้งหมด (ถาม y/N) |
 | `npm run dashboard` | Next.js dev server :3000 |
 | `npm run demo:sim` | bridge + sim + dashboard พร้อมกัน |
@@ -129,7 +134,7 @@ Terminal 1: `npm run broker` · Terminal 2: `npm run demo:cira` · แล้ว�
 |---|---|---|
 | `spdi/line1/detections` | CiRA / simulator | ผลทุกเฟรม `{type:"frame", device, objects:[{name,conf,x,y,w,h}]}` |
 | `spdi/line1/events` | (ทางเลือก) CiRA ที่นับเอง | 1 กล่อง `{result:"PASS"\|"FAIL", className, confidence}` |
-| `spdi/line1/counted` | bridge | ทุก event ที่บันทึกแล้ว (สำหรับ ESP32 แขนคัดกล่องในอนาคต) |
+| `spdi/line1/counted` | bridge | ทุก event ที่บันทึกแล้ว → `npm run relay` ส่งต่อให้ ESP32 |
 
 ## ทำวิดีโอสำหรับ demo
 ```bash
