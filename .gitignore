@@ -34,3 +34,6 @@ _preview/
 weights/
 spdidamaged/
 damaged/
+
+# local training data (not in git)
+box_good/
