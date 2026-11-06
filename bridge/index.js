@@ -158,7 +158,8 @@ async function saveEvent(ev) {
   log(`${icon} ${ev.result} #${state.sessionCount} ${ev.className} conf=${ev.confidence.toFixed(2)}${frames}${votes} [${ev.source}]`);
 
   if (mqttClient && mqttClient.connected) {
-    mqttClient.publish(config.topics.counted, JSON.stringify(ev), { qos: 0 });
+    // unitNo = the #number shown in this log, so the ESP32 shows the same number
+    mqttClient.publish(config.topics.counted, JSON.stringify({ ...ev, unitNo: state.sessionCount }), { qos: 0 });
   }
 
   if (NO_DB) return;
