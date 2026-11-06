@@ -1,6 +1,10 @@
 import { neon } from '@neondatabase/serverless';
 
-const DB_URL = 'postgresql://neondb_owner:npg_QjI8V7vPWKoc@ep-withered-fire-azqk8g3a-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require';
+const DB_URL = process.env.NEON_DATABASE_URL;
+if (!DB_URL) {
+  console.error('Set NEON_DATABASE_URL (Neon connection string) in your environment first.');
+  process.exit(1);
+}
 
 async function main() {
   const sql = neon(DB_URL);
