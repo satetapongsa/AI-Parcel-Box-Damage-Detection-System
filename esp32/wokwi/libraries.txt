@@ -1,0 +1,5 @@
+PubSubClient
+ESP32Servo
+LiquidCrystal I2C
+Adafruit GFX Library
+Adafruit SSD1306
