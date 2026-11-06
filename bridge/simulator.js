@@ -48,6 +48,9 @@ const DEVICE = typeof args.device === 'string' ? args.device : 'sim-01';
 
 const GOOD_NAME = config.goodClasses[0] || 'good';
 const DAMAGED_NAME = config.damagedClasses[0] || 'damaged';
+// each damaged box gets one of the first two damaged classes (e.g. dent / tear)
+const DAMAGED_NAMES = config.damagedClasses.slice(0, 2).length ? config.damagedClasses.slice(0, 2) : [DAMAGED_NAME];
+const pickDamaged = () => DAMAGED_NAMES[Math.floor(Math.random() * DAMAGED_NAMES.length)];
 const BOX_W = 0.16; // normalized
 const BOX_H = 0.3;
 
@@ -97,6 +100,7 @@ function spawnBox(now) {
   const box = {
     id: nextBoxId++,
     damaged,
+    defect: pickDamaged(),
     cx: ltr ? -0.08 : 1.08,
     cy: rand(0.5, 0.6),
     born: now,
@@ -104,7 +108,7 @@ function spawnBox(now) {
   };
   boxes.push(box);
   stats.spawned += 1;
-  log(`📦 sim box #${box.id} spawned -> ${damaged ? 'DAMAGED (expect FAIL)' : 'GOOD (expect PASS)'}`);
+  log(`📦 sim box #${box.id} spawned -> ${damaged ? `DAMAGED ${box.defect} (expect FAIL)` : 'GOOD (expect PASS)'}`);
 }
 
 function frameTick() {
@@ -144,7 +148,7 @@ function frameTick() {
     const ox = config.boxOrigin === 'topleft' ? cx - w / 2 : cx;
     const oy = config.boxOrigin === 'topleft' ? cy - h / 2 : cy;
     objects.push({
-      name: isDamagedLabel ? DAMAGED_NAME : GOOD_NAME,
+      name: isDamagedLabel ? b.defect : GOOD_NAME,
       conf: r3(conf),
       x: Math.round(ox * config.frameW),
       y: Math.round(oy * config.frameH),
@@ -173,7 +177,7 @@ function eventTick() {
     source: 'simulator',
     ts: Date.now(),
     result: damaged ? 'FAIL' : 'PASS',
-    className: damaged ? DAMAGED_NAME : GOOD_NAME,
+    className: damaged ? pickDamaged() : GOOD_NAME,
     confidence: r3(rand(0.8, 0.98)),
   };
   if (!client.connected) return;
@@ -188,7 +192,7 @@ function eventTick() {
 console.log('\n🎬 SPDI Simulator (pretending to be CiRA CORE)');
 if (MODE === 'frames') {
   console.log(`   ${FPS} fps, a box every ~${INTERVAL_S}s, crosses in ${CROSS_S}s, damaged=${DAMAGED_P * 100}% noise=${NOISE_P * 100}% drop=${DROP_P * 100}%`);
-  console.log(`   topic ${config.topics.detections}, classes "${GOOD_NAME}" / "${DAMAGED_NAME}", ${config.frameW}x${config.frameH}px, dir=${config.direction}\n`);
+  console.log(`   topic ${config.topics.detections}, classes "${GOOD_NAME}" / "${DAMAGED_NAMES.join(`" + "`)}", ${config.frameW}x${config.frameH}px, dir=${config.direction}\n`);
   setInterval(frameTick, Math.round(1000 / FPS));
 } else {
   console.log(`   one event every ${INTERVAL_S}s -> ${config.topics.events}\n`);
