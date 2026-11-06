@@ -26,7 +26,7 @@ Deploy ขึ้น Vercel ได้เลย — หน้าจำลองไ
 
 **ตีกรอบกล่องอัตโนมัติสำหรับ CiRA:** [tools/auto_label](tools/auto_label/README.md) — AI หา "cardboard box" แล้วเขียนไฟล์ `.gt` ข้างทุกรูป
 
-**Control Center (http://localhost:3100):** แถบสถานะทั้งสาย `CiRA → Broker → Bridge → MongoDB → Dashboard → Relay → ESP32` ติดเขียวเมื่อข้อมูลวิ่งผ่านจริง (fps, heartbeat, จำนวนกล่อง, ESP32 ออนไลน์) · ปุ่ม **Start everything** / **Fresh demo** (ล้าง DB + เปิดใหม่) / **Stop all** · สลับโหมด Simulator ↔ CiRA จริง · **Auto-restart** ตัวที่พังให้เอง · ปุ่ม **Copy ESP32 code** (ใส่ topic ให้แล้ว)
+**Control Center (http://localhost:3100):** แบ่ง 2 แผงชัดเจน **Simulation** (รันได้เลย ไม่ต้องมีกล้อง) กับ **Real system** (ต้องเปิด CiRA CORE แล้วกด Run) แต่ละแผงมีรายการทีละขั้นว่าอะไรเชื่อมแล้ว อัปเดตทุก 1 วินาที · ถ้าตัวจำลองกับ CiRA ส่งพร้อมกันจะขึ้นเตือนว่าตัวเลขปนกัน · แถบสถานะทั้งสาย `CiRA → Broker → Bridge → MongoDB → Dashboard → Relay → ESP32` ติดเขียวเมื่อข้อมูลวิ่งผ่านจริง (fps, heartbeat, จำนวนกล่อง, ESP32 ออนไลน์) · ปุ่ม **Start everything** / **Fresh demo** (ล้าง DB + เปิดใหม่) / **Stop all** · สลับโหมด Simulator ↔ CiRA จริง · **Auto-restart** ตัวที่พังให้เอง · ปุ่ม **Copy ESP32 code** (ใส่ topic ให้แล้ว)
 
 **เวอร์ชันเก่า:** เว็บ Vite + React + TypeScript ตัวเดิม (Neon DB) ย้ายไปเก็บไว้ที่ [legacy/simulation-v1-vite](legacy/simulation-v1-vite/) ครบทุกไฟล์พร้อมประวัติ commit
 
