@@ -114,6 +114,32 @@ function pickTruth(s) {
   return 'box_good';
 }
 
+/** Carton colours seen on a real parcel line (weights = how common). */
+export const BOX_COLORS = [
+  { key: 'kraft', weight: 5 },
+  { key: 'light', weight: 2 },
+  { key: 'dark', weight: 2 },
+  { key: 'white', weight: 1 },
+];
+
+function pickColor() {
+  const total = BOX_COLORS.reduce((a, c) => a + c.weight, 0);
+  let r = Math.random() * total;
+  for (const c of BOX_COLORS) {
+    r -= c.weight;
+    if (r <= 0) return c.key;
+  }
+  return 'kraft';
+}
+
+/** Relative box size (1 = standard carton): flat mailers, cubes and tall boxes. */
+function pickDims() {
+  const kind = Math.random();
+  if (kind < 0.2) return { w: rand(1.05, 1.3), h: rand(0.55, 0.72), d: rand(0.9, 1.2) }; // flat
+  if (kind < 0.4) return { w: rand(0.72, 0.88), h: rand(1.15, 1.4), d: rand(0.75, 0.9) }; // tall
+  return { w: rand(0.85, 1.15), h: rand(0.85, 1.1), d: rand(0.85, 1.1) }; // regular
+}
+
 function spaceAvailable(s) {
   return !s.boxes.some((b) => b.state === 'belt' && b.x < ZONE.spawn + MIN_GAP);
 }
@@ -134,7 +160,9 @@ function spawnBox(s, spec) {
     truth,
     x: ZONE.spawn,
     lane: rand(-6, 6), // small sideways offset in px for realism
-    size: rand(0.92, 1.08),
+    size: 1,
+    dims: spec.dims || pickDims(),
+    color: spec.color || pickColor(),
     weight: r3(truth === 'box_good' ? rand(0.8, 3.2) : rand(0.6, 3.0)),
     votes: { box_good: 0, dent: 0, tear: 0 },
     confSum: { box_good: 0, dent: 0, tear: 0 },
@@ -328,7 +356,7 @@ export function step(s, dtReal) {
         b.state = 'gone';
         s.stats.rejectedBin += 1;
         const bin = b.predicted === 'tear' ? 'tear' : 'dent';
-        s.bins[bin].push({ no: b.no, tracking: b.tracking, truth: b.truth, seed: b.seed, reworked: b.reworked });
+        s.bins[bin].push({ no: b.no, tracking: b.tracking, truth: b.truth, seed: b.seed, reworked: b.reworked, dims: b.dims, color: b.color });
       }
     }
   }
@@ -394,7 +422,7 @@ export function addBox(s, truth) {
 export function reworkBin(s, kind) {
   const items = s.bins[kind].splice(0);
   for (const it of items) {
-    s.returning.push({ truth: 'box_good', no: it.no, tracking: it.tracking, reworked: (it.reworked || 0) + 1 });
+    s.returning.push({ truth: 'box_good', no: it.no, tracking: it.tracking, reworked: (it.reworked || 0) + 1, dims: it.dims, color: it.color });
   }
   s.stats.reworked += items.length;
   if (items.length) {
