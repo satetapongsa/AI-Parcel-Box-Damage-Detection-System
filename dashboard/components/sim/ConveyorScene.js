@@ -15,6 +15,13 @@ const FRAME_BOT = 292; // bottom of the front frame
 const FLOOR = 352; // floor line (legs end here)
 const BOX_BASE = 252; // bottom of a box front face (sits on the belt)
 const px = (x) => X0 + x * BW;
+/** Carton colour variants as SVG filters over the kraft artwork. */
+export const COLOR_FILTER = {
+  kraft: undefined,
+  light: 'brightness(1.2) saturate(0.7)',
+  dark: 'brightness(0.7) saturate(1.15)',
+  white: 'grayscale(0.9) brightness(1.6)',
+};
 const BIN_W = 150;
 const BIN_TOP = 358;
 const BIN_H = 74;
@@ -37,7 +44,7 @@ function RejectBin({ cx, kind, items }) {
         const bx = left + 8 + col * 47;
         const by = BIN_TOP + BIN_H - 34 - row * 20;
         return (
-          <g key={`${it.no}-${i}`} transform={`translate(${bx} ${by})`}>
+          <g key={`${it.no}-${i}`} transform={`translate(${bx} ${by})`} style={{ filter: COLOR_FILTER[it.color] }}>
             <BoxGlyph w={36} h={26} truth={it.truth} seed={it.seed} shadow={false} />
             <text x={18} y={20} textAnchor="middle" fontSize={9} fontWeight={800} fill="#111827">
               #{it.no}
@@ -255,8 +262,8 @@ export default function ConveyorScene({ sim }) {
 
       {/* ---------- boxes ---------- */}
       {sim.boxes.map((b) => {
-        const w = 84 * b.size;
-        const h = 62 * b.size;
+        const w = 84 * (b.dims ? b.dims.w : 1);
+        const h = 62 * (b.dims ? b.dims.h : 1);
         const d = Math.min(w, h) * 0.45;
         let x = px(b.x) - w / 2;
         let y = BOX_BASE - h + b.lane * 0.6;
@@ -284,7 +291,7 @@ export default function ConveyorScene({ sim }) {
         const top = y - d * 0.45;
         return (
           <g key={b.id} opacity={opacity}>
-            <g transform={`translate(${x} ${y}) rotate(${rot} ${bw / 2} ${bh})`}>
+            <g transform={`translate(${x} ${y}) rotate(${rot} ${bw / 2} ${bh})`} style={{ filter: COLOR_FILTER[b.color] }}>
               <BoxGlyph w={bw} h={bh} truth={b.truth} seed={b.seed} reworked={b.reworked > 0} />
               {/* unit number sticker */}
               <rect x={bw * 0.54} y={bh * 0.5} width={bw * 0.4} height={bh * 0.24} rx={2} fill={b.reworked ? '#bfdbfe' : '#f8fafc'} stroke="#1f2937" strokeWidth={0.6} />
