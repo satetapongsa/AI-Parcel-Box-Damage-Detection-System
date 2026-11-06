@@ -56,6 +56,9 @@ CiRA → Mosquitto → bridge → spdi/line1/counted → relay → broker.hivemq
 7. กด **SAVE** (ล็อกอิน Wokwi ฟรี) จะได้ลิงก์ไว้เปิดตอนเดโม
 
 ## ใช้กับระบบจริง
+**ง่ายสุด:** ดับเบิลคลิก `runall.bat` ที่โฟลเดอร์โปรเจกต์ — เปิดทุกอย่างรวม relay ให้เลย แล้วกด ▶ ใน Wokwi (ตัวจำลองส่งทั้งกล่อง dent และ tear จึงเห็นลูกสูบทั้ง 2 ตัวทำงาน)
+
+หรือเปิดเอง:
 เปิดตามปกติ (`3-DEMO-CIRA.bat` หรือ `npm run demo:cira`) แล้วเปิดอีกหน้าต่าง:
 ```bash
 npm run relay

@@ -34,7 +34,7 @@ Deploy ขึ้น Vercel ได้เลย — หน้าจำลองไ
 
 | ไฟล์ | ทำเมื่อไร | ทำอะไร |
 |---|---|---|
-| **`runall.bat`** | ใช้อันนี้อันเดียวพอ | เมนูรวมทุกอย่าง: เดโม (จำลอง / CiRA / +ESP32), relay ESP32, sniff, reset, auto-label, แปลง .gt, ทำวิดีโอ, test · ใส่เลขต่อท้ายได้ เช่น `runall 12` |
+| **`runall.bat`** | ใช้อันนี้อันเดียวพอ | ดับเบิลคลิกแล้ว**รันทุกอย่างในหน้าต่างเดียว** (broker + bridge + ตัวจำลอง + dashboard + relay ESP32) แล้วเปิดเบราว์เซอร์ให้เอง · กด **C** = ใช้ CiRA จริงแทนตัวจำลอง · กด **M** = เมนูเครื่องมือ (reset, auto-label, ทำวิดีโอ, test) |
 | `1-SETUP.bat` | ครั้งแรกครั้งเดียว | ติดตั้งทุกอย่าง + ถามให้วาง connection string |
 | `2-DEMO-SIM.bat` | อยากลองระบบ (ไม่ต้องเปิด CiRA) | จำลองกล่องวิ่ง → เปิดหน้าเว็บให้เอง |
 | `3-DEMO-CIRA.bat` | ใช้กับ CiRA จริง | เปิดตัวรับข้อมูล + หน้าเว็บ แล้วไปกด Run ใน CiRA |
@@ -128,6 +128,8 @@ Terminal 1: `npm run broker` · Terminal 2: `npm run demo:cira` · แล้ว�
 | `npm run demo:sim` | bridge + sim + dashboard พร้อมกัน |
 | `npm run demo:sim:nobroker` | dev broker + bridge + sim + dashboard |
 | `npm run demo:cira` | bridge + dashboard (CiRA ส่งข้อมูลจริง) |
+| `npm run all` | ทุกอย่าง: broker + bridge + sim + dashboard + relay ESP32 (ที่ runall.bat ใช้) |
+| `npm run all:cira` | ทุกอย่างแบบใช้ CiRA จริง (ไม่มีตัวจำลอง) |
 | `npm test` | unit tests ของ tracker |
 
 ## MQTT topics
