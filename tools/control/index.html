@@ -226,13 +226,14 @@
         <div class="micon"><svg class="i lg"><use href="#i-camera"/></svg></div>
         <div>
           <div class="mtitle">Real system <span class="badge" id="badge-real">OFF</span></div>
-          <div class="mdesc">Camera + AI. Start the services here, then open CiRA CORE and press Run.</div>
+          <div class="mdesc">Camera + AI. Start real system also opens CiRA CORE with project.npj, then press Run in CiRA.</div>
         </div>
       </div>
       <div class="progress"><div class="bar"><span id="bar-real"></span></div><span><b id="prog-real">0/5</b> connected</span></div>
       <ul class="checks" id="checks-real"></ul>
       <div class="mfoot">
         <button class="primary" data-run="allcira"><svg class="i sm"><use href="#i-play"/></svg>Start real system</button>
+        <button id="openCira" title="Open CiRA CORE with project.npj"><svg class="i sm"><use href="#i-camera"/></svg>Open CiRA CORE</button>
         <button data-fresh="allcira" title="Stop, empty the database, start again"><svg class="i sm"><use href="#i-refresh"/></svg>Fresh start</button>
         <button class="danger" data-stop><svg class="i sm"><use href="#i-stop"/></svg>Stop</button>
       </div>
@@ -616,7 +617,11 @@ document.querySelectorAll('[data-fresh]').forEach((b) => {
   };
 });
 $('#autoRestart').onchange = (e) => post('/api/autorestart', { on: e.target.checked });
-$('#espTest').onclick = () => post('/api/start/relaytest');
+$('#openCira').onclick = async () => {
+  const r = await post('/api/cira/open');
+  if (r.ok) setView('tool:cira');
+};
+$('#espTest').onclick =() => post('/api/start/relaytest');
 $('#copySketch').onclick = async () => {
   const b = $('#copySketch');
   try {
