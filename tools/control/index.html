@@ -15,28 +15,54 @@
   body { margin: 0; background: var(--bg); color: var(--text);
     font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
   header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-    padding: 14px 20px; border-bottom: 1px solid var(--line); background: var(--panel); position: sticky; top: 0; z-index: 2; }
+    padding: 12px 20px; border-bottom: 1px solid var(--line); background: var(--panel); position: sticky; top: 0; z-index: 3; }
   header h1 { font-size: 17px; margin: 0; font-weight: 650; letter-spacing: .2px; }
   .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto; }
   .chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border: 1px solid var(--line);
     border-radius: 999px; background: var(--panel2); color: var(--muted); font-size: 12.5px; white-space: nowrap; }
   .chip b { color: var(--text); font-weight: 600; }
-  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex: none; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: #4a525c; flex: none; }
   .dot.running, .dot.ok { background: var(--green); box-shadow: 0 0 8px #3fb95088; }
-  .dot.crashed, .dot.down, .dot.error { background: var(--red); }
-  .dot.stopping, .dot.starting { background: var(--amber); }
-  main { padding: 18px 20px 28px; max-width: 1500px; margin: 0 auto; }
-  .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+  .dot.crashed, .dot.down, .dot.error { background: var(--red); box-shadow: 0 0 8px #f8514988; }
+  .dot.stopping, .dot.starting, .dot.restarting, .dot.warn { background: var(--amber); }
+  main { padding: 16px 20px 28px; max-width: 1500px; margin: 0 auto; }
+
+  /* summary banner */
+  .summary { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; margin-bottom: 12px;
+    border: 1px solid var(--line); background: var(--panel); font-weight: 600; font-size: 15px; }
+  .summary.ok { border-color: #2ea04388; background: #12261a; }
+  .summary.warn { border-color: #d2992288; background: #2a2210; }
+  .summary.error { border-color: #f8514988; background: #2d1414; }
+  .summary .sub { color: var(--muted); font-weight: 400; font-size: 13px; }
+
+  /* pipeline */
+  .pipe { display: flex; align-items: stretch; gap: 0; margin-bottom: 16px; overflow-x: auto; padding-bottom: 2px; }
+  .stage { flex: 1 1 0; min-width: 128px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; }
+  .stage.ok { border-color: #2ea04366; }
+  .stage.warn { border-color: #d2992266; }
+  .stage.error { border-color: #f8514988; }
+  .stage .top { display: flex; align-items: center; gap: 7px; font-weight: 600; font-size: 13px; white-space: nowrap; }
+  .stage .detail { color: var(--muted); font-size: 12px; margin-top: 3px; }
+  .arrow { flex: none; align-self: center; color: #4a525c; padding: 0 5px; font-size: 15px; }
+  .arrow.ok { color: var(--green); }
+
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
+  .seg button { border: 0; border-radius: 0; padding: 10px 14px; background: var(--panel2); color: var(--muted); }
+  .seg button.on { background: #1f3a5f; color: var(--text); }
   button { font: inherit; color: var(--text); background: var(--panel2); border: 1px solid var(--line);
     border-radius: 8px; padding: 7px 12px; cursor: pointer; }
   button:hover { border-color: #44505e; background: #222b36; }
   button:disabled { opacity: .45; cursor: default; }
-  button.big { padding: 11px 18px; font-weight: 600; font-size: 14.5px; }
+  button.big { padding: 10px 18px; font-weight: 600; font-size: 14.5px; }
   button.go { background: #1f6f3a; border-color: #2ea043; }
   button.go:hover { background: #238645; }
   button.stop { background: #5a1d1d; border-color: #8e2b2b; }
   button.stop:hover { background: #6e2222; }
+  button.fresh { background: #2b2f6b; border-color: #4b50b0; }
+  button.fresh:hover { background: #34398a; }
   button.ghost { background: transparent; }
+  .toggle { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: 13px; margin-left: auto; cursor: pointer; }
   a.btn { color: var(--blue); text-decoration: none; border: 1px solid var(--line); border-radius: 8px;
     padding: 7px 12px; background: var(--panel2); display: inline-block; }
   a.btn:hover { border-color: #44505e; }
@@ -49,6 +75,7 @@
   .svc .name { font-weight: 600; }
   .svc .hint { color: var(--muted); font-size: 12.5px; }
   .svc .state { font-size: 12px; color: var(--muted); margin-left: 6px; font-weight: 400; }
+  .svc .state.bad { color: #ff7b72; }
   .svc .btns { display: flex; gap: 6px; }
   .svc button { padding: 5px 10px; min-width: 62px; }
   .links { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -68,7 +95,7 @@
   details[open] summary::before { content: "▾ "; }
   details .body { margin-top: 8px; display: grid; gap: 7px; }
   .console { background: #0a0d12; border: 1px solid var(--line); border-radius: 12px; display: flex; flex-direction: column;
-    height: calc(100vh - 190px); min-height: 420px; position: sticky; top: 76px; }
+    height: calc(100vh - 150px); min-height: 420px; position: sticky; top: 70px; }
   .tabs { display: flex; gap: 4px; padding: 8px; border-bottom: 1px solid var(--line); flex-wrap: wrap; align-items: center; }
   .tab { padding: 4px 10px; border-radius: 6px; border: 1px solid transparent; background: transparent; color: var(--muted); font-size: 12.5px; }
   .tab.on { color: var(--text); background: var(--panel2); border-color: var(--line); }
@@ -86,6 +113,10 @@
     .console { position: static; height: 60vh; }
     header { position: static; }
     main { padding: 14px 16px 24px; }
+    .pipe { flex-wrap: wrap; gap: 8px; }
+    .arrow { display: none; }
+    .stage { flex: 1 1 140px; }
+    .toggle { margin-left: 0; }
   }
 </style>
 </head>
@@ -94,7 +125,6 @@
   <h1>📦 SPDI Control Center</h1>
   <span class="chip"><span id="conn" class="dot"></span><span id="connText">connecting…</span></span>
   <div class="chips">
-    <span class="chip"><span id="dashDot" class="dot"></span>Dashboard <b id="dashText">–</b></span>
     <span class="chip">Boxes <b id="cTotal">–</b></span>
     <span class="chip">Pass <b id="cGood" style="color:var(--green)">–</b></span>
     <span class="chip">Reject <b id="cBad" style="color:var(--red)">–</b></span>
@@ -102,10 +132,18 @@
 </header>
 
 <main>
+  <div class="summary" id="summary"><span class="dot" id="sumDot"></span><div><div id="sumText">Checking…</div><div class="sub" id="sumSub"></div></div></div>
+  <div class="pipe" id="pipe"></div>
+
   <div class="actions">
-    <button class="big go" data-preset="all">▶ Start everything · simulator</button>
-    <button class="big go" data-preset="allcira">▶ Start everything · real CiRA CORE</button>
+    <div class="seg" id="mode">
+      <button data-mode="all" class="on">🧪 Simulator</button>
+      <button data-mode="allcira">🎥 Real CiRA CORE</button>
+    </div>
+    <button class="big go" id="startAll">▶ Start everything</button>
+    <button class="big fresh" id="fresh" title="Stop all, empty the database, start again">🧹 Fresh demo</button>
     <button class="big stop" id="stopAll">■ Stop all</button>
+    <label class="toggle"><input type="checkbox" id="autoRestart" checked> Auto-restart crashed parts</label>
   </div>
 
   <div class="grid">
@@ -124,6 +162,10 @@
           <a class="btn" href="https://boxdetections.vercel.app" target="_blank" rel="noopener">Vercel</a>
         </div>
         <div class="topic">Wokwi <code>TOPIC_BASE</code> must be: <code id="topic">–</code></div>
+        <div class="row" style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
+          <button id="copySketch">📋 Copy ESP32 code</button>
+          <span class="muted" style="font-size:12.5px">topic already filled in → paste into sketch.ino in Wokwi, then Save</span>
+        </div>
       </section>
 
       <section class="card">
@@ -132,6 +174,7 @@
         <div class="tool">
           <div class="row">
             <button data-tool="tests">Run unit tests</button>
+            <button data-tool="shortcut">Desktop shortcut</button>
             <button data-tool="setup">Setup / reinstall</button>
           </div>
         </div>
@@ -195,9 +238,11 @@
 
 <script>
 const $ = (s) => document.querySelector(s);
-const state = { services: {}, logs: {}, all: [], view: 'all', tasks: new Set() };
+const state = { services: {}, logs: {}, all: [], view: 'all' };
 const MAX = 800;
 const seenTabs = new Set();
+let mode = 'all';
+try { mode = localStorage.getItem('spdi.control.mode') || 'all'; } catch {}
 
 function toast(msg) {
   const t = $('#toast');
@@ -226,21 +271,76 @@ function fmtAge(ms) {
   return m < 60 ? m + 'm' : Math.floor(m / 60) + 'h ' + (m % 60) + 'm';
 }
 
+// ------------------------------------------------------------ pipeline
+function renderPipeline(stages) {
+  const pipe = $('#pipe');
+  pipe.innerHTML = '';
+  stages.forEach((s, i) => {
+    if (i) {
+      const a = document.createElement('div');
+      a.className = 'arrow' + (s.state === 'ok' && stages[i - 1].state === 'ok' ? ' ok' : '');
+      a.textContent = '➜';
+      pipe.appendChild(a);
+    }
+    const el = document.createElement('div');
+    el.className = 'stage ' + s.state;
+    el.innerHTML = '<div class="top"><span class="dot"></span><span class="nm"></span></div><div class="detail"></div>';
+    el.querySelector('.dot').className = 'dot ' + s.state;
+    el.querySelector('.nm').textContent = s.name;
+    el.querySelector('.detail').textContent = s.detail;
+    pipe.appendChild(el);
+  });
+
+  // one-line summary of the whole line
+  const core = stages.filter((s) => s.id !== 'relay' && s.id !== 'esp32');
+  const bad = stages.find((s) => s.state === 'error');
+  const coreOk = core.every((s) => s.state === 'ok');
+  const espOk = stages.filter((s) => s.id === 'relay' || s.id === 'esp32').every((s) => s.state === 'ok');
+  const anyOn = Object.values(state.services).some((s) => ['running', 'restarting', 'stopping'].includes(s.state));
+  let cls, text, sub;
+  if (bad) {
+    cls = 'error'; text = `Problem: ${bad.name}`; sub = bad.detail;
+  } else if (coreOk && espOk) {
+    cls = 'ok'; text = 'Everything is running — boxes flow from camera to ESP32'; sub = 'All 7 parts are green.';
+  } else if (coreOk) {
+    cls = 'ok'; text = 'Inspection line is running'; sub = 'Not yet: ' + stages.filter((s) => s.id === 'relay' || s.id === 'esp32').filter((s) => s.state !== 'ok').map((s) => `${s.name} – ${s.detail}`).join(' · ');
+  } else if (anyOn) {
+    const wait = stages.filter((s) => s.state !== 'ok');
+    cls = 'warn'; text = 'Starting up / not complete'; sub = wait.map((s) => `${s.name}: ${s.detail}`).join(' · ');
+  } else {
+    cls = ''; text = 'Nothing is running'; sub = 'Press ▶ Start everything.';
+  }
+  $('#summary').className = 'summary ' + cls;
+  $('#sumDot').className = 'dot ' + (cls || '');
+  $('#sumText').textContent = text;
+  $('#sumSub').textContent = sub;
+}
+
+function renderHealth(h) {
+  const c = (h && h.counts) || {};
+  $('#cTotal').textContent = c.total ?? '–';
+  $('#cGood').textContent = c.good ?? '–';
+  $('#cBad').textContent = c.damaged ?? '–';
+}
+
+// ------------------------------------------------------------ services
 function renderServices() {
   const box = $('#services');
   box.innerHTML = '';
   for (const [id, s] of Object.entries(state.services)) {
     const row = document.createElement('div');
     row.className = 'svc';
-    const running = s.state === 'running' || s.state === 'stopping';
-    const label = { running: 'running', stopping: 'stopping…', crashed: 'crashed', stopped: 'off' }[s.state] || s.state;
+    const running = ['running', 'stopping', 'restarting'].includes(s.state);
+    const label = { running: 'running', stopping: 'stopping…', crashed: 'crashed', stopped: 'off', restarting: 'restarting…' }[s.state] || s.state;
     row.innerHTML = `<span class="dot ${s.state}"></span>
       <div><div class="name"></div><div class="hint"></div></div>
       <div class="btns"><button class="tog"></button><button class="ghost lg">log</button></div>`;
     row.querySelector('.name').textContent = s.label;
     const st = document.createElement('span');
-    st.className = 'state';
-    st.textContent = label + (s.state === 'running' && s.since ? ' · ' + fmtAge(Date.now() - s.since) : '');
+    st.className = 'state' + (s.state === 'crashed' ? ' bad' : '');
+    let txt = label + (s.state === 'running' && s.since ? ' · ' + fmtAge(Date.now() - s.since) : '');
+    if (s.restarts) txt += ` · restarted ${s.restarts}×`;
+    st.textContent = txt;
     row.querySelector('.name').appendChild(st);
     row.querySelector('.hint').textContent = s.hint;
     const tog = row.querySelector('.tog');
@@ -253,6 +353,7 @@ function renderServices() {
   }
 }
 
+// ------------------------------------------------------------ logs
 function renderTabs() {
   const tabs = $('#tabs');
   tabs.querySelectorAll('.tab').forEach((t) => t.remove());
@@ -269,7 +370,7 @@ function renderTabs() {
 
 function lineClass(line) {
   if (/❌|error|failed|crashed|EADDRINUSE/i.test(line)) return 'l-err';
-  if (/⚠️|warn/i.test(line)) return 'l-warn';
+  if (/⚠️|warn|🔁/i.test(line)) return 'l-warn';
   if (/✅|✓|connected|ready|listening/i.test(line)) return 'l-ok';
   return '';
 }
@@ -319,16 +420,7 @@ function onLog({ id, line }) {
   }
 }
 
-function renderHealth(h) {
-  const map = { ok: 'online', down: 'off', starting: 'starting', error: 'DB error' };
-  $('#dashDot').className = 'dot ' + (h.dashboard || '');
-  $('#dashText').textContent = map[h.dashboard] || '–';
-  const c = h.counts || {};
-  $('#cTotal').textContent = c.total ?? '–';
-  $('#cGood').textContent = c.good ?? '–';
-  $('#cBad').textContent = c.damaged ?? '–';
-}
-
+// ------------------------------------------------------------ load + live stream
 async function load() {
   const r = await fetch('/api/state');
   const s = await r.json();
@@ -338,19 +430,27 @@ async function load() {
   for (const [id, lines] of Object.entries(state.logs)) for (const line of lines.slice(-150)) state.all.push({ id, line });
   $('#topic').textContent = s.relayTopic || '(run the ESP32 relay once to create it)';
   $('#wokwi').href = s.wokwiUrl;
+  $('#autoRestart').checked = !!s.autoRestart;
   renderServices();
   renderTabs();
   renderLog();
-  renderHealth(s.health || {});
+  renderHealth(s.health);
+  if (s.stages) renderPipeline(s.stages);
+  setBusy(s.busy);
   for (const t of s.tasks || []) setTaskBusy(t, true);
 }
 
 function setTaskBusy(name, busy) {
   document.querySelectorAll(`[data-tool="${name}"]`).forEach((b) => {
-    b.disabled = busy;
     if (busy) b.dataset.label ||= b.textContent;
+    b.disabled = busy;
     b.textContent = busy ? 'Running…' : b.dataset.label || b.textContent;
   });
+}
+
+function setBusy(busy) {
+  for (const id of ['#startAll', '#fresh', '#stopAll']) $(id).disabled = !!busy;
+  $('#fresh').textContent = busy ? '🧹 Working…' : '🧹 Fresh demo';
 }
 
 function connect() {
@@ -358,11 +458,15 @@ function connect() {
   es.onopen = () => {
     $('#conn').className = 'dot ok';
     $('#connText').textContent = 'connected';
-    load();
+    load().catch(() => {});
   };
   es.onerror = () => {
     $('#conn').className = 'dot down';
     $('#connText').textContent = 'Control Center stopped';
+    renderPipeline([]);
+    $('#summary').className = 'summary error';
+    $('#sumText').textContent = 'Control Center is not running';
+    $('#sumSub').textContent = 'Double-click runall.bat (or the SPDI icon on the desktop).';
   };
   es.addEventListener('log', (e) => onLog(JSON.parse(e.data)));
   es.addEventListener('status', (e) => {
@@ -370,15 +474,49 @@ function connect() {
     state.services[d.id] = { ...state.services[d.id], ...d };
     renderServices();
   });
-  es.addEventListener('health', (e) => renderHealth(JSON.parse(e.data)));
+  es.addEventListener('pipeline', (e) => {
+    const d = JSON.parse(e.data);
+    renderPipeline(d.stages);
+    renderHealth(d.health);
+  });
   es.addEventListener('task', (e) => {
     const d = JSON.parse(e.data);
     setTaskBusy(d.name, d.running);
   });
+  es.addEventListener('busy', (e) => setBusy(JSON.parse(e.data).busy));
+  es.addEventListener('autorestart', (e) => ($('#autoRestart').checked = JSON.parse(e.data).on));
 }
 
-document.querySelectorAll('[data-preset]').forEach((b) => (b.onclick = () => post('/api/preset/' + b.dataset.preset)));
+// ------------------------------------------------------------ buttons
+function setMode(m) {
+  mode = m;
+  try { localStorage.setItem('spdi.control.mode', m); } catch {}
+  document.querySelectorAll('#mode button').forEach((b) => b.classList.toggle('on', b.dataset.mode === m));
+}
+document.querySelectorAll('#mode button').forEach((b) => (b.onclick = () => setMode(b.dataset.mode)));
+setMode(mode);
+
+$('#startAll').onclick = () => post('/api/preset/' + mode);
 $('#stopAll').onclick = () => post('/api/stopall');
+$('#fresh').onclick = async () => {
+  const what = mode === 'all' ? 'the simulator' : 'real CiRA CORE';
+  if (!confirm(`Fresh demo:\n\n1. stop everything\n2. DELETE all inspection records in MongoDB\n3. start everything again with ${what}\n\nContinue?`)) return;
+  const r = await post('/api/fresh/' + mode, { confirm: true });
+  if (r.ok) setView('tool:fresh');
+};
+$('#copySketch').onclick = async () => {
+  try {
+    const j = await (await fetch('/api/sketch')).json();
+    if (!j.ok) return toast(j.error || 'could not read sketch.ino');
+    await navigator.clipboard.writeText(j.code);
+    const b = $('#copySketch');
+    b.textContent = '✅ Copied (' + (j.topic || 'no topic yet') + ')';
+    setTimeout(() => (b.textContent = '📋 Copy ESP32 code'), 3000);
+  } catch (e) {
+    toast('Copy failed: ' + e.message);
+  }
+};
+$('#autoRestart').onchange =(e) => post('/api/autorestart', { on: e.target.checked });
 $('#clear').onclick = () => {
   if (state.view === 'all') {
     state.all = [];
@@ -392,6 +530,7 @@ $('#clear').onclick = () => {
 const toolBody = {
   tests: () => ({}),
   setup: () => ({}),
+  shortcut: () => ({}),
   reset: () => ({ confirm: $('#resetConfirm').value.trim() }),
   label: () => ({ folder: $('#labelFolder').value, options: $('#labelOpts').value }),
   convert: () => ({ folder: $('#convFolder').value }),
