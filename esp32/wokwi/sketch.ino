@@ -6,6 +6,7 @@
  *   <TOPIC_BASE>/status  "online" | "offline"   (retained, from the relay)
  * Reports back what it did:
  *   <TOPIC_BASE>/ack     {"n":12,"act":"dent_bin","pass":10,"dent":1,"tear":1}
+ *   <TOPIC_BASE>/esp32   heartbeat every 10 s, "offline" (last will) when it stops
  *
  * Line (top view, drawn live on the OLED):
  *
@@ -76,6 +77,7 @@ bool oledDirty = true;            // redraw only when something changed (keeps t
 const String T_CMD    = String(TOPIC_BASE) + "/cmd";
 const String T_STATUS = String(TOPIC_BASE) + "/status";
 const String T_ACK    = String(TOPIC_BASE) + "/ack";
+const String T_ESP    = String(TOPIC_BASE) + "/esp32";   // heartbeat for the Control Center
 
 bool bridgeOnline = false;
 unsigned long passCount = 0, failCount = 0, shipped = 0;
@@ -97,7 +99,8 @@ Box boxes[MAX_BOXES];
 bool pusherBusy[2] = {false, false};
 unsigned long binLedUntil[2] = {0, 0};
 unsigned long redUntil = 0, greenBlinkUntil = 0;
-unsigned long lastConnTry = 0, lastFrame = 0, lastStep = 0;
+unsigned long lastConnTry = 0, lastFrame = 0, lastStep = 0, lastBeat = 0;
+const unsigned long BEAT_MS = 10000;
 bool lastButton = HIGH;
 int testToggle = 0;
 
@@ -200,9 +203,11 @@ void ensureConnected() {
   }
   lcdLine(0, "MQTT...");
   String id = "spdi-esp32-" + String(esp_random() & 0xffffff, HEX);   // random: two sims never kick each other
-  if (mqtt.connect(id.c_str())) {
+  // last will: the broker publishes "offline" for us if the simulation stops
+  if (mqtt.connect(id.c_str(), T_ESP.c_str(), 1, true, "offline")) {
     mqtt.subscribe(T_CMD.c_str());
     mqtt.subscribe(T_STATUS.c_str());
+    lastBeat = 0;                                 // send a heartbeat right away
     Serial.println("MQTT connected, topic " + String(TOPIC_BASE));
     lcdLine(0, "Waiting bridge");
   } else {
@@ -399,6 +404,15 @@ void loop() {
   bool b = digitalRead(PIN_BUTTON);
   if (lastButton == HIGH && b == LOW) handleDecision(true, (testToggle++ % 2) ? "tear" : "dent", -1);
   lastButton = b;
+
+  // heartbeat every 10 s (retained): lets the Control Center show "ESP32 online"
+  if (mqtt.connected() && (lastBeat == 0 || millis() - lastBeat >= BEAT_MS)) {
+    lastBeat = millis();
+    String beat = "{\"up\":" + String(millis() / 1000) + ",\"pass\":" + String(passCount) +
+                  ",\"dent\":" + String(binCount[0]) + ",\"tear\":" + String(binCount[1]) +
+                  ",\"out\":" + String(shipped) + "}";
+    mqtt.publish(T_ESP.c_str(), beat.c_str(), true);
+  }
 
   stepBelt();
   updateLights();
