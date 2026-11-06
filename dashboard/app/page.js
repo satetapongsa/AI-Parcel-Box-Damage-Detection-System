@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import NavTabs from '@/components/NavTabs';
 import KpiCard from '@/components/KpiCard';
 import ConveyorScene from '@/components/sim/ConveyorScene';
@@ -12,6 +13,39 @@ import { ThroughputChart, ClassDonut } from '@/components/sim/SimCharts';
 import { BoxThumb } from '@/components/sim/BoxGlyph';
 import { CLASSES, formatSimTime } from '@/lib/sim/engine';
 import { useSim } from '@/lib/sim/useSim';
+
+// the 3D camera view is heavy (WebGL): load it only in the browser, only when chosen
+const CameraView3D = dynamic(() => import('@/components/sim/CameraView3D'), {
+  ssr: false,
+  loading: () => <div className="aspect-video w-full animate-pulse bg-[#1a1f26]" />,
+});
+
+const VIEW_KEY = 'spdi.sim.view';
+const VIEWS = [
+  { key: 'schematic', label: 'Schematic' },
+  { key: 'camera', label: 'Camera · 3D' },
+];
+
+function useViewMode() {
+  const [view, setView] = useState('schematic');
+  useEffect(() => {
+    try {
+      const v = window.localStorage.getItem(VIEW_KEY);
+      if (v === 'camera' || v === 'schematic') setView(v);
+    } catch {
+      /* storage blocked: keep default */
+    }
+  }, []);
+  const choose = (v) => {
+    setView(v);
+    try {
+      window.localStorage.setItem(VIEW_KEY, v);
+    } catch {
+      /* ignore */
+    }
+  };
+  return [view, choose];
+}
 
 const LIGHT_TEXT = {
   green: { text: '● Line running', cls: 'bg-green-600/20 text-green-300' },
@@ -66,6 +100,7 @@ function LastDecision({ ev }) {
 
 export default function SimulationPage() {
   const { sim, snap, refresh } = useSim();
+  const [view, setView] = useViewMode();
   const st = snap.stats;
   const light = LIGHT_TEXT[snap.light];
 
@@ -101,6 +136,22 @@ export default function SimulationPage() {
         <div className="min-w-0 overflow-hidden rounded-lg border border-edge bg-panel lg:col-span-3">
           <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-edge px-4 py-2 text-sm">
             <span className="font-semibold text-slate-200">Conveyor · Line 1</span>
+            <div className="flex rounded-md bg-slate-800 p-0.5" role="tablist" aria-label="View">
+              {VIEWS.map((v) => (
+                <button
+                  key={v.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={view === v.key}
+                  onClick={() => setView(v.key)}
+                  className={`rounded px-3 py-1 text-xs font-semibold sm:text-sm ${
+                    view === v.key ? 'bg-slate-200 text-slate-900' : 'text-slate-300 hover:text-white'
+                  }`}
+                >
+                  {v.label}
+                </button>
+              ))}
+            </div>
             <span className="font-mono text-xs text-muted sm:text-sm">
               {formatSimTime(snap.simTime)} · {snap.speed}x · {snap.framesTotal.toLocaleString()} frames
             </span>
@@ -108,7 +159,7 @@ export default function SimulationPage() {
           {/* on phones the scene keeps a readable size and scrolls sideways */}
           <div className="overflow-x-auto overscroll-x-contain">
             <div className="min-w-[760px] sm:min-w-0">
-              <ConveyorScene sim={sim} />
+              {view === 'camera' ? <CameraView3D sim={sim} /> : <ConveyorScene sim={sim} />}
             </div>
           </div>
           <div className="px-4 pt-1 text-xs text-muted sm:hidden">← swipe to see the whole line →</div>
