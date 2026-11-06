@@ -49,6 +49,7 @@ CiRA → Mosquitto → bridge → spdi/line1/counted → relay → broker.hivemq
    ครั้งแรกจะสร้าง `RELAY_TOPIC=spdi-xxxxxxxx/line1` ลงใน `bridge/.env` ให้เอง และพิมพ์ออกมาให้เห็น
 2. เปิด https://wokwi.com/projects/new/esp32
 3. แท็บ **sketch.ino** → ลบของเดิม วางโค้ดจาก [wokwi/sketch.ino](wokwi/sketch.ino)
+   (ง่ายกว่า: กดปุ่ม **📋 Copy ESP32 code** ใน Control Center จะได้โค้ดที่ใส่ topic ให้แล้ว วางได้เลย)
    แก้บรรทัด `#define TOPIC_BASE "spdi-xxxxxxxx/line1"` ให้ตรงกับ `RELAY_TOPIC` ในข้อ 1
 4. แท็บ **diagram.json** → ลบของเดิม วางจาก [wokwi/diagram.json](wokwi/diagram.json)
 5. แท็บ **Library Manager** → กด **+** เพิ่ม 5 ตัว: `PubSubClient`, `ESP32Servo`, `LiquidCrystal I2C`, `Adafruit GFX Library`, `Adafruit SSD1306` (ดู [wokwi/libraries.txt](wokwi/libraries.txt))
@@ -67,6 +68,10 @@ npm run relay
 
 ## ใช้กับบอร์ดจริงภายหลัง
 โค้ดเดียวกันใช้ได้เลย แก้ `WIFI_SSID` / `WIFI_PASS` เป็น WiFi จริง แล้ว upload ด้วย Arduino IDE (ติดตั้ง 5 library เดียวกัน)
+
+## สถานะใน Control Center
+ESP32 ส่ง heartbeat ทุก 10 วินาทีไปที่ `<TOPIC_BASE>/esp32` และตั้ง last will = `offline` ไว้ ช่อง **ESP32 (Wokwi)** ใน Control Center จึงเขียวเมื่อกด ▶ ใน Wokwi และเทาเองเมื่อหยุด simulation
+> ถ้าใช้โค้ดเวอร์ชันก่อนหน้า (ไม่มี heartbeat) ช่องนี้จะเขียวเฉพาะตอนมีกล่องวิ่ง → อัปเดตโค้ดใน Wokwi ด้วยปุ่ม Copy ESP32 code
 
 ## แก้ปัญหา
 | อาการ | ทางแก้ |

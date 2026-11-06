@@ -26,6 +26,8 @@ Deploy ขึ้น Vercel ได้เลย — หน้าจำลองไ
 
 **ตีกรอบกล่องอัตโนมัติสำหรับ CiRA:** [tools/auto_label](tools/auto_label/README.md) — AI หา "cardboard box" แล้วเขียนไฟล์ `.gt` ข้างทุกรูป
 
+**Control Center (http://localhost:3100):** แถบสถานะทั้งสาย `CiRA → Broker → Bridge → MongoDB → Dashboard → Relay → ESP32` ติดเขียวเมื่อข้อมูลวิ่งผ่านจริง (fps, heartbeat, จำนวนกล่อง, ESP32 ออนไลน์) · ปุ่ม **Start everything** / **Fresh demo** (ล้าง DB + เปิดใหม่) / **Stop all** · สลับโหมด Simulator ↔ CiRA จริง · **Auto-restart** ตัวที่พังให้เอง · ปุ่ม **Copy ESP32 code** (ใส่ topic ให้แล้ว)
+
 **เวอร์ชันเก่า:** เว็บ Vite + React + TypeScript ตัวเดิม (Neon DB) ย้ายไปเก็บไว้ที่ [legacy/simulation-v1-vite](legacy/simulation-v1-vite/) ครบทุกไฟล์พร้อมประวัติ commit
 
 ## 🚀 เริ่มที่นี่ (Windows, ดับเบิลคลิกอย่างเดียว)
@@ -35,6 +37,7 @@ Deploy ขึ้น Vercel ได้เลย — หน้าจำลองไ
 | ไฟล์ | ทำเมื่อไร | ทำอะไร |
 |---|---|---|
 | **`runall.bat`** | ใช้อันนี้อันเดียวพอ | ดับเบิลคลิก → เปิด **Control Center** บนเว็บ (http://localhost:3100 ธีมมืด) และรันทุกอย่างให้เลย (broker + bridge + ตัวจำลอง + dashboard + relay ESP32) · ในเว็บมีปุ่ม Start/Stop ทีละตัว, ดู log สด, ปุ่มเครื่องมือ (test, reset, auto-label, แปลง .gt, ทำวิดีโอ) · หน้าต่าง terminal ยังโชว์ log ทุกตัว ปิดหน้าต่าง = หยุดทุกอย่าง · กด **C** = ใช้ CiRA จริง, **W** = เปิดเว็บอย่างเดียว, **M** = เมนูเดิมใน terminal |
+| **ไอคอน SPDI บน Desktop** | ทุกวัน | เหมือนดับเบิลคลิก `runall.bat` · สร้างด้วยปุ่ม **Desktop shortcut** ใน Control Center (หรือ `node tools/control/make-shortcut.js`) · คลิกขวา → Pin to taskbar ได้ |
 | `1-SETUP.bat` | ครั้งแรกครั้งเดียว | ติดตั้งทุกอย่าง + ถามให้วาง connection string |
 | `2-DEMO-SIM.bat` | อยากลองระบบ (ไม่ต้องเปิด CiRA) | จำลองกล่องวิ่ง → เปิดหน้าเว็บให้เอง |
 | `3-DEMO-CIRA.bat` | ใช้กับ CiRA จริง | เปิดตัวรับข้อมูล + หน้าเว็บ แล้วไปกด Run ใน CiRA |
