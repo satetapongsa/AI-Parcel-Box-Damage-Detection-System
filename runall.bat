@@ -14,28 +14,55 @@ set "empties=0"
 set "choice=%~1"
 if not "%choice%"=="" goto dispatch
 
-rem double-click: start EVERYTHING unless another key is pressed
+rem double-click: open the web Control Center and start EVERYTHING
 cls
 echo ==========================================================
-echo   SPDI - starting EVERYTHING in one window:
-echo     broker + bridge + simulator + dashboard + ESP32 relay
-echo   The browser opens the dashboard, the Live page and Wokwi.
+echo   SPDI - opening the Control Center in your browser
+echo     http://localhost:3100   (start / stop every part there)
+echo   and starting everything: broker + bridge + simulator
+echo                            + dashboard + ESP32 relay
 echo ==========================================================
 echo.
-echo   [R] run everything now (starts by itself in 6 s)
-echo   [C] everything, but real CiRA CORE instead of the simulator
-echo   [M] menu (reset, auto-label, video, tests ...)
+echo   [R] Control Center + start everything (auto in 6 s)
+echo   [C] Control Center + everything with real CiRA CORE
+echo   [W] Control Center only, start things yourself
+echo   [M] old terminal menu
 echo.
-choice /c RCM /t 6 /d R /n /m "Your choice [R/C/M]: "
-if errorlevel 3 goto menu
-if errorlevel 2 goto everything_cira
-goto everything
+choice /c RCWM /t 6 /d R /n /m "Your choice [R/C/W/M]: "
+if errorlevel 4 goto menu
+if errorlevel 3 goto panel
+if errorlevel 2 goto panel_cira
+goto panel_all
+
+:panel_all
+call :need_env || goto menu
+call :need_port || goto menu
+title SPDI - Control Center
+node tools\control\server.js --all
+pause
+exit /b 0
+
+:panel_cira
+call :need_env || goto menu
+call :need_port || goto menu
+title SPDI - Control Center
+node tools\control\server.js --all-cira
+pause
+exit /b 0
+
+:panel
+title SPDI - Control Center
+node tools\control\server.js
+pause
+exit /b 0
 
 :menu
 cls
 echo ==========================================================
 echo                SPDI  -  run everything from here
 echo ==========================================================
+echo.
+echo   W  Web Control Center (browser)
 echo.
 echo   DEMO
 echo    1  EVERYTHING: simulator + dashboard + ESP32 relay
@@ -77,6 +104,7 @@ if "%choice%"=="10" goto convert
 if "%choice%"=="11" goto video
 if "%choice%"=="12" goto tests
 if /i "%choice%"=="S" goto setup
+if /i "%choice%"=="W" goto panel
 if "%choice%"=="0"  exit /b 0
 echo [X] Unknown choice: %choice%
 pause
