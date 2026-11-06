@@ -13,7 +13,9 @@
     "sniff": "node sniff.js",
     "reset": "node reset.js",
     "broker": "node dev-broker.js",
-    "test": "node --test tests/tracker.test.js"
+    "test": "node --test tests/tracker.test.js",
+    "relay": "node relay.js",
+    "relay:test": "node relay.js --test"
   },
   "engines": {
     "node": ">=20"

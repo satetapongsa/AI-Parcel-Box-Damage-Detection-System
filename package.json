@@ -12,6 +12,8 @@
     "sim": "npm --prefix bridge run sim",
     "sim:events": "npm --prefix bridge run sim:events",
     "sniff": "npm --prefix bridge run sniff",
+    "relay": "npm --prefix bridge run relay",
+    "relay:test": "npm --prefix bridge run relay:test",
     "reset": "npm --prefix bridge run reset",
     "dashboard": "npm --prefix dashboard run dev",
     "demo:sim": "concurrently -k -n bridge,sim,dash -c green,yellow,cyan \"npm:bridge\" \"npm:sim\" \"npm:dashboard\"",
