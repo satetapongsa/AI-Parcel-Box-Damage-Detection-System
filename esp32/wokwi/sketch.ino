@@ -80,6 +80,7 @@ const String T_ACK    = String(TOPIC_BASE) + "/ack";
 const String T_ESP    = String(TOPIC_BASE) + "/esp32";   // heartbeat for the Control Center
 
 bool bridgeOnline = false;
+bool statusSeen = false;          // got at least one status since (re)connecting
 unsigned long passCount = 0, failCount = 0, shipped = 0;
 unsigned long binCount[2] = {0, 0};
 
@@ -180,9 +181,15 @@ void onMessage(char *topic, byte *payload, unsigned int len) {
   for (unsigned int i = 0; i < len; i++) body += (char)payload[i];
 
   if (t == T_STATUS) {
-    bridgeOnline = (body == "online");
-    Serial.println("bridge " + body);
-    if (!bridgeOnline) lcdLine(0, "Bridge offline");
+    bool now = (body == "online");
+    // the relay repeats "online" every 10 s: only update the LCD when it changes,
+    // so the last box result stays on screen
+    if (now != bridgeOnline || !statusSeen) {
+      Serial.println("bridge " + body);
+      lcdLine(0, now ? "Bridge online" : "Bridge offline");
+    }
+    bridgeOnline = now;
+    statusSeen = true;
     return;
   }
   if (t == T_CMD) {
@@ -210,6 +217,7 @@ void ensureConnected() {
     lastBeat = 0;                                 // send a heartbeat right away
     Serial.println("MQTT connected, topic " + String(TOPIC_BASE));
     lcdLine(0, "Waiting bridge");
+    statusSeen = false;                           // the retained status will update the LCD
   } else {
     Serial.println("MQTT failed, rc=" + String(mqtt.state()));
   }
