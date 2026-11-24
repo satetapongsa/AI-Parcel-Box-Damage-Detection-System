@@ -27,6 +27,20 @@
 | จอ LCD 16x2 (I2C) | SDA 21 / SCL 22 | ผลล่าสุด + ตัวนับ P(ผ่าน) D(บุบ) T(ฉีก) OUT(ส่งออก) |
 | ปุ่ม TEST FAIL | GPIO 4 | กดทดสอบได้โดยไม่ต้องมีเน็ต (สลับ dent / tear) |
 
+## รันใน VS Code (เร็วกว่าบนเว็บ)
+
+ใช้ extension **Wokwi Simulator** (`wokwi.wokwi-vscode`) รัน `diagram.json` ตัวเดียวกับบนเว็บ แต่จำลองในเครื่อง
+
+1. ติดตั้งครั้งแรก: `winget install ArduinoSA.CLI` แล้ว `npm run esp32:setup` (ลงบอร์ด ESP32 และไลบรารี)
+2. รัน relay อย่างน้อย 1 ครั้ง (`npm run relay`) เพื่อให้มี `RELAY_TOPIC` ใน `bridge/.env`
+3. คอมไพล์: `npm run esp32:build` ได้ไฟล์ `esp32/wokwi/build/sketch.ino.bin` โดยใส่ topic ให้อัตโนมัติ
+4. VS Code → เปิดไฟล์ `esp32/wokwi/diagram.json` → กด `F1` → **Wokwi: Start Simulator**
+   - ครั้งแรก extension จะให้กด **Wokwi: Request a New License** (ฟรี) และล็อกอิน wokwi.com
+5. แก้ `sketch.ino` เมื่อไหร่ ให้รัน `npm run esp32:build` ใหม่ แล้วเริ่ม simulator อีกครั้ง
+
+> โฟลเดอร์ `build/` ไม่ขึ้น git เพราะมี topic จริงอยู่ข้างใน
+> WiFi `Wokwi-GUEST` ใช้ได้ใน VS Code เหมือนบนเว็บ (ยังต้องมีอินเทอร์เน็ตเพื่อไปถึง HiveMQ)
+
 > Wokwi ไม่มีลูกสูบเชิงเส้น (linear actuator) จึงใช้ servo หมุนแทนการดัน ส่วนภาพการดันลูกสูบจริงดูได้บน OLED
 > ถ้าทำบอร์ดจริง ใช้ servo ตัวเดิม หรือเปลี่ยนเป็นรีเลย์สั่งกระบอกลม/โซลินอยด์ที่ขาเดียวกันได้
 > ชื่อคลาสที่มีคำว่า `tear` หรือ `torn` ไปลัง TEAR ส่วนกล่องเสียแบบอื่นทั้งหมดไปลัง DENT
