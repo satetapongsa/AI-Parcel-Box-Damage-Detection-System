@@ -1,0 +1,6 @@
+# Wokwi for VS Code: runs the same diagram.json locally.
+# Build the firmware first: npm run esp32:build
+[wokwi]
+version = 1
+firmware = 'build/sketch.ino.bin'
+elf = 'build/sketch.ino.elf'

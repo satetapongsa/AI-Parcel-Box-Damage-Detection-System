@@ -23,7 +23,9 @@
     "control": "node tools/control/server.js",
     "all": "concurrently -k -n broker,bridge,sim,dash,esp32 -c magenta,green,yellow,cyan,blue \"npm:broker:node\" \"npm:bridge\" \"npm:sim\" \"npm:dashboard\" \"npm:relay\"",
     "all:cira": "concurrently -k -n broker,bridge,dash,esp32 -c magenta,green,cyan,blue \"npm:broker:node\" \"npm:bridge\" \"npm:dashboard\" \"npm:relay\"",
-    "setup:env": "node tools/setup-env.js",
+    "esp32:setup": "arduino-cli core update-index && arduino-cli core install esp32:esp32 && arduino-cli lib install PubSubClient ESP32Servo \"LiquidCrystal I2C\" \"Adafruit GFX Library\" \"Adafruit SSD1306\"",
+    "esp32:build": "node tools/esp32-build.js",
+    "setup:env":"node tools/setup-env.js",
     "test": "npm --prefix bridge test"
   },
   "devDependencies": {
