@@ -17,6 +17,13 @@ export async function getDb() {
   if (!uri) {
     throw new Error('MONGODB_URI is not set (dashboard/.env.local locally, or Vercel Environment Variables)');
   }
+  // Cloudflare Workers cannot reuse a socket opened by another request,
+  // so there every request gets its own small client.
+  if (process.env.SPDI_RUNTIME === 'cloudflare') {
+    const client = new MongoClient(uri, { ...OPTIONS, maxPoolSize: 1 });
+    await client.connect();
+    return client.db(process.env.DB_NAME || 'spdi');
+  }
   const g = globalThis;
   if (!g.__spdiMongo) {
     const client = new MongoClient(uri, OPTIONS);
