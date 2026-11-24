@@ -1,0 +1,20 @@
+// Cloudflare Workers config for the SPDI dashboard (built with @opennextjs/cloudflare).
+// Secrets are NOT stored here. Set them once with:
+//   npx wrangler secret put MONGODB_URI
+//   npx wrangler secret put ADMIN_TOKEN
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "spdi-dashboard",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-11-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "vars": {
+    "DB_NAME": "spdi",
+    "SPDI_RUNTIME": "cloudflare"
+  },
+  "observability": { "enabled": true }
+}
