@@ -2,6 +2,8 @@
 
 AI Parcel Box Damage Detection System: Edge AI (CiRA CORE) → MQTT → Node Bridge → MongoDB Atlas → Next.js Dashboard, with an ESP32 sorter driven over MQTT.
 
+High-resolution images: [system-architecture.png](architecture/system-architecture.png) · [decision-flow.png](architecture/decision-flow.png)
+
 ```mermaid
 flowchart LR
     CAM(["Camera / VideoFile<br/>parcel boxes on the belt"])
