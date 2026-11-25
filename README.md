@@ -128,7 +128,7 @@ Broker, Bridge และ CiRA รันบนเครื่องหน้า�
 | `tools/` | Control Center, build ESP32, auto-label, ทำวิดีโอ |
 | `docs/` | Workflow diagram, ภาพหน้าจอ, สไลด์, สถาปัตยกรรม, troubleshooting |
 
-รายละเอียดเพิ่มเติม: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) · [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) · [cira/README_CIRA.md](cira/README_CIRA.md)
+รายละเอียดเพิ่มเติม: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) · [cira/README_CIRA.md](cira/README_CIRA.md)
 
 ## ความปลอดภัย
 
