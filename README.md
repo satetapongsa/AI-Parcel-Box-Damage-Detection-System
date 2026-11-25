@@ -10,6 +10,27 @@ CiRA CORE ตรวจกล่องพัสดุบนสายพาน แ
 
 ![SPDI workflow](docs/workflow/workflow.png)
 
+## System Architecture
+
+แผนภาพละเอียด (2 แผนภาพ + ตารางส่วนประกอบ): [docs/system-architecture.md](docs/system-architecture.md)
+
+```mermaid
+flowchart LR
+    CAM(["Camera / VideoFile"]) -->|"frames"| CIRA["CiRA CORE<br/>DeepDetect<br/>box_good / dent / tear"]
+    CIRA -->|"spdi/line1/detections"| BROKER["MQTT broker<br/>:1883"]
+    SIM["simulator.js<br/>(demo mode)"] -.->|"same JSON"| BROKER
+    BROKER --> BRIDGE["Node Bridge<br/>track + vote<br/>PASS / FAIL"]
+    BRIDGE -->|"insert"| ATLAS[("MongoDB Atlas")]
+    BRIDGE <-->|"store-and-forward"| QUEUE[("queue<br/>max 2,000")]
+    BRIDGE -->|"spdi/line1/counted"| RELAY["Relay"]
+    RELAY -->|"cmd + status"| HIVE["HiveMQ"]
+    HIVE --> ESP["ESP32 on Wokwi<br/>servo, tower light,<br/>buzzer, LCD, OLED"]
+    ESP -.->|"ack + heartbeat"| HIVE
+    DASH["Next.js Dashboard<br/>Vercel / Cloudflare"] -->|"/api/stats, /api/events"| ATLAS
+    USER(["Browser"]) --> DASH
+    CC["Control Center :3100"] -.->|"start + health"| BRIDGE
+```
+
 ## ระบบทำงานอย่างไร
 
 | ขั้น | ส่วน | ทำอะไร |
