@@ -13,7 +13,7 @@ const crypto = require('crypto');
 const mqtt = require('mqtt');
 const { MongoClient } = require('mongodb');
 const { config, requireMongo, safeUrl, summary } = require('./config');
-const { createTracker, normalizeEvent, makeClassifier, parseMessage } = require('./tracker');
+const { createTracker, createImageCounter, normalizeEvent, makeClassifier, parseMessage } = require('./tracker');
 
 const NO_DB = process.argv.includes('--no-db') || process.env.NO_DB === '1';
 if (!NO_DB) requireMongo();
@@ -44,10 +44,8 @@ const state = {
   stopping: false,
 };
 
-const tracker = createTracker({
-  ...config,
-  onWarn: (msg) => log('⚠️ ', msg),
-});
+const trackerOpts = { ...config, onWarn: (msg) => log('⚠️ ', msg) };
+const tracker = config.inputMode === 'image' ? createImageCounter(trackerOpts) : createTracker(trackerOpts);
 const classify = makeClassifier(config.goodClasses, config.damagedClasses);
 const warnedEvent = new Set();
 
@@ -289,6 +287,7 @@ async function heartbeat() {
           mqttConnected: state.mqttConnected,
           fps,
           activeTracks: tracker.activeCount(),
+          inputMode: config.inputMode,
           lastFrameAt: state.lastFrameAt ? new Date(state.lastFrameAt) : null,
           lastEventAt: state.lastEventAt ? new Date(state.lastEventAt) : null,
           lastDevice: state.lastDevice,

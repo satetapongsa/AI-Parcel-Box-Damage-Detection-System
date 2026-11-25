@@ -55,6 +55,9 @@ const config = {
   trackTtlMs: num('TRACK_TTL_MS', 1000),
   minFrames: num('MIN_FRAMES', 5),
   failRatio: num('FAIL_RATIO', 0.3),
+  // video: boxes move across the virtual line (VideoFile / camera)
+  // image: one still picture = one box (Image Slide)
+  inputMode: ['image', 'images', 'photo'].includes(String(process.env.INPUT_MODE || '').trim().toLowerCase()) ? 'image' : 'video',
 };
 
 const overlap = config.goodClasses.filter((c) => config.damagedClasses.includes(c));
@@ -104,6 +107,7 @@ function summary() {
     `   GOOD      ${config.goodClasses.join(', ')}`,
     `   DAMAGED   ${config.damagedClasses.join(', ')}`,
     `   Frame     ${config.frameW}x${config.frameH} px, box origin=${config.boxOrigin}`,
+    `   Input     ${config.inputMode === 'image' ? 'image (1 picture = 1 box, Image Slide)' : 'video (count at the virtual line)'}`,
     `   Line      x=${config.linePos} dir=${config.direction}  MIN_CONF=${config.minConf} MIN_FRAMES=${config.minFrames}`,
     `   Tracking  MAX_DIST=${config.maxDist} TTL=${config.trackTtlMs}ms FAIL_RATIO=${config.failRatio}`,
   ].join('\n');
