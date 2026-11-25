@@ -423,6 +423,93 @@ function normalizeEvent(payload, ctx = {}) {
   };
 }
 
+/**
+ * Image mode: for still pictures (CiRA "Image Slide"), where boxes never move
+ * across the virtual line. One picture = one box:
+ *  - the result is FAIL if any known damaged class is found, else PASS
+ *  - the same picture sent again (same objects in the same place) is counted once,
+ *    until a different picture or an empty frame arrives
+ * Same input and output shape as createTracker().processFrame().
+ */
+function createImageCounter(opts = {}) {
+  const o = { ...DEFAULTS, ...opts };
+  const classify = makeClassifier(o.goodClasses, o.damagedClasses);
+  const runId = newRunId();
+  const warned = new Set();
+  let lastSig = null;
+  let n = 0;
+
+  function warnOnce(key, msg) {
+    if (warned.has(key)) return;
+    warned.add(key);
+    if (o.onWarn) o.onWarn(msg);
+  }
+
+  function processFrame(payload, ts = Date.now(), meta = {}) {
+    const raw = extractObjects(payload);
+    if (raw === null) {
+      warnOnce('shape', 'Unknown payload shape: expected {objects:[...]}, {DeepDetect:{objects:[...]}} or an array');
+      return { ok: false, detections: 0, events: [] };
+    }
+    const dets = [];
+    for (const r of raw) {
+      const d = normalizeObject(r, o);
+      if (!d) continue;
+      const vote = classify(d.name);
+      if (!vote) {
+        warnOnce(`class:${d.name.toLowerCase()}`, `Unknown class "${d.name}" -> skipped. Add it to GOOD_CLASSES or DAMAGED_CLASSES in bridge/.env`);
+        continue;
+      }
+      if (d.conf < o.minConf) continue;
+      dets.push({ ...d, vote });
+    }
+    if (dets.length === 0) {
+      lastSig = null; // blank frame: the next picture counts even if it looks the same
+      return { ok: true, detections: 0, events: [] };
+    }
+
+    const sig = dets
+      .map((d) => `${d.name.toLowerCase()}@${round(d.cx, 2)},${round(d.cy, 2)},${round(d.w, 2)},${round(d.h, 2)}`)
+      .sort()
+      .join('|');
+    if (sig === lastSig) return { ok: true, detections: dets.length, events: [] };
+    lastSig = sig;
+
+    const fails = dets.filter((d) => d.vote === 'FAIL');
+    const pool = fails.length ? fails : dets;
+    const best = pool.reduce((a, b) => (b.conf > a.conf ? b : a));
+    n += 1;
+    return {
+      ok: true,
+      detections: dets.length,
+      events: [
+        {
+          eventId: `${o.lineId}-${runId}-img${n}`,
+          ts,
+          line: o.lineId,
+          device: meta.device || o.device,
+          result: fails.length ? 'FAIL' : 'PASS',
+          className: best.name,
+          confidence: round(clamp(best.conf, 0, 1)),
+          trackId: null,
+          framesSeen: 1,
+          votes: { pass: dets.length - fails.length, fail: fails.length },
+          source: meta.source || o.source,
+        },
+      ],
+    };
+  }
+
+  return {
+    runId,
+    processFrame,
+    activeCount: () => 0,
+    reset: () => {
+      lastSig = null;
+    },
+  };
+}
+
 module.exports = {
   DEFAULTS,
   parseMessage,
@@ -430,5 +517,6 @@ module.exports = {
   normalizeObject,
   makeClassifier,
   createTracker,
+  createImageCounter,
   normalizeEvent,
 };
