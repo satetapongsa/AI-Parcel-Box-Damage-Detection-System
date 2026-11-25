@@ -49,6 +49,9 @@ const PRESETS = {
 // auto-restart: a service that dies on its own is started again (with a pause),
 // at most MAX_RESTARTS times per RESTART_WINDOW_MS
 let autoRestart = true;
+// what the bridge expects from CiRA: 'video' (boxes cross the virtual line) or 'image' (Image Slide)
+let inputMode = null; // read from bridge/.env on first use
+const getInputMode = () => (inputMode ??= readEnv('INPUT_MODE').toLowerCase() === 'image' ? 'image' : 'video');
 const MAX_RESTARTS = 5;
 const RESTART_WINDOW_MS = 60_000;
 const RESTART_DELAY_MS = 2_000;
@@ -105,7 +108,9 @@ function startService(id, { fromRestart = false } = {}) {
     return { ok: false, error: 'not installed' };
   }
   addLog(id, `START ${svc.label}`);
-  const child = spawn(NODE, svc.args, { cwd: svc.cwd, env: { ...process.env, FORCE_COLOR: '0' }, windowsHide: true });
+  const env = { ...process.env, FORCE_COLOR: '0' };
+  if (id === 'bridge') env.INPUT_MODE = getInputMode();
+  const child = spawn(NODE, svc.args, { cwd: svc.cwd, env, windowsHide: true });
   child.stdout.on('data', (d) => addLog(id, d));
   child.stderr.on('data', (d) => addLog(id, d));
   child.on('error', (err) => addLog(id, `ERROR could not start: ${err.message}`));
@@ -513,6 +518,7 @@ function snapshot() {
     health,
     ...pipeline(),
     autoRestart,
+    inputMode: getInputMode(),
     busy,
     relayTopic: readEnv('RELAY_TOPIC'),
     wokwiUrl: WOKWI_URL,
@@ -573,6 +579,20 @@ const server = http.createServer(async (req, res) => {
       autoRestart = !!body.on;
       broadcast('autorestart', { on: autoRestart });
       return json(res, 200, { ok: true, on: autoRestart });
+    }
+    if (a === 'inputmode') {
+      if (!['video', 'image'].includes(body.mode)) return json(res, 400, { ok: false, error: 'mode must be video or image' });
+      const changed = body.mode !== getInputMode();
+      inputMode = body.mode;
+      broadcast('inputmode', { mode: inputMode });
+      if (changed && procs.bridge) {
+        // the bridge reads the mode at start-up: restart it
+        addLog('bridge', `INPUT mode -> ${inputMode}, restarting bridge`);
+        stopService('bridge');
+        for (let i = 0; i < 40 && procs.bridge; i++) await sleep(100);
+        startService('bridge');
+      }
+      return json(res, 200, { ok: true, mode: inputMode, restarted: changed && !!procs.bridge });
     }
     if (a === 'tool' && b) return json(res, 200, startTask(b, body));
     if (a === 'clear' && b) {

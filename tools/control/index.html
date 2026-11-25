@@ -80,6 +80,11 @@
   .check.ok .ic { color: var(--green); }
 
   .mfoot { margin-top: auto; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .inmode { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: 4px 0 12px; }
+  .inmode .inlabel { color: var(--muted); font-size: 12.5px; margin-right: 4px; }
+  .inmode button { padding: 5px 11px; font-size: 13px; }
+  .inmode button.on { background: #1d3b5c; border-color: #4c8dff; color: #fff; }
+  .inmode .inhint { color: var(--muted); font-size: 12px; margin-left: 4px; }
   .mlinks { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 10px; font-size: 12.5px; }
   .mlinks a { color: var(--blue); text-decoration: none; display: inline-flex; gap: 5px; align-items: center; }
   .mlinks a:hover { text-decoration: underline; }
@@ -160,6 +165,7 @@
     <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M17.5 19a4.5 4.5 0 1 0-1.3-8.8A6 6 0 0 0 4.1 12 4 4 0 0 0 5 19.9z"/></symbol>
     <symbol id="i-chip" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1.5"/><rect x="9.5" y="9.5" width="5" height="5"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></symbol>
     <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 17-5-5-9 8"/></symbol>
     <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1.5"/></symbol>
     <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 6.3"/><path d="M20 4v7h-7"/></symbol>
     <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12.5 2.7 2.7L16 9.7"/></symbol>
@@ -231,6 +237,12 @@
       </div>
       <div class="progress"><div class="bar"><span id="bar-real"></span></div><span><b id="prog-real">0/5</b> connected</span></div>
       <ul class="checks" id="checks-real"></ul>
+      <div class="inmode" role="radiogroup" aria-label="CiRA input type">
+        <span class="inlabel">CiRA input</span>
+        <button type="button" data-inmode="video" role="radio" title="VideoFile / camera: a box is counted when it crosses the virtual line"><svg class="i sm"><use href="#i-camera"/></svg>Video</button>
+        <button type="button" data-inmode="image" role="radio" title="Image Slide: one picture = one box"><svg class="i sm"><use href="#i-image"/></svg>Images</button>
+        <span class="inhint" id="inmode-hint"></span>
+      </div>
       <div class="mfoot">
         <button class="primary" data-run="allcira"><svg class="i sm"><use href="#i-play"/></svg>Start real system</button>
         <button id="openCira" title="Open CiRA CORE with project.npj"><svg class="i sm"><use href="#i-camera"/></svg>Open CiRA CORE</button>
@@ -558,6 +570,7 @@ async function load() {
   $('#topic').textContent = s.relayTopic || '(starts with the first relay run)';
   $('#wokwi').href = s.wokwiUrl;
   $('#autoRestart').checked = !!s.autoRestart;
+  showInputMode(s.inputMode);
   renderServices();
   renderTabs();
   renderLog();
@@ -603,6 +616,7 @@ function connect() {
   });
   es.addEventListener('busy', (e) => setBusy(JSON.parse(e.data).busy));
   es.addEventListener('autorestart', (e) => ($('#autoRestart').checked = JSON.parse(e.data).on));
+  es.addEventListener('inputmode', (e) => showInputMode(JSON.parse(e.data).mode));
 }
 
 // ------------------------------------------------------------ buttons
@@ -617,6 +631,24 @@ document.querySelectorAll('[data-fresh]').forEach((b) => {
   };
 });
 $('#autoRestart').onchange = (e) => post('/api/autorestart', { on: e.target.checked });
+
+// CiRA input type: Video (count at the virtual line) or Images (Image Slide, 1 picture = 1 box)
+function showInputMode(mode) {
+  document.querySelectorAll('[data-inmode]').forEach((b) => {
+    const on = b.dataset.inmode === mode;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-checked', on ? 'true' : 'false');
+  });
+  $('#inmode-hint').textContent = mode === 'image'
+    ? '1 picture = 1 box (Image Slide)'
+    : 'counted when a box crosses the line (VideoFile / camera)';
+}
+document.querySelectorAll('[data-inmode]').forEach((b) => {
+  b.onclick = async () => {
+    showInputMode(b.dataset.inmode);
+    await post('/api/inputmode', { mode: b.dataset.inmode });
+  };
+});
 $('#openCira').onclick = async () => {
   const r = await post('/api/cira/open');
   if (r.ok) setView('tool:cira');
