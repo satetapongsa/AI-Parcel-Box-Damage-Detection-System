@@ -153,4 +153,4 @@ Broker, Bridge และ CiRA รันบนเครื่องหน้า�
 | 66088911 | เศรษฐพงศ์ สงวนสุข | Web Dashboard & Cloud | Web Dashboard, API, Sync Edge to Cloud |
 | 66013507 | วชิระ เฟื้อแก้ว | AI & Computer Vision | CiRA CORE, เทรนโมเดล, จูน Threshold |
 | 66039252 | นนทพัทธ์ จีนเกิด | Embedded & Control | ESP32/PLC, IR, Load Cell, Servo, Tower Light |
-| 66027138 | ณัฐวัฒน์ ปราณวรกิจ | Database | SQLite, MQTT |
+| 66027138 | ณัฐวัฒน์ ปราณวรกิจ | Database | MongoDB Atlas, MQTT |
