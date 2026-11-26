@@ -8,6 +8,7 @@ import LiveBelt from '@/components/LiveBelt';
 import KpiCard from '@/components/KpiCard';
 import { PerMinuteChart, PassFailDonut } from '@/components/Charts';
 import EventsTable from '@/components/EventsTable';
+import ReportBar from '@/components/ReportBar';
 import HourlyTable from '@/components/HourlyTable';
 
 const POLL_MS = 2000;
@@ -89,12 +90,14 @@ export default function LiveDashboardPage() {
   const [filter, setFilter] = useState('ALL');
   const [freshIds, setFreshIds] = useState(() => new Set());
   const [alert, setAlert] = useState(null);
+  const [line, setLine] = useState('line1');
 
   const seenIds = useRef(new Set());
   const baseline = useRef(true); // first load (or filter change) -> no highlight
   const lastFailId = useRef(undefined); // undefined = not loaded yet
   const alertTimer = useRef(null);
   const filterRef = useRef(filter);
+  const lineRef = useRef(line);
 
   const changeFilter = useCallback((f) => {
     filterRef.current = f;
@@ -102,11 +105,21 @@ export default function LiveDashboardPage() {
     setFilter(f);
   }, []);
 
+  const changeLine = useCallback((l) => {
+    lineRef.current = l;
+    baseline.current = true;
+    lastFailId.current = undefined; // no red alert for the other line's old FAIL
+    setStats(null);
+    setLine(l);
+  }, []);
+
   const loadStats = useCallback(async (signal) => {
+    const l = lineRef.current;
     try {
-      const res = await fetch('/api/stats', { cache: 'no-store', signal });
+      const res = await fetch(`/api/stats?line=${encodeURIComponent(l)}`, { cache: 'no-store', signal });
       const data = await res.json();
       if (!res.ok || !data.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      if (l !== lineRef.current) return; // line changed while loading
       setStats(data);
       setStatsError(null);
 
@@ -128,10 +141,11 @@ export default function LiveDashboardPage() {
     const f = filterRef.current;
     try {
       const q = f === 'ALL' ? '' : `&result=${f}`;
-      const res = await fetch(`/api/events?limit=20${q}`, { cache: 'no-store', signal });
+      const l = lineRef.current;
+      const res = await fetch(`/api/events?limit=20${q}&line=${encodeURIComponent(l)}`, { cache: 'no-store', signal });
       const data = await res.json();
       if (!res.ok || !data.ok) throw new Error(data.error || `HTTP ${res.status}`);
-      if (f !== filterRef.current) return; // filter changed while loading
+      if (f !== filterRef.current || l !== lineRef.current) return; // filter or line changed while loading
 
       const list = data.events || [];
       if (baseline.current) {
@@ -177,7 +191,7 @@ export default function LiveDashboardPage() {
     const c = new AbortController();
     loadEvents(c.signal);
     return () => c.abort();
-  }, [filter, loadEvents]);
+  }, [filter, line, loadEvents]);
 
   useEffect(() => () => clearTimeout(alertTimer.current), []);
 
@@ -195,7 +209,7 @@ export default function LiveDashboardPage() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-xl font-bold text-slate-50">SPDI · Parcel Defect Inspection</h1>
-            <p className="text-sm text-muted">Live data from CiRA CORE · Line {st?.line || 'line1'}</p>
+            <p className="text-sm text-muted">Live data from CiRA CORE · Line {line}</p>
           </div>
           <NavTabs />
           <div className="flex items-center gap-4">
@@ -216,7 +230,9 @@ export default function LiveDashboardPage() {
 
       <ModeBanner mode="live" />
 
-      <LiveBelt />
+      <ReportBar line={line} onLine={changeLine} />
+
+      <LiveBelt line={line} />
 
       {/* ---------- FAIL alert ---------- */}
       {alert ? (

@@ -14,7 +14,7 @@ const DELAY_MAX_MS = 5000;
  * exactly like the real decision. Events that existed before the page was opened
  * are not replayed.
  */
-export function useLiveBelt() {
+export function useLiveBelt(line = 'line1') {
   const simRef = useRef(null);
   if (simRef.current === null) simRef.current = createSim({ live: true });
   const [frame, setFrame] = useState(0);
@@ -56,7 +56,7 @@ export function useLiveBelt() {
 
     async function poll() {
       try {
-        const res = await fetch('/api/events?limit=50', { cache: 'no-store' });
+        const res = await fetch(`/api/events?limit=50&line=${encodeURIComponent(line)}`, { cache: 'no-store' });
         const data = await res.json();
         if (!res.ok || !data.ok) throw new Error(data.error || `HTTP ${res.status}`);
         const list = (data.events || []).slice().reverse(); // oldest first
@@ -93,7 +93,7 @@ export function useLiveBelt() {
       clearInterval(id);
       timeouts.forEach(clearTimeout);
     };
-  }, []);
+  }, [line]);
 
   return { sim: simRef.current, frame, info };
 }

@@ -4,8 +4,8 @@ import ConveyorScene from '@/components/sim/ConveyorScene';
 import { useLiveBelt } from '@/lib/sim/useLiveBelt';
 
 /** Conveyor view on the Live page: one box per real inspection saved in MongoDB. */
-export default function LiveBelt() {
-  const { sim, info } = useLiveBelt();
+export default function LiveBelt({ line = 'line1' }) {
+  const { sim, info } = useLiveBelt(line);
   const onBelt = sim.boxes.length;
   return (
     <section className="rounded-lg border border-emerald-700/50 bg-panel">
