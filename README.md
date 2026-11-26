@@ -150,7 +150,7 @@ Broker, Bridge และ CiRA รันบนเครื่องหน้า�
 
 | รหัส | ชื่อ | หน้าที่ | งานที่รับผิดชอบ |
 |---|---|---|---|
-| 66013507 | วชิระ เฟื้อแก้ว | AI & Computer Vision | CiRA CORE, เทรนโมเดล box_good / dent / tear, จูน Confidence |
-| 66088911 | เศรษฐพงศ์ สงวนสุข | Dashboard & UI | Next.js Dashboard, MongoDB Atlas, API, Deploy เว็บ, Control Center |
-| 66039252 | นนทพัทธ์ จีนเกิด | Embedded & Control | ESP32 บน Wokwi, Servo คัดแยก, Tower light, Buzzer, LCD / OLED |
-| 66027138 | ณัฐวัฒน์ ปราณวรกิจ | Backend & Data Pipeline | MQTT, Node Bridge, คิวเก็บและส่งต่อข้อมูล, Relay ไป ESP32 |
+| 66088911 | เศรษฐพงศ์ สงวนสุข | Web Dashboard & Cloud | Web Dashboard, API, Sync Edge to Cloud |
+| 66013507 | วชิระ เฟื้อแก้ว | AI & Computer Vision | CiRA CORE, เทรนโมเดล, จูน Threshold |
+| 66039252 | นนทพัทธ์ จีนเกิด | Embedded & Control | ESP32/PLC, IR, Load Cell, Servo, Tower Light |
+| 66027138 | ณัฐวัฒน์ ปราณวรกิจ | Database | SQLite, MQTT |
