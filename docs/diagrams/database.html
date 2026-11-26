@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SPDI — database diagram</title>
+<style data-flowshot="base">
+/* flowshot base styles. Override the custom properties in a later <style> block to restyle a diagram. */
+:root {
+  --font: "Inter", "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Inter Display", "Inter", "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", "Cascadia Code", "Cascadia Mono", Consolas, ui-monospace, monospace;
+
+  --bg: #f4f5f8;
+  --bg-dot: rgba(23, 29, 45, 0.075);
+  --ink: #0f1422;
+  --ink-2: #4a5268;
+  --ink-3: #8a91a5;
+  --line: #e3e6ed;
+  --card: #ffffff;
+  --card-2: #fbfbfd;
+  --lane: rgba(255, 255, 255, 0.55);
+  --lane-line: rgba(18, 24, 40, 0.08);
+  --shadow: 0 1px 0 rgba(16, 22, 38, 0.04), 0 1px 2px rgba(16, 22, 38, 0.06), 0 8px 24px -10px rgba(16, 22, 38, 0.14);
+
+  --accent: #4f46e5;
+  --tone-accent: #4f46e5;   /* main request path */
+  --tone-data: #0e9f6e;     /* reads / writes */
+  --tone-ext: #e2621b;      /* third-party calls */
+  --tone-async: #8b5cf6;    /* queues, webhooks, cron (drawn dashed) */
+  --tone-warn: #d43f5e;     /* auth / security boundary */
+  --tone-muted: #9aa1b4;    /* build, deploy, misc */
+  --halo: var(--bg);
+}
+body.theme-dark {
+  --bg: #0a0c11;
+  --bg-dot: rgba(255, 255, 255, 0.06);
+  --ink: #eef0f5;
+  --ink-2: #a6adbf;
+  --ink-3: #6c7387;
+  --line: #222736;
+  --card: #12151d;
+  --card-2: #161a23;
+  --lane: rgba(255, 255, 255, 0.025);
+  --lane-line: rgba(255, 255, 255, 0.07);
+  --shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 12px 30px -12px rgba(0, 0, 0, 0.7);
+  --accent: #8b87ff;
+  --tone-accent: #8b87ff;
+  --tone-data: #34d399;
+  --tone-ext: #fb923c;
+  --tone-async: #b794ff;
+  --tone-warn: #fb7185;
+  --tone-muted: #6f7890;
+  --halo: #0a0c11;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); }
+body {
+  font-family: var(--font); color: var(--ink);
+  -webkit-font-smoothing: antialiased; text-rendering: geometricPrecision;
+  font-feature-settings: "ss01", "cv11", "tnum";
+  display: inline-block; min-width: 100%;
+}
+
+/* ---------- canvas ---------- */
+#canvas {
+  position: relative; display: inline-flex; flex-direction: column; gap: 36px;
+  padding: 56px 64px 44px; min-width: 1200px;
+  background-color: var(--bg);
+  background-image: radial-gradient(var(--bg-dot) 1px, transparent 1.2px);
+  background-size: 22px 22px; background-position: 11px 11px;
+}
+
+/* ---------- header ---------- */
+.fs-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 48px; }
+.fs-eyebrow {
+  font: 600 11.5px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--accent);
+  display: inline-flex; align-items: center; gap: 10px; margin-bottom: 14px;
+}
+.fs-eyebrow::before { content: ""; width: 22px; height: 2px; border-radius: 2px; background: currentColor; }
+.fs-title { font: 700 40px/1.04 var(--font-display); letter-spacing: -0.028em; margin: 0; }
+.fs-title em { font-style: normal; color: var(--accent); }
+.fs-sub { margin: 12px 0 0; max-width: 760px; font-size: 15.5px; line-height: 1.5; color: var(--ink-2); }
+.fs-meta { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; max-width: 520px; }
+.fs-chip {
+  display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px 0 8px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 999px;
+  font-size: 12.5px; font-weight: 550; color: var(--ink-2); box-shadow: var(--shadow);
+}
+.fs-chip .si { width: 18px; height: 18px; border-radius: 5px; }
+.fs-chip .si svg { width: 11px; height: 11px; }
+
+/* ---------- lanes ---------- */
+.fs-board { display: flex; align-items: stretch; gap: 84px; }
+.fs-lane {
+  position: relative; display: flex; flex-direction: column; gap: 18px;
+  padding: 18px 18px 20px; min-width: 268px;
+  background: var(--lane); border: 1px solid var(--lane-line); border-radius: 22px;
+}
+.fs-lane.is-plain { background: transparent; border-color: transparent; padding-left: 0; padding-right: 0; }
+.fs-lane-h {
+  display: flex; align-items: center; gap: 10px; padding: 2px 4px 4px;
+  font: 600 11px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3);
+}
+.fs-lane-h b {
+  display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 7px;
+  background: var(--ink); color: var(--bg); font: 700 10.5px/1 var(--mono); letter-spacing: 0;
+}
+.fs-lane-h small { margin-left: auto; text-transform: none; letter-spacing: 0; font: 500 11px/1 var(--font); color: var(--ink-3); }
+.fs-stack { display: flex; flex-direction: column; gap: 16px; }
+.fs-row { display: flex; gap: 16px; }
+.fs-grow { flex: 1; }
+.fs-spacer { flex: 1; min-height: 8px; }
+
+/* bands span the full width (deploy pipeline, observability, CI) */
+.fs-band {
+  position: relative; display: flex; align-items: center; gap: 22px; padding: 16px 18px;
+  background: var(--lane); border: 1px dashed color-mix(in srgb, var(--ink-3) 45%, transparent); border-radius: 18px;
+}
+.fs-band > .fs-lane-h { writing-mode: horizontal-tb; min-width: 150px; }
+.fs-band .fs-node { min-width: 0; width: auto; flex: 1; }
+
+/* ---------- nodes ---------- */
+.fs-node {
+  position: relative; z-index: 2; width: 268px;
+  display: grid; grid-template-columns: auto 1fr; column-gap: 12px; row-gap: 8px; align-items: center;
+  padding: 13px 14px 13px 13px; background: var(--card); border: 1px solid var(--line); border-radius: 15px;
+  box-shadow: var(--shadow);
+}
+.fs-node .si { grid-row: 1; }
+.fs-node h4 { margin: 0; font: 650 14.5px/1.2 var(--font); letter-spacing: -0.01em; }
+.fs-node h4 + p, .fs-node .fs-txt p { margin: 3px 0 0; font-size: 12.25px; line-height: 1.38; color: var(--ink-2); }
+.fs-node .fs-txt { min-width: 0; }
+.fs-node .fs-tags { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 5px; }
+.fs-node ul { grid-column: 1 / -1; margin: 0; padding: 9px 0 0; list-style: none; border-top: 1px solid var(--line);
+  display: grid; gap: 5px; font-size: 12px; color: var(--ink-2); }
+.fs-node ul li { display: flex; gap: 8px; align-items: baseline; }
+.fs-node ul li::before { content: ""; flex: none; width: 5px; height: 5px; border-radius: 2px; background: var(--ink-3); transform: translateY(-1px); }
+.fs-node ul code, .fs-tag { font: 500 10.75px/1 var(--mono); }
+.fs-node ul code { color: var(--ink); }
+.fs-tag { display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: 6px;
+  background: var(--card-2); border: 1px solid var(--line); color: var(--ink-2); }
+.fs-tag.is-accent { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  background: color-mix(in srgb, var(--accent) 7%, var(--card)); }
+
+.fs-node.is-primary { border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 11%, transparent), var(--shadow); }
+.fs-node.is-ext { border-style: dashed; border-color: color-mix(in srgb, var(--tone-ext) 45%, var(--line)); background: var(--card-2); }
+.fs-node.is-store { border-bottom-width: 3px; border-bottom-color: color-mix(in srgb, var(--tone-data) 70%, var(--line)); }
+.fs-node.is-actor { width: auto; border-radius: 999px; padding: 8px 18px 8px 8px; grid-template-columns: auto auto; }
+.fs-node.is-actor .si { border-radius: 999px; }
+.fs-node .fs-badge { position: absolute; top: -9px; right: 12px; height: 18px; padding: 0 7px; border-radius: 999px;
+  font: 700 9.5px/18px var(--mono); letter-spacing: .08em; text-transform: uppercase;
+  background: var(--ink); color: var(--bg); }
+.fs-node .fs-badge.is-accent { background: var(--accent); color: #fff; }
+
+/* ---------- icons ---------- */
+.si {
+  --brand: var(--ink-2);
+  display: inline-grid; place-items: center; flex: none; width: 40px; height: 40px; border-radius: 11px;
+  background: color-mix(in srgb, var(--brand) 11%, var(--card));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brand) 20%, transparent);
+  color: var(--ink-2);
+}
+.si svg { width: 22px; height: 22px; display: block; fill: var(--brand); }
+.si[data-ink="light"] svg { filter: drop-shadow(0 0 .6px rgba(0, 0, 0, .35)); }
+.si[data-ink="dark"] { background: color-mix(in srgb, var(--ink) 6%, var(--card)); box-shadow: inset 0 0 0 1px var(--line); }
+.si[data-ink="dark"] svg { fill: var(--ink); }
+.si[data-kind="glyph"] { background: var(--card-2); box-shadow: inset 0 0 0 1px var(--line); }
+.si[data-kind="glyph"] svg { fill: none; stroke: currentColor; }
+.si[data-kind="fallback"] { background: var(--ink); color: var(--bg); box-shadow: none; }
+.si[data-kind="fallback"] b { font: 800 13px/1 var(--font); letter-spacing: -0.02em; }
+.si.is-sm { width: 28px; height: 28px; border-radius: 8px; }
+.si.is-sm svg { width: 15px; height: 15px; }
+.si.is-lg { width: 48px; height: 48px; border-radius: 13px; }
+.si.is-lg svg { width: 26px; height: 26px; }
+.fs-icons { display: inline-flex; gap: 4px; }
+
+/* ---------- wires ---------- */
+.fs-wires { position: absolute; left: 0; top: 0; z-index: 1; pointer-events: none; overflow: visible; }
+.fs-wire { fill: none; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.fs-wire.is-dash { stroke-dasharray: 5 5; }
+.fs-halo { fill: none; stroke: var(--halo); stroke-width: 7; stroke-linecap: round; opacity: .9; }
+.fs-port { fill: var(--card); stroke-width: 1.8; }
+.fs-label {
+  position: absolute; z-index: 3; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  height: 24px; padding: 0 9px 0 4px; border-radius: 8px;
+  background: var(--card); border: 1px solid color-mix(in srgb, var(--c) 35%, var(--line));
+  font: 550 11.5px/1 var(--font); color: var(--ink-2);
+  box-shadow: 0 2px 6px -2px rgba(16, 22, 38, .14);
+}
+.fs-label:not(:has(i)) { padding-left: 9px; }
+.fs-label i { display: inline-grid; place-items: center; width: 17px; height: 17px; border-radius: 5px;
+  background: var(--c); color: #fff; font: 700 10px/1 var(--mono); font-style: normal; }
+.fs-label:has(i):not(:has(span)) { padding: 0 3px; }
+
+/* ---------- footer / legend ---------- */
+.fs-foot { display: flex; align-items: center; justify-content: space-between; gap: 32px; padding-top: 18px;
+  border-top: 1px solid var(--lane-line); }
+.fs-legend { display: flex; flex-wrap: wrap; gap: 22px; font-size: 12.5px; color: var(--ink-2); }
+.fs-legend span { display: inline-flex; align-items: center; gap: 9px; }
+.fs-legend span::before { content: ""; width: 26px; height: 0; border-top: 2px solid var(--c); }
+.fs-legend span.is-dash::before { border-top-style: dashed; }
+.fs-legend span.is-box::before { width: 14px; height: 14px; border: 1.5px dashed var(--c); border-radius: 4px; }
+.fs-note { font: 500 11.5px/1.4 var(--mono); color: var(--ink-3); text-align: right; }
+
+/* ---------- numbered steps panel (optional) ---------- */
+.fs-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.fs-step { display: grid; grid-template-columns: auto 1fr; gap: 10px; padding: 12px 14px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 12px; font-size: 12.5px; line-height: 1.45; color: var(--ink-2); }
+.fs-step i { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 6px;
+  background: var(--accent); color: #fff; font: 700 10.5px/1 var(--mono); font-style: normal; }
+.fs-step b { display: block; color: var(--ink); font-weight: 650; font-size: 13px; margin-bottom: 2px; }
+
+</style>
+<style>
+  :root { --accent: #13aa52; --tone-accent: #13aa52; }
+  .fields { columns: 2; column-gap: 22px; }
+  .fields li { break-inside: avoid; }
+  .fs-node.wide { width: 430px; max-width: 430px; }
+  .col { gap: 64px; }
+  .src { gap: 72px !important; }
+  .one { display:block !important; }
+</style>
+</head>
+<body>
+<div id="canvas">
+
+  <header class="fs-head">
+    <div>
+      <div class="fs-eyebrow">Database diagram · line1</div>
+      <h1 class="fs-title">SPDI — <em>how an inspection is stored</em> and read back</h1>
+      <p class="fs-sub">The Node bridge turns CiRA CORE detections into one document per box in MongoDB Atlas (database <code>spdi</code>); the Next.js API on Vercel reads it for the Live page.</p>
+    </div>
+    <div class="fs-meta">
+      <span class="fs-chip"><span class="si" data-icon="mongodb" data-kind="brand" data-ink="mid" style="--brand:#47A248" role="img" aria-label="MongoDB" title="MongoDB"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.193 9.555c-1.264-5.58-4.252-7.414-4.573-8.115-.28-.394-.53-.954-.735-1.44-.036.495-.055.685-.523 1.184-.723.566-4.438 3.682-4.74 10.02-.282 5.912 4.27 9.435 4.888 9.884l.07.05A73.49 73.49 0 0111.91 24h.481c.114-1.032.284-2.056.51-3.07.417-.296.604-.463.85-.693a11.342 11.342 0 003.639-8.464c.01-.814-.103-1.662-.197-2.218zm-5.336 8.195s0-8.291.275-8.29c.213 0 .49 10.695.49 10.695-.381-.045-.765-1.76-.765-2.405z"/></svg></span>MongoDB Atlas</span>
+      <span class="fs-chip"><span class="si" data-icon="nodedotjs" data-kind="brand" data-ink="mid" style="--brand:#5FA04E" role="img" aria-label="Node.js" title="Node.js"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11.998,24c-0.321,0-0.641-0.084-0.922-0.247l-2.936-1.737c-0.438-0.245-0.224-0.332-0.08-0.383 c0.585-0.203,0.703-0.25,1.328-0.604c0.065-0.037,0.151-0.023,0.218,0.017l2.256,1.339c0.082,0.045,0.197,0.045,0.272,0l8.795-5.076 c0.082-0.047,0.134-0.141,0.134-0.238V6.921c0-0.099-0.053-0.192-0.137-0.242l-8.791-5.072c-0.081-0.047-0.189-0.047-0.271,0 L3.075,6.68C2.99,6.729,2.936,6.825,2.936,6.921v10.15c0,0.097,0.054,0.189,0.139,0.235l2.409,1.392 c1.307,0.654,2.108-0.116,2.108-0.89V7.787c0-0.142,0.114-0.253,0.256-0.253h1.115c0.139,0,0.255,0.112,0.255,0.253v10.021 c0,1.745-0.95,2.745-2.604,2.745c-0.508,0-0.909,0-2.026-0.551L2.28,18.675c-0.57-0.329-0.922-0.945-0.922-1.604V6.921 c0-0.659,0.353-1.275,0.922-1.603l8.795-5.082c0.557-0.315,1.296-0.315,1.848,0l8.794,5.082c0.57,0.329,0.924,0.944,0.924,1.603 v10.15c0,0.659-0.354,1.273-0.924,1.604l-8.794,5.078C12.643,23.916,12.324,24,11.998,24z M19.099,13.993 c0-1.9-1.284-2.406-3.987-2.763c-2.731-0.361-3.009-0.548-3.009-1.187c0-0.528,0.235-1.233,2.258-1.233 c1.807,0,2.473,0.389,2.747,1.607c0.024,0.115,0.129,0.199,0.247,0.199h1.141c0.071,0,0.138-0.031,0.186-0.081 c0.048-0.054,0.074-0.123,0.067-0.196c-0.177-2.098-1.571-3.076-4.388-3.076c-2.508,0-4.004,1.058-4.004,2.833 c0,1.925,1.488,2.457,3.895,2.695c2.88,0.282,3.103,0.703,3.103,1.269c0,0.983-0.789,1.402-2.642,1.402 c-2.327,0-2.839-0.584-3.011-1.742c-0.02-0.124-0.126-0.215-0.253-0.215h-1.137c-0.141,0-0.254,0.112-0.254,0.253 c0,1.482,0.806,3.248,4.655,3.248C17.501,17.007,19.099,15.91,19.099,13.993z"/></svg></span>Node.js bridge</span>
+      <span class="fs-chip"><span class="si" data-icon="mqtt" data-kind="brand" data-ink="dark" style="--brand:#660066" role="img" aria-label="MQTT" title="MQTT"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.657 23.994h-9.45A1.212 1.212 0 0 1 0 22.788v-9.18h.071c5.784 0 10.504 4.65 10.586 10.386Zm7.606 0h-4.045C14.135 16.246 7.795 9.977 0 9.942V6.038h.071c9.983 0 18.121 8.044 18.192 17.956Zm4.53 0h-.97C21.754 12.071 11.995 2.407 0 2.372v-1.16C0 .55.544.006 1.207.006h7.64C15.733 2.49 21.257 7.789 24 14.508v8.291c0 .663-.544 1.195-1.207 1.195ZM16.713.006h6.092A1.19 1.19 0 0 1 24 1.2v5.914c-.91-1.242-2.046-2.65-3.158-3.762C19.588 2.11 18.122.987 16.714.005Z"/></svg></span>MQTT</span>
+      <span class="fs-chip"><span class="si" data-icon="nextdotjs" data-kind="brand" data-ink="dark" style="--brand:#000000" role="img" aria-label="Next.js" title="Next.js"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.665 21.978C16.758 23.255 14.465 24 12 24 5.377 24 0 18.623 0 12S5.377 0 12 0s12 5.377 12 12c0 3.583-1.574 6.801-4.067 9.001L9.219 7.2H7.2v9.596h1.615V9.251l9.85 12.727Zm-3.332-8.533 1.6 2.061V7.2h-1.6v6.245Z"/></svg></span>Next.js API</span>
+      <span class="fs-chip"><span class="si" data-icon="vercel" data-kind="brand" data-ink="dark" style="--brand:#000000" role="img" aria-label="Vercel" title="Vercel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 1.608 12 20.784H0Z"/></svg></span>Vercel</span>
+    </div>
+  </header>
+
+  <section class="fs-board">
+
+    <div class="fs-lane is-plain src">
+      <div class="fs-lane-h"><b>01</b>Sources</div>
+      <div class="fs-node is-actor" data-node="cira">
+        <span class="si" data-icon="g:cpu" data-kind="glyph" role="img" aria-label="cpu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5" rx=".8"/><path d="M9 2.5V6M15 2.5V6M9 18v3.5M15 18v3.5M2.5 9H6M2.5 15H6M18 9h3.5M18 15h3.5"/></svg></span>
+        <div class="fs-txt"><h4>CiRA CORE</h4><p>Edge AI model · one message per frame</p></div>
+        <div class="fs-tags"><span class="fs-tag">video</span><span class="fs-tag">image slide</span></div>
+      </div>
+      <div class="fs-node" data-node="mqtt">
+        <span class="si" data-icon="mqtt" data-kind="brand" data-ink="dark" style="--brand:#660066" role="img" aria-label="MQTT" title="MQTT"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.657 23.994h-9.45A1.212 1.212 0 0 1 0 22.788v-9.18h.071c5.784 0 10.504 4.65 10.586 10.386Zm7.606 0h-4.045C14.135 16.246 7.795 9.977 0 9.942V6.038h.071c9.983 0 18.121 8.044 18.192 17.956Zm4.53 0h-.97C21.754 12.071 11.995 2.407 0 2.372v-1.16C0 .55.544.006 1.207.006h7.64C15.733 2.49 21.257 7.789 24 14.508v8.291c0 .663-.544 1.195-1.207 1.195ZM16.713.006h6.092A1.19 1.19 0 0 1 24 1.2v5.914c-.91-1.242-2.046-2.65-3.158-3.762C19.588 2.11 18.122.987 16.714.005Z"/></svg></span>
+        <div class="fs-txt"><h4>MQTT broker</h4><p><code>spdi/line1/detections</code></p></div>
+      </div>
+      <div class="fs-node" data-node="sim">
+        <span class="si" data-icon="g:code" data-kind="glyph" role="img" aria-label="code"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8.5 7-5 5 5 5M15.5 7l5 5-5 5M13.5 4.5l-3 15"/></svg></span>
+        <div class="fs-txt"><h4>Simulator</h4><p><code>sim-01</code> · test frames, no camera</p></div>
+      </div>
+    </div>
+
+    <div class="fs-lane">
+      <div class="fs-lane-h"><b>02</b>Bridge<small>bridge/index.js</small></div>
+      <div class="fs-stack col">
+        <div class="fs-node is-primary" data-node="bridge">
+          <span class="fs-badge is-accent">Writer</span>
+          <span class="si" data-icon="nodedotjs" data-kind="brand" data-ink="mid" style="--brand:#5FA04E" role="img" aria-label="Node.js" title="Node.js"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11.998,24c-0.321,0-0.641-0.084-0.922-0.247l-2.936-1.737c-0.438-0.245-0.224-0.332-0.08-0.383 c0.585-0.203,0.703-0.25,1.328-0.604c0.065-0.037,0.151-0.023,0.218,0.017l2.256,1.339c0.082,0.045,0.197,0.045,0.272,0l8.795-5.076 c0.082-0.047,0.134-0.141,0.134-0.238V6.921c0-0.099-0.053-0.192-0.137-0.242l-8.791-5.072c-0.081-0.047-0.189-0.047-0.271,0 L3.075,6.68C2.99,6.729,2.936,6.825,2.936,6.921v10.15c0,0.097,0.054,0.189,0.139,0.235l2.409,1.392 c1.307,0.654,2.108-0.116,2.108-0.89V7.787c0-0.142,0.114-0.253,0.256-0.253h1.115c0.139,0,0.255,0.112,0.255,0.253v10.021 c0,1.745-0.95,2.745-2.604,2.745c-0.508,0-0.909,0-2.026-0.551L2.28,18.675c-0.57-0.329-0.922-0.945-0.922-1.604V6.921 c0-0.659,0.353-1.275,0.922-1.603l8.795-5.082c0.557-0.315,1.296-0.315,1.848,0l8.794,5.082c0.57,0.329,0.924,0.944,0.924,1.603 v10.15c0,0.659-0.354,1.273-0.924,1.604l-8.794,5.078C12.643,23.916,12.324,24,11.998,24z M19.099,13.993 c0-1.9-1.284-2.406-3.987-2.763c-2.731-0.361-3.009-0.548-3.009-1.187c0-0.528,0.235-1.233,2.258-1.233 c1.807,0,2.473,0.389,2.747,1.607c0.024,0.115,0.129,0.199,0.247,0.199h1.141c0.071,0,0.138-0.031,0.186-0.081 c0.048-0.054,0.074-0.123,0.067-0.196c-0.177-2.098-1.571-3.076-4.388-3.076c-2.508,0-4.004,1.058-4.004,2.833 c0,1.925,1.488,2.457,3.895,2.695c2.88,0.282,3.103,0.703,3.103,1.269c0,0.983-0.789,1.402-2.642,1.402 c-2.327,0-2.839-0.584-3.011-1.742c-0.02-0.124-0.126-0.215-0.253-0.215h-1.137c-0.141,0-0.254,0.112-0.254,0.253 c0,1.482,0.806,3.248,4.655,3.248C17.501,17.007,19.099,15.91,19.099,13.993z"/></svg></span>
+          <div class="fs-txt"><h4>SPDI Bridge</h4><p>Tracks boxes, decides PASS / FAIL</p></div>
+          <ul><li>video: counted at virtual line <code>x=0.5</code></li><li>image: one picture = one box</li><li>FAIL if ≥ 30% of frames damaged</li></ul>
+        </div>
+        <div class="fs-node" data-node="classes">
+          <span class="si" data-icon="g:gear" data-kind="glyph" role="img" aria-label="gear"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg></span>
+          <div class="fs-txt"><h4>Class mapping</h4><p><code>bridge/.env</code> · case-insensitive</p></div>
+          <ul><li><span class="one"><b>PASS</b> ← <code>GOOD_CLASSES</code>: box_good, box, good, good_box, o</span></li><li><span class="one"><b>FAIL</b> ← <code>DAMAGED_CLASSES</code>: dent, tear, x, damage, damaged, defect …</span></li><li><span class="one">any other name → skipped, not stored</span></li></ul>
+        </div>
+        <div class="fs-node" data-node="queue">
+          <span class="si" data-icon="g:queue" data-kind="glyph" role="img" aria-label="queue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="7" width="4.5" height="10" rx="1.2"/><rect x="9.75" y="7" width="4.5" height="10" rx="1.2"/><rect x="17" y="7" width="4.5" height="10" rx="1.2"/></svg></span>
+          <div class="fs-txt"><h4>Store-and-forward queue</h4><p>In memory · up to 2000 events</p></div>
+          <div class="fs-tags"><span class="fs-tag is-accent">retry every 5 s</span><span class="fs-tag">flush on reconnect</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fs-lane">
+      <div class="fs-lane-h"><b>03</b>MongoDB Atlas<small>database spdi</small></div>
+      <div class="fs-stack col">
+        <div class="fs-node is-store wide" data-node="insp">
+          <span class="si" data-icon="mongodb" data-kind="brand" data-ink="mid" style="--brand:#47A248" role="img" aria-label="MongoDB" title="MongoDB"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.193 9.555c-1.264-5.58-4.252-7.414-4.573-8.115-.28-.394-.53-.954-.735-1.44-.036.495-.055.685-.523 1.184-.723.566-4.438 3.682-4.74 10.02-.282 5.912 4.27 9.435 4.888 9.884l.07.05A73.49 73.49 0 0111.91 24h.481c.114-1.032.284-2.056.51-3.07.417-.296.604-.463.85-.693a11.342 11.342 0 003.639-8.464c.01-.814-.103-1.662-.197-2.218zm-5.336 8.195s0-8.291.275-8.29c.213 0 .49 10.695.49 10.695-.381-.045-.765-1.76-.765-2.405z"/></svg></span>
+          <div class="fs-txt"><h4>inspections</h4><p>One document per box · insert only</p></div>
+          <ul class="fields">
+            <li><code>eventId</code> string</li>
+            <li><code>ts</code> date</li>
+            <li><code>result</code> PASS | FAIL</li>
+            <li><code>className</code> string</li>
+            <li><code>confidence</code> 0–1</li>
+            <li><code>line</code> · <code>device</code></li>
+            <li><code>trackId</code> number</li>
+            <li><code>framesSeen</code> number</li>
+            <li><code>votes</code> {pass, fail}</li>
+            <li><code>source</code> · <code>createdAt</code></li>
+          </ul>
+          <div class="fs-tags"><span class="fs-tag is-accent">eventId unique</span><span class="fs-tag">ts desc index</span><span class="fs-tag">duplicates skipped</span></div>
+        </div>
+        <div class="fs-node is-store wide" data-node="status">
+          <span class="si" data-icon="mongodb" data-kind="brand" data-ink="mid" style="--brand:#47A248" role="img" aria-label="MongoDB" title="MongoDB"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.193 9.555c-1.264-5.58-4.252-7.414-4.573-8.115-.28-.394-.53-.954-.735-1.44-.036.495-.055.685-.523 1.184-.723.566-4.438 3.682-4.74 10.02-.282 5.912 4.27 9.435 4.888 9.884l.07.05A73.49 73.49 0 0111.91 24h.481c.114-1.032.284-2.056.51-3.07.417-.296.604-.463.85-.693a11.342 11.342 0 003.639-8.464c.01-.814-.103-1.662-.197-2.218zm-5.336 8.195s0-8.291.275-8.29c.213 0 .49 10.695.49 10.695-.381-.045-.765-1.76-.765-2.405z"/></svg></span>
+          <div class="fs-txt"><h4>system_status</h4><p>One document <code>_id: "bridge"</code> · upsert</p></div>
+          <ul class="fields">
+            <li><code>mqttConnected</code></li>
+            <li><code>fps</code> · <code>activeTracks</code></li>
+            <li><code>inputMode</code></li>
+            <li><code>lastFrameAt</code></li>
+            <li><code>lastEventAt</code></li>
+            <li><code>pendingWrites</code></li>
+            <li><code>sessionCount</code></li>
+            <li><code>updatedAt</code></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="fs-lane">
+      <div class="fs-lane-h"><b>04</b>Dashboard API<small>Next.js on Vercel</small></div>
+      <div class="fs-stack col">
+        <div class="fs-node" data-node="stats">
+          <span class="si" data-icon="nextdotjs" data-kind="brand" data-ink="dark" style="--brand:#000000" role="img" aria-label="Next.js" title="Next.js"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.665 21.978C16.758 23.255 14.465 24 12 24 5.377 24 0 18.623 0 12S5.377 0 12 0s12 5.377 12 12c0 3.583-1.574 6.801-4.067 9.001L9.219 7.2H7.2v9.596h1.615V9.251l9.85 12.727Zm-3.332-8.533 1.6 2.061V7.2h-1.6v6.245Z"/></svg></span>
+          <div class="fs-txt"><h4>GET /api/stats</h4><p>Totals, pass rate, timeline, bridge online</p></div>
+          <ul><li><code>countDocuments</code> · <code>aggregate $facet</code></li><li>reads <code>system_status</code></li></ul>
+        </div>
+        <div class="fs-node" data-node="events">
+          <span class="si" data-icon="nextdotjs" data-kind="brand" data-ink="dark" style="--brand:#000000" role="img" aria-label="Next.js" title="Next.js"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.665 21.978C16.758 23.255 14.465 24 12 24 5.377 24 0 18.623 0 12S5.377 0 12 0s12 5.377 12 12c0 3.583-1.574 6.801-4.067 9.001L9.219 7.2H7.2v9.596h1.615V9.251l9.85 12.727Zm-3.332-8.533 1.6 2.061V7.2h-1.6v6.245Z"/></svg></span>
+          <div class="fs-txt"><h4>GET /api/events</h4><p>Latest inspections, newest first</p></div>
+          <ul><li><code>find().sort(ts:-1)</code> · limit 1–100</li></ul>
+        </div>
+        <div class="fs-node" data-node="reset">
+          <span class="si" data-icon="g:lock" data-kind="glyph" role="img" aria-label="lock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="10.5" rx="2.2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg></span>
+          <div class="fs-txt"><h4>POST /api/reset</h4><p>Clears inspections</p></div>
+          <div class="fs-tags"><span class="fs-tag is-accent">x-admin-token</span><span class="fs-tag">off unless ADMIN_TOKEN set</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fs-lane is-plain">
+      <div class="fs-lane-h"><b>05</b>Viewer</div>
+      <div class="fs-node is-actor" data-node="live">
+        <span class="si" data-icon="g:browser" data-kind="glyph" role="img" aria-label="browser"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="4" width="19" height="16" rx="2.5"/><path d="M2.5 8.5h19M6 6.3h.01M8.5 6.3h.01"/></svg></span>
+        <div class="fs-txt"><h4>/live page</h4><p>KPIs, charts, live conveyor</p></div>
+        <div class="fs-tags"><span class="fs-tag">polls every 1.5 s</span></div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="fs-foot">
+    <div class="fs-legend">
+      <span style="--c:var(--tone-accent)">Inspection path</span>
+      <span style="--c:var(--tone-data)">Database read / write</span>
+      <span class="is-dash" style="--c:var(--tone-async)">Retry · heartbeat</span>
+      <span style="--c:var(--tone-warn)">Admin only</span>
+      <span class="is-box" style="--c:var(--tone-ext)">Data store</span>
+    </div>
+    <div class="fs-note">source: docs/diagrams/database.html</div>
+  </footer>
+</div>
+
+<script type="application/json" id="edges">[
+  { "from": "cira", "to": "mqtt", "label": "detections", "step": 1, "tone": "accent" },
+  { "from": "sim", "to": "mqtt", "label": "test frames", "tone": "muted", "dash": true },
+  { "from": "mqtt:right", "to": "bridge:left", "label": "subscribe", "step": 2, "tone": "accent" },
+  { "from": "bridge", "to": "classes", "label": "name → result", "step": 3, "tone": "accent" },
+  { "from": "bridge:right", "to": "insp:left", "label": "insertOne", "step": 4, "tone": "data" },
+  { "from": "bridge:right", "to": "status:left", "label": "heartbeat upsert", "tone": "async" },
+  { "from": "bridge:left", "to": "queue:left", "label": "DB down", "tone": "warn", "route": "elbow", "offset": 34, "at": 0.5 },
+  { "from": "queue:right", "to": "insp:left", "label": "flush", "tone": "async" },
+  { "from": "stats:left", "to": "insp:right", "label": "count · aggregate", "tone": "data" },
+  { "from": "stats:left", "to": "status:right", "label": "bridge online?", "tone": "data" },
+  { "from": "events:left", "to": "insp:right", "label": "find newest", "tone": "data" },
+  { "from": "reset:left", "to": "insp:right", "label": "deleteMany", "tone": "warn" },
+  { "from": "live:left", "to": "stats:right", "label": "fetch", "step": 5, "tone": "accent" },
+  { "from": "live:left", "to": "events:right", "label": "fetch", "tone": "accent" }
+]</script>
+<script data-flowshot="connectors">
+/* flowshot connectors: draws arrows between [data-node] elements inside #canvas.
+   Edges come from a JSON script element with id="edges": [ {...}, ... ]
+   Edge: { "from":"web", "to":"api:left", "label":"REST", "step":2,
+           "tone":"accent|data|ext|async|muted|warn", "dash":false, "route":"curve|elbow", "both":false,
+           "offset":40 (elbow only: middle segment distance from the start side), "at":0.5 (label position 0-1) }
+   "id:side" pins the side (top|right|bottom|left); otherwise the side is picked from the geometry. */
+(function () {
+  window.flowshotReady = false;
+  var NS = 'http://www.w3.org/2000/svg';
+
+  function draw() {
+    window.flowshotReady = false;
+    var warnings = [];
+    var canvas = document.getElementById('canvas');
+    var src = document.getElementById('edges');
+    if (!canvas || !src) { window.flowshotWarnings = warnings; window.flowshotReady = true; return; }
+    var edges = [];
+    try { edges = JSON.parse(src.textContent || '[]'); } catch (e) { warnings.push('edges JSON: ' + e.message); }
+    var old = canvas.querySelectorAll('.fs-wires, .fs-label');
+    for (var i = 0; i < old.length; i++) old[i].remove();
+
+    var cr = canvas.getBoundingClientRect();
+    var cs = getComputedStyle(canvas);
+    function rectOf(id) {
+      var el = canvas.querySelector('[data-node="' + id + '"]');
+      if (!el) return null;
+      var r = el.getBoundingClientRect();
+      var x = r.left - cr.left, y = r.top - cr.top;
+      return { x: x, y: y, w: r.width, h: r.height, cx: x + r.width / 2, cy: y + r.height / 2 };
+    }
+    function parse(ref) { var p = String(ref).split(':'); return { id: p[0], side: p[1] || null }; }
+
+    // 1. endpoints and sides
+    var list = [];
+    edges.forEach(function (e, idx) {
+      var a = parse(e.from), b = parse(e.to);
+      var ra = rectOf(a.id), rb = rectOf(b.id);
+      if (!ra || !rb) { warnings.push('edge ' + idx + ': unknown node "' + (!ra ? a.id : b.id) + '"'); return; }
+      var dx = rb.cx - ra.cx, dy = rb.cy - ra.cy;
+      var gapX = Math.max(rb.x - (ra.x + ra.w), ra.x - (rb.x + rb.w));
+      var gapY = Math.max(rb.y - (ra.y + ra.h), ra.y - (rb.y + rb.h));
+      var horiz = gapX > 0 && (gapX >= gapY || gapY <= 0);
+      var sa = a.side || (horiz ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'bottom' : 'top'));
+      var sb = b.side || (horiz ? (dx > 0 ? 'left' : 'right') : (dy > 0 ? 'top' : 'bottom'));
+      list.push({ e: e, a: { id: a.id, r: ra, side: sa }, b: { id: b.id, r: rb, side: sb } });
+    });
+
+    // 2. spread connections that share one side of a node
+    var ports = {};
+    list.forEach(function (it) {
+      [['a', 'b'], ['b', 'a']].forEach(function (pair) {
+        var me = it[pair[0]], other = it[pair[1]];
+        var key = me.id + ':' + me.side;
+        (ports[key] = ports[key] || []).push({ end: me, other: other });
+      });
+    });
+    Object.keys(ports).forEach(function (k) {
+      var arr = ports[k], vertical = /left|right/.test(arr[0].end.side);
+      arr.sort(function (p, q) { return vertical ? p.other.r.cy - q.other.r.cy : p.other.r.cx - q.other.r.cx; });
+      arr.forEach(function (p, j) { p.end.frac = arr.length === 1 ? 0.5 : 0.25 + 0.5 * (j / (arr.length - 1)); });
+    });
+    function point(end) {
+      var r = end.r, f = end.frac == null ? 0.5 : end.frac;
+      if (end.side === 'left') return { x: r.x, y: r.y + r.h * f, nx: -1, ny: 0 };
+      if (end.side === 'right') return { x: r.x + r.w, y: r.y + r.h * f, nx: 1, ny: 0 };
+      if (end.side === 'top') return { x: r.x + r.w * f, y: r.y, nx: 0, ny: -1 };
+      return { x: r.x + r.w * f, y: r.y + r.h, nx: 0, ny: 1 };
+    }
+
+    var svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('class', 'fs-wires');
+    svg.setAttribute('width', cr.width);
+    svg.setAttribute('height', cr.height);
+    svg.setAttribute('viewBox', '0 0 ' + cr.width + ' ' + cr.height);
+    var defs = document.createElementNS(NS, 'defs');
+    svg.appendChild(defs);
+    var made = {};
+    function tone(t) {
+      var v = cs.getPropertyValue('--tone-' + (t || 'muted')).trim();
+      return v || cs.getPropertyValue('--tone-muted').trim() || '#8a93a6';
+    }
+    function marker(t) {
+      var id = 'fs-arrow-' + (t || 'muted');
+      if (made[id]) return id;
+      made[id] = 1;
+      var m = document.createElementNS(NS, 'marker');
+      m.setAttribute('id', id);
+      m.setAttribute('viewBox', '0 0 12 12');
+      m.setAttribute('refX', '10');
+      m.setAttribute('refY', '6');
+      m.setAttribute('markerWidth', '11');
+      m.setAttribute('markerHeight', '11');
+      m.setAttribute('markerUnits', 'userSpaceOnUse');
+      m.setAttribute('orient', 'auto-start-reverse');
+      var p = document.createElementNS(NS, 'path');
+      p.setAttribute('d', 'M1.5 1.5 L10.5 6 L1.5 10.5 L4.2 6 Z');
+      p.setAttribute('fill', tone(t));
+      m.appendChild(p);
+      defs.appendChild(m);
+      return id;
+    }
+
+    var labels = [];
+    list.forEach(function (it) {
+      var e = it.e, p1 = point(it.a), p2 = point(it.b), d, mid;
+      var len = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+      if (e.route === 'elbow') {
+        var m1, m2;
+        // "offset" (px) pushes the middle segment out from the start side, to route around cards.
+        if (p1.nx !== 0 && p2.nx !== 0) {
+          var mx = e.offset != null ? p1.x + p1.nx * e.offset : (p1.x + p2.x) / 2;
+          m1 = { x: mx, y: p1.y }; m2 = { x: mx, y: p2.y };
+        } else if (p1.ny !== 0 && p2.ny !== 0) {
+          var my = e.offset != null ? p1.y + p1.ny * e.offset : (p1.y + p2.y) / 2;
+          m1 = { x: p1.x, y: my }; m2 = { x: p2.x, y: my };
+        }
+        else if (p1.nx !== 0) { m1 = m2 = { x: p2.x, y: p1.y }; }
+        else { m1 = m2 = { x: p1.x, y: p2.y }; }
+        d = roundedPath([p1, m1, m2, p2], 12);
+        mid = { x: (m1.x + m2.x) / 2, y: (m1.y + m2.y) / 2 };
+      } else {
+        var k = Math.max(36, Math.min(160, len * 0.42));
+        var c1 = { x: p1.x + p1.nx * k, y: p1.y + p1.ny * k };
+        var c2 = { x: p2.x + p2.nx * k, y: p2.y + p2.ny * k };
+        d = 'M' + p1.x + ' ' + p1.y + ' C' + c1.x + ' ' + c1.y + ' ' + c2.x + ' ' + c2.y + ' ' + p2.x + ' ' + p2.y;
+        mid = {
+          x: 0.125 * p1.x + 0.375 * c1.x + 0.375 * c2.x + 0.125 * p2.x,
+          y: 0.125 * p1.y + 0.375 * c1.y + 0.375 * c2.y + 0.125 * p2.y
+        };
+      }
+      var col = tone(e.tone);
+      var halo = document.createElementNS(NS, 'path');
+      halo.setAttribute('d', d);
+      halo.setAttribute('class', 'fs-halo');
+      svg.appendChild(halo);
+      var path = document.createElementNS(NS, 'path');
+      path.setAttribute('d', d);
+      path.setAttribute('class', 'fs-wire' + (e.dash || e.tone === 'async' ? ' is-dash' : ''));
+      path.setAttribute('stroke', col);
+      path.setAttribute('marker-end', 'url(#' + marker(e.tone) + ')');
+      if (e.both) path.setAttribute('marker-start', 'url(#' + marker(e.tone) + ')');
+      svg.appendChild(path);
+      if (!e.both) {
+        var dot = document.createElementNS(NS, 'circle');
+        dot.setAttribute('cx', p1.x);
+        dot.setAttribute('cy', p1.y);
+        dot.setAttribute('r', 3.4);
+        dot.setAttribute('class', 'fs-port');
+        dot.setAttribute('stroke', col);
+        svg.appendChild(dot);
+      }
+      if (e.label || e.step != null) labels.push({ e: e, x: mid.x, y: mid.y, col: col, path: path });
+    });
+    canvas.insertBefore(svg, canvas.firstChild);
+
+    // 3. labels as HTML pills, nudged apart when they collide
+    var placed = [];
+    var nodes = [];
+    var nodeEls = canvas.querySelectorAll('[data-node]');
+    for (var ni = 0; ni < nodeEls.length; ni++) nodes.push(rectOf(nodeEls[ni].getAttribute('data-node')));
+    labels.forEach(function (L) {
+      var el = document.createElement('div');
+      el.className = 'fs-label tone-' + (L.e.tone || 'muted');
+      el.style.setProperty('--c', L.col);
+      if (L.e.step != null) { var n = document.createElement('i'); n.textContent = String(L.e.step); el.appendChild(n); }
+      if (L.e.label) { var s = document.createElement('span'); s.textContent = L.e.label; el.appendChild(s); }
+      canvas.appendChild(el);
+      var w = el.offsetWidth, h = el.offsetHeight;
+      // Slide the pill along its own wire until it covers no card and no other label.
+      var total = L.path.getTotalLength(), best = null;
+      var fracs = L.e.at != null ? [L.e.at] : [0.5, 0.42, 0.58, 0.34, 0.66, 0.26, 0.74, 0.18, 0.82];
+      for (var f = 0; f < fracs.length; f++) {
+        var pt = L.path.getPointAtLength(total * fracs[f]);
+        var bx = pt.x - w / 2, by = pt.y - h / 2, cost = 0;
+        var obs = nodes.concat(placed);
+        for (var q = 0; q < obs.length; q++) {
+          var o = obs[q];
+          var ox = Math.min(bx + w + 4, o.x + o.w) - Math.max(bx - 4, o.x);
+          var oy = Math.min(by + h + 3, o.y + o.h) - Math.max(by - 3, o.y);
+          if (ox > 0 && oy > 0) cost += ox * oy;
+        }
+        if (!best || cost < best.cost) best = { x: bx, y: by, cost: cost };
+        if (cost === 0) break;
+      }
+      if (best.cost > w * h * 0.35) warnings.push('label "' + (L.e.label || L.e.step) + '" overlaps a card; give the lanes more gap or set "at" (0-1)');
+      var x = best.x, y = best.y;
+      el.style.left = x + 'px';
+      el.style.top = y + 'px';
+      placed.push({ x: x, y: y, w: w, h: h });
+    });
+    window.flowshotWarnings = warnings;
+    window.flowshotReady = true;
+  }
+
+  function unit(a, b) { var l = Math.hypot(b.x - a.x, b.y - a.y) || 1; return { x: (b.x - a.x) / l, y: (b.y - a.y) / l }; }
+  function roundedPath(pts, r) {
+    var c = [pts[0]];
+    for (var i = 1; i < pts.length; i++) {
+      var q = c[c.length - 1];
+      if (Math.abs(q.x - pts[i].x) > 0.5 || Math.abs(q.y - pts[i].y) > 0.5) c.push(pts[i]);
+    }
+    var d = 'M' + c[0].x + ' ' + c[0].y;
+    for (var j = 1; j < c.length - 1; j++) {
+      var a = c[j - 1], b = c[j], n = c[j + 1];
+      var rr = Math.min(r, Math.hypot(b.x - a.x, b.y - a.y) / 2, Math.hypot(n.x - b.x, n.y - b.y) / 2);
+      var u1 = unit(a, b), u2 = unit(b, n);
+      d += ' L' + (b.x - u1.x * rr) + ' ' + (b.y - u1.y * rr) + ' Q' + b.x + ' ' + b.y + ' ' + (b.x + u2.x * rr) + ' ' + (b.y + u2.y * rr);
+    }
+    var last = c[c.length - 1];
+    return d + ' L' + last.x + ' ' + last.y;
+  }
+
+  window.flowshotDraw = draw;
+  function start() { (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(draw); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+  var timer;
+  window.addEventListener('resize', function () { clearTimeout(timer); timer = setTimeout(draw, 60); });
+})();
+
+</script>
+</body>
+</html>
