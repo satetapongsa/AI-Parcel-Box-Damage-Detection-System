@@ -45,7 +45,13 @@ const state = {
 };
 
 const trackerOpts = { ...config, onWarn: (msg) => log('⚠️ ', msg) };
-const tracker = config.inputMode === 'image' ? createImageCounter(trackerOpts) : createTracker(trackerOpts);
+const tracker =
+  config.inputMode === 'image'
+    ? createImageCounter(trackerOpts)
+    : config.inputMode === 'still'
+      ? // a held box flickers in and out of detection: keep its track longer so it is counted once
+        createTracker({ ...trackerOpts, countMode: 'presence', trackTtlMs: Math.max(config.trackTtlMs, 2500) })
+      : createTracker(trackerOpts);
 const classify = makeClassifier(config.goodClasses, config.damagedClasses);
 const warnedEvent = new Set();
 

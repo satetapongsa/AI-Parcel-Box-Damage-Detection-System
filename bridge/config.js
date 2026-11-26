@@ -33,6 +33,20 @@ if (minConf > 1) minConf = minConf / 100; // allow "50" meaning 50%
 const direction = (process.env.DIRECTION || 'ltr').trim().toLowerCase() === 'rtl' ? 'rtl' : 'ltr';
 const boxOrigin = (process.env.BOX_ORIGIN || 'center').trim().toLowerCase() === 'topleft' ? 'topleft' : 'center';
 
+/** 'video' = boxes move across the frame, 'still' = a box is held or placed in view, 'image' = Image Slide. */
+function inputModeOf(raw) {
+  const v = String(raw || '').trim().toLowerCase();
+  if (['image', 'images', 'photo'].includes(v)) return 'image';
+  if (['still', 'presence', 'static'].includes(v)) return 'still';
+  return 'video';
+}
+
+const INPUT_LABELS = {
+  video: 'video (count at the virtual line)',
+  still: 'still (count a box once it is seen steadily, no line)',
+  image: 'image (1 picture = 1 box, Image Slide)',
+};
+
 const config = {
   mqttUrl: (process.env.MQTT_URL || 'mqtt://127.0.0.1:1883').trim(),
   mongoUri: (process.env.MONGODB_URI || '').trim(),
@@ -57,7 +71,7 @@ const config = {
   failRatio: num('FAIL_RATIO', 0.3),
   // video: boxes move across the virtual line (VideoFile / camera)
   // image: one still picture = one box (Image Slide)
-  inputMode: ['image', 'images', 'photo'].includes(String(process.env.INPUT_MODE || '').trim().toLowerCase()) ? 'image' : 'video',
+  inputMode: inputModeOf(process.env.INPUT_MODE),
 };
 
 const overlap = config.goodClasses.filter((c) => config.damagedClasses.includes(c));
@@ -107,7 +121,7 @@ function summary() {
     `   GOOD      ${config.goodClasses.join(', ')}`,
     `   DAMAGED   ${config.damagedClasses.join(', ')}`,
     `   Frame     ${config.frameW}x${config.frameH} px, box origin=${config.boxOrigin}`,
-    `   Input     ${config.inputMode === 'image' ? 'image (1 picture = 1 box, Image Slide)' : 'video (count at the virtual line)'}`,
+    `   Input     ${INPUT_LABELS[config.inputMode]}`,
     `   Line      x=${config.linePos} dir=${config.direction}  MIN_CONF=${config.minConf} MIN_FRAMES=${config.minFrames}`,
     `   Tracking  MAX_DIST=${config.maxDist} TTL=${config.trackTtlMs}ms FAIL_RATIO=${config.failRatio}`,
   ].join('\n');
