@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Pipeline from '@/components/Pipeline';
 import NavTabs from '@/components/NavTabs';
+import ModeBanner from '@/components/ModeBanner';
+import LiveBelt from '@/components/LiveBelt';
 import KpiCard from '@/components/KpiCard';
 import { PerMinuteChart, PassFailDonut } from '@/components/Charts';
 import EventsTable from '@/components/EventsTable';
@@ -211,6 +213,10 @@ export default function LiveDashboardPage() {
           <Pipeline health={health} />
         </div>
       </header>
+
+      <ModeBanner mode="live" />
+
+      <LiveBelt />
 
       {/* ---------- FAIL alert ---------- */}
       {alert ? (
