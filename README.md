@@ -68,6 +68,10 @@ flowchart LR
 - **Images:** Image Slide **ภาพ 1 ใบ = กล่อง 1 กล่อง** ภาพเดิมที่ส่งซ้ำนับครั้งเดียว ถ้ามีคลาสชำรุดในภาพ → FAIL
 - กดสลับแล้ว Bridge รีสตาร์ทให้เอง (ตั้งค่าเริ่มต้นได้ที่ `INPUT_MODE` ใน `bridge/.env`)
 
+**Dashboard มี 2 หน้าแยกกันชัดเจน**
+- **Live · real data** (`/live`): ข้อมูลจริงจาก MongoDB และมี **Live conveyor** ทุกกล่องที่ CiRA ตรวจจับและ Bridge นับแล้ว จะออกมาที่หัวสายพานหลังจากนั้น 2–5 วินาที แล้ววิ่งไปตามผลจริง (PASS ออกปลายสาย, FAIL ถูกดันลงถัง DENT / TEAR)
+- **Simulation · demo only** (`/`): จำลองในเบราว์เซอร์อย่างเดียว กล่องสุ่มวิ่งตลอด ไม่เชื่อมกับ CiRA หรือฐานข้อมูล
+
 ใน Control Center มี 2 แผงแยกกัน **Simulation** (รันได้ทันที ไม่ต้องมีกล้อง) กับ **Real system** (CiRA CORE) แต่ละแผงแสดงสถานะ 7 ขั้นแบบ real-time และมีปุ่ม Fresh start, Auto-restart, Copy ESP32 code
 
 ## ESP32 (Wokwi)
