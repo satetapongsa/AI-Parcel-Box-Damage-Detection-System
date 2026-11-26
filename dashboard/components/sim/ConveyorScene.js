@@ -29,9 +29,9 @@ const BIN_OFFSET = 82; // tear bin left of the pusher, dent bin right
 const BIN_SHOW = 6; // boxes drawn inside a bin (the rest is a "+n")
 
 /** One reject bin with the rejected boxes piled inside. */
-function RejectBin({ cx, kind, items }) {
+function RejectBin({ cx, kind, items, label }) {
   const left = cx - BIN_W / 2;
-  const tear = kind === 'tear';
+  const tear = kind === 'tear' || kind === 'bad';
   const stroke = tear ? '#ef4444' : '#f59e0b';
   const shown = items.slice(-BIN_SHOW);
   const extra = items.length - shown.length;
@@ -54,7 +54,7 @@ function RejectBin({ cx, kind, items }) {
       })}
       <rect x={left} y={BIN_TOP + 44} width={BIN_W} height={BIN_H - 44} rx={3} fill={tear ? '#4c1518' : '#4a3209'} opacity={0.93} />
       <text x={left + 10} y={BIN_TOP + 63} fontSize={12} fontWeight={800} fill={tear ? '#fecaca' : '#fde68a'}>
-        {tear ? 'TORN · scrap' : 'DENTED · fix'}
+        {label || (tear ? 'TORN · scrap' : 'DENTED · fix')}
       </text>
       <text x={left + BIN_W - 10} y={BIN_TOP + 64} textAnchor="end" fontSize={18} fontWeight={800} fill="#fff" fontFamily="Consolas, monospace">
         {items.length}
@@ -169,7 +169,9 @@ export default function ConveyorScene({ sim, live = false }) {
   const ext = sim.arm.active ? Math.sin(Math.PI * Math.min(sim.arm.t * 1.6, 1)) : 0;
   const light = lightOf(sim);
   const falling = sim.boxes.find((b) => b.state === 'rejecting');
-  const divert = falling ? (falling.predicted === 'tear' ? 'tear' : 'dent') : 'dent';
+  const divert = live ? 'bad' : falling ? (falling.predicted === 'tear' ? 'tear' : 'dent') : 'dent';
+  // live line: one BAD bin straight under the pusher; simulation: TORN left, DENTED right
+  const binX = (kind) => (kind === 'bad' ? armX : armX + (kind === 'tear' ? -BIN_OFFSET : BIN_OFFSET));
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="block h-auto w-full" role="img" aria-label={live ? 'Live conveyor driven by real inspections' : 'Conveyor simulation'}>
@@ -199,10 +201,16 @@ export default function ConveyorScene({ sim, live = false }) {
       {/* ---------- reject chute + two bins (below the front of the belt) ---------- */}
       <polygon points={`${armX - 52},${SURF_FRONT} ${armX + 52},${SURF_FRONT} ${armX + 40},${BIN_TOP - 6} ${armX - 40},${BIN_TOP - 6}`} fill="url(#sc-chute)" opacity={0.9} />
       {/* diverter flap points at the bin of the box that is falling */}
-      <line x1={armX} y1={BIN_TOP - 30} x2={armX + (divert === 'tear' ? -34 : 34)} y2={BIN_TOP - 4} stroke="#d1d5db" strokeWidth={5} strokeLinecap="round" />
+      <line x1={armX} y1={BIN_TOP - 30} x2={armX + (divert === 'bad' ? 0 : divert === 'tear' ? -34 : 34)} y2={BIN_TOP - 4} stroke="#d1d5db" strokeWidth={5} strokeLinecap="round" />
       <circle cx={armX} cy={BIN_TOP - 30} r={4} fill="#9ca3af" />
-      <RejectBin cx={armX - BIN_OFFSET} kind="tear" items={sim.bins.tear} />
-      <RejectBin cx={armX + BIN_OFFSET} kind="dent" items={sim.bins.dent} />
+      {live ? (
+        <RejectBin cx={armX} kind="bad" items={sim.bins.dent} label="BAD · reject" />
+      ) : (
+        <>
+          <RejectBin cx={armX - BIN_OFFSET} kind="tear" items={sim.bins.tear} />
+          <RejectBin cx={armX + BIN_OFFSET} kind="dent" items={sim.bins.dent} />
+        </>
+      )}
 
       {/* ---------- belt ---------- */}
       {/* legs */}
@@ -273,7 +281,7 @@ export default function ConveyorScene({ sim, live = false }) {
         let bh = h;
         if (b.state === 'rejecting') {
           const t = Math.min(b.rejectT, 1);
-          const target = armX + (b.predicted === 'tear' ? -BIN_OFFSET : BIN_OFFSET);
+          const target = binX(live ? 'bad' : b.predicted === 'tear' ? 'tear' : 'dent');
           const startC = px(b.x);
           const cx = startC + (target - startC) * t;
           const bottom = BOX_BASE + (BIN_TOP + 40 - BOX_BASE) * t;
@@ -304,7 +312,7 @@ export default function ConveyorScene({ sim, live = false }) {
                 <rect x={x - 5} y={top - 5} width={w + d * 0.55 + 10} height={h + d * 0.45 + 10} fill="none" stroke={cls.color} strokeWidth={2.5} />
                 <rect x={x - 5} y={top - 25} width={Math.max(92, w + 12)} height={20} fill={cls.color} />
                 <text x={x} y={top - 10} fontSize={13} fill="#0b0f14" fontWeight={700} fontFamily="Consolas, monospace">
-                  {b.seen.cls} {b.seen.conf.toFixed(2)}
+                  {live ? (cls.defect ? 'bad' : 'good') : b.seen.cls} {b.seen.conf.toFixed(2)}
                 </text>
               </g>
             ) : null}
