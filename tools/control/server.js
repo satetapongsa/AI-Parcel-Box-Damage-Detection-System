@@ -51,7 +51,8 @@ const PRESETS = {
 let autoRestart = true;
 // what the bridge expects from CiRA: 'video' (boxes cross the virtual line) or 'image' (Image Slide)
 let inputMode = null; // read from bridge/.env on first use
-const getInputMode = () => (inputMode ??= readEnv('INPUT_MODE').toLowerCase() === 'image' ? 'image' : 'video');
+const INPUT_MODES = ['video', 'still', 'image'];
+const getInputMode = () => (inputMode ??= INPUT_MODES.includes(readEnv('INPUT_MODE').toLowerCase()) ? readEnv('INPUT_MODE').toLowerCase() : 'video');
 const MAX_RESTARTS = 5;
 const RESTART_WINDOW_MS = 60_000;
 const RESTART_DELAY_MS = 2_000;
@@ -581,7 +582,7 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, { ok: true, on: autoRestart });
     }
     if (a === 'inputmode') {
-      if (!['video', 'image'].includes(body.mode)) return json(res, 400, { ok: false, error: 'mode must be video or image' });
+      if (!INPUT_MODES.includes(body.mode)) return json(res, 400, { ok: false, error: 'mode must be video, still or image' });
       const changed = body.mode !== getInputMode();
       inputMode = body.mode;
       broadcast('inputmode', { mode: inputMode });

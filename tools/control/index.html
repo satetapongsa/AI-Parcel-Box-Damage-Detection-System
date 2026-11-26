@@ -240,6 +240,7 @@
       <div class="inmode" role="radiogroup" aria-label="CiRA input type">
         <span class="inlabel">CiRA input</span>
         <button type="button" data-inmode="video" role="radio" title="VideoFile / camera: a box is counted when it crosses the virtual line"><svg class="i sm"><use href="#i-camera"/></svg>Video</button>
+        <button type="button" data-inmode="still" role="radio" title="Camera on a box that is placed or held in view: counted once it is seen steadily"><svg class="i sm"><use href="#i-camera"/></svg>Still</button>
         <button type="button" data-inmode="image" role="radio" title="Image Slide: one picture = one box"><svg class="i sm"><use href="#i-image"/></svg>Images</button>
         <span class="inhint" id="inmode-hint"></span>
       </div>
@@ -639,9 +640,10 @@ function showInputMode(mode) {
     b.classList.toggle('on', on);
     b.setAttribute('aria-checked', on ? 'true' : 'false');
   });
-  $('#inmode-hint').textContent = mode === 'image'
-    ? '1 picture = 1 box (Image Slide)'
-    : 'counted when a box crosses the line (VideoFile / camera)';
+  $('#inmode-hint').textContent = {
+    image: '1 picture = 1 box (Image Slide)',
+    still: 'counted once a box is seen steadily, no line needed (box held or placed in view)',
+  }[mode] || 'counted when a box crosses the line (VideoFile / camera)';
 }
 document.querySelectorAll('[data-inmode]').forEach((b) => {
   b.onclick = async () => {
