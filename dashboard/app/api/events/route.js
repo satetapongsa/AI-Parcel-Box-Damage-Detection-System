@@ -1,16 +1,22 @@
 import { NextResponse } from 'next/server';
+import { requireSession } from '@/lib/session';
 import { getDb, friendlyError } from '@/lib/mongodb';
+import { lineOf } from '@/lib/line';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 export async function GET(request) {
+  const denied = await requireSession(request);
+  if (denied) return denied;
   try {
     const { searchParams } = new URL(request.url);
     const limitRaw = Number.parseInt(searchParams.get('limit') || '20', 10);
     const limit = Number.isFinite(limitRaw) ? Math.min(100, Math.max(1, limitRaw)) : 20;
     const result = (searchParams.get('result') || '').toUpperCase();
     const filter = result === 'PASS' || result === 'FAIL' ? { result } : {};
+    const line = lineOf(searchParams);
+    if (line) filter.line = line;
 
     const db = await getDb();
     const docs = await db

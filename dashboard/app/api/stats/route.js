@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
+import { requireSession } from '@/lib/session';
 import { getDb, friendlyError } from '@/lib/mongodb';
+import { lineOf, statusIdOf } from '@/lib/line';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -10,8 +12,12 @@ const HOUR = 60 * MIN;
 const iso = (d) => (d instanceof Date && !Number.isNaN(d.getTime()) ? d.toISOString() : null);
 const pct = (part, whole) => (whole > 0 ? Math.round((part / whole) * 1000) / 10 : 0);
 
-export async function GET() {
+export async function GET(request) {
+  const denied = await requireSession(request);
+  if (denied) return denied;
   try {
+    const line = lineOf(new URL(request.url).searchParams);
+    const base = line ? { line } : {};
     const db = await getDb();
     const col = db.collection('inspections');
     const now = Date.now();
@@ -19,9 +25,10 @@ export async function GET() {
     const hourStart = Math.floor(now / HOUR) * HOUR - 23 * HOUR; // 24 buckets incl. current hour
 
     const [total, facetResult, status, lastFail, lastEvent] = await Promise.all([
-      col.countDocuments({}),
+      col.countDocuments(base),
       col
         .aggregate([
+          { $match: base },
           {
             $facet: {
               byResult: [{ $group: { _id: '$result', n: { $sum: 1 }, avgConf: { $avg: '$confidence' } } }],
@@ -49,9 +56,9 @@ export async function GET() {
           },
         ])
         .toArray(),
-      db.collection('system_status').findOne({ _id: 'bridge' }),
-      col.findOne({ result: 'FAIL' }, { sort: { ts: -1 }, projection: { _id: 0 } }),
-      col.findOne({}, { sort: { ts: -1 }, projection: { _id: 0 } }),
+      db.collection('system_status').findOne({ _id: statusIdOf(line) }),
+      col.findOne({ ...base, result: 'FAIL' }, { sort: { ts: -1 }, projection: { _id: 0 } }),
+      col.findOne(base, { sort: { ts: -1 }, projection: { _id: 0 } }),
     ]);
 
     const facet = facetResult[0] || { byResult: [], lastMinute: [], timeline: [], hourly: [] };
@@ -126,6 +133,8 @@ export async function GET() {
               lastDevice: status.lastDevice ?? null,
               lastSource: status.lastSource ?? null,
               pendingWrites: status.pendingWrites ?? 0,
+              inputMode: status.inputMode ?? null,
+              sink: status.sink ?? 'mongo',
               updatedAt: iso(status.updatedAt),
             }
           : null,
