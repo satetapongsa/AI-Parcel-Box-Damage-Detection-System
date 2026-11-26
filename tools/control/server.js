@@ -18,6 +18,7 @@ const { spawn, execFile } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const BRIDGE = path.join(ROOT, 'bridge');
+const { SETTINGS, readSettings, writeSettings } = require('./settings');
 const DASH = path.join(ROOT, 'dashboard');
 const PORT = Number(process.env.CONTROL_PORT || 3100);
 const NODE = process.execPath;
@@ -542,6 +543,10 @@ const server = http.createServer(async (req, res) => {
     return fs.createReadStream(path.join(__dirname, 'spdi.ico')).pipe(res);
   }
   if (req.method === 'GET' && url.pathname === '/api/state') return json(res, 200, snapshot());
+  if (req.method === 'GET' && url.pathname === '/api/settings') {
+    const hints = Object.fromEntries(Object.entries(SETTINGS).map(([k, v]) => [k, v.hint]));
+    return json(res, 200, { ok: true, values: readSettings(path.join(BRIDGE, '.env')), hints });
+  }
   if (req.method === 'GET' && url.pathname === '/api/sketch') {
     // the Wokwi sketch with this computer's RELAY_TOPIC filled in, ready to paste
     try {
@@ -594,6 +599,19 @@ const server = http.createServer(async (req, res) => {
         startService('bridge');
       }
       return json(res, 200, { ok: true, mode: inputMode, restarted: changed && !!procs.bridge });
+    }
+    if (a === 'settings') {
+      const r = writeSettings(path.join(BRIDGE, '.env'), body.values);
+      if (!r.ok) return json(res, 400, r);
+      if (r.changed.length) addLog('bridge', `settings changed: ${r.changed.join(', ')}`);
+      const restart = r.changed.length > 0 && !!procs.bridge;
+      if (restart) {
+        // the bridge reads bridge/.env at start-up
+        stopService('bridge');
+        for (let i = 0; i < 40 && procs.bridge; i++) await sleep(100);
+        startService('bridge');
+      }
+      return json(res, 200, { ok: true, changed: r.changed, restarted: restart });
     }
     if (a === 'tool' && b) return json(res, 200, startTask(b, body));
     if (a === 'clear' && b) {
