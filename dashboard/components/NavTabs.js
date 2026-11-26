@@ -4,8 +4,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const TABS = [
-  { href: '/', label: 'Simulation', sub: 'Digital twin' },
-  { href: '/live', label: 'Live', sub: 'CiRA + DB' },
+  { href: '/', label: 'Simulation', sub: 'demo only' },
+  { href: '/live', label: 'Live', sub: 'real data' },
 ];
 
 export default function NavTabs() {

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import NavTabs from '@/components/NavTabs';
+import ModeBanner from '@/components/ModeBanner';
 import KpiCard from '@/components/KpiCard';
 import ConveyorScene from '@/components/sim/ConveyorScene';
 import ControlPanel from '@/components/sim/ControlPanel';
@@ -123,6 +124,8 @@ export default function SimulationPage() {
           <SystemFlow snap={snap} />
         </div>
       </header>
+
+      <ModeBanner mode="sim" />
 
       {!snap.online ? (
         <div className="rounded-lg border border-amber-500/50 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
