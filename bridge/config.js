@@ -72,6 +72,21 @@ const config = {
   // video: boxes move across the virtual line (VideoFile / camera)
   // image: one still picture = one box (Image Slide)
   inputMode: inputModeOf(process.env.INPUT_MODE),
+  // where counted boxes go: mongo = MongoDB Atlas directly, http = dashboard /api/ingest over HTTPS
+  sink: (process.env.SINK || 'mongo').trim().toLowerCase() === 'http' ? 'http' : 'mongo',
+  ingestUrl: (process.env.INGEST_URL || '').trim(),
+  ingestToken: (process.env.INGEST_TOKEN || '').trim(),
+  // queue kept on disk while the database cannot be reached
+  outboxFile: path.resolve(__dirname, (process.env.OUTBOX_FILE || 'data/outbox.jsonl').trim()),
+  outboxMax: num('OUTBOX_MAX', 20000),
+  alerts: {
+    discordUrl: (process.env.DISCORD_WEBHOOK_URL || '').trim(),
+    lineToken: (process.env.LINE_CHANNEL_TOKEN || '').trim(),
+    lineTo: (process.env.LINE_TO || '').trim(),
+    failStreak: num('ALERT_FAIL_STREAK', 3),
+    offlineS: num('ALERT_OFFLINE_S', 60),
+    cooldownS: num('ALERT_COOLDOWN_S', 60),
+  },
 };
 
 const overlap = config.goodClasses.filter((c) => config.damagedClasses.includes(c));
@@ -80,6 +95,26 @@ if (overlap.length) {
 }
 
 /** Exit with a clear Thai message when MongoDB is not configured. */
+/** Exit with a clear message when the chosen sink is not configured. */
+function requireSink() {
+  if (config.sink === 'mongo') return requireMongo();
+  let u = null;
+  try {
+    u = new URL(config.ingestUrl);
+  } catch {
+    /* handled below */
+  }
+  const local = u && ['localhost', '127.0.0.1', '[::1]'].includes(u.hostname);
+  if (!u || !(u.protocol === 'https:' || (u.protocol === 'http:' && local))) {
+    console.error('\n❌ SINK=http needs INGEST_URL=https://<your-dashboard> (http:// only for localhost)\n');
+    process.exit(1);
+  }
+  if (config.ingestToken.length < 24) {
+    console.error('\n❌ SINK=http needs INGEST_TOKEN (at least 24 characters, the same value as on the dashboard)\n');
+    process.exit(1);
+  }
+}
+
 function requireMongo() {
   if (!config.mongoUri) {
     console.error(
@@ -117,7 +152,10 @@ function summary() {
   return [
     `   MQTT      ${safeUrl(config.mqttUrl)}`,
     `   Topics    ${config.topics.detections} | ${config.topics.events} -> ${config.topics.counted}`,
-    `   MongoDB   ${config.mongoUri ? `configured ✓ (db="${config.dbName}")` : 'not configured'}`,
+    config.sink === 'http'
+      ? `   Save to   ${safeUrl(config.ingestUrl).replace(/\/+$/, '')}/api/ingest`
+      : `   MongoDB   ${config.mongoUri ? `configured ✓ (db="${config.dbName}")` : 'not configured'}`,
+    `   Queue     ${config.outboxFile} (max ${config.outboxMax})`,
     `   GOOD      ${config.goodClasses.join(', ')}`,
     `   DAMAGED   ${config.damagedClasses.join(', ')}`,
     `   Frame     ${config.frameW}x${config.frameH} px, box origin=${config.boxOrigin}`,
@@ -127,4 +165,4 @@ function summary() {
   ].join('\n');
 }
 
-module.exports = { config, requireMongo, safeUrl, summary };
+module.exports = { config, requireMongo, requireSink, safeUrl, summary };

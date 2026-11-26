@@ -3,7 +3,7 @@
  * SPDI Bridge
  *   MQTT spdi/<line>/detections (per-frame)  --tracker-->  1 event per physical box
  *   MQTT spdi/<line>/events     (pre-counted) ------------>  1 event
- *   -> MongoDB `inspections` (insert ONLY counted events) + re-publish to spdi/<line>/counted
+ *   -> outbox on disk -> MongoDB `inspections` (or the dashboard /api/ingest over HTTPS) + re-publish to spdi/<line>/counted
  *   -> MongoDB `system_status` heartbeat every 3 s
  *
  * Usage:  node index.js          (normal)
@@ -11,16 +11,18 @@
  */
 const crypto = require('crypto');
 const mqtt = require('mqtt');
-const { MongoClient } = require('mongodb');
-const { config, requireMongo, safeUrl, summary } = require('./config');
+const { config, requireSink, safeUrl, summary } = require('./config');
+const { createOutbox } = require('./outbox');
+const { createMongoSink, createHttpSink } = require('./sinks');
+const { createAlerter } = require('./alerts');
 const { createTracker, createImageCounter, normalizeEvent, makeClassifier, parseMessage } = require('./tracker');
 
 const NO_DB = process.argv.includes('--no-db') || process.env.NO_DB === '1';
-if (!NO_DB) requireMongo();
+if (!NO_DB) requireSink();
 
 const HEARTBEAT_MS = 3000;
 const STATUS_LOG_MS = 15000;
-const MAX_PENDING = 2000;
+const BATCH = 100; // events per write
 
 const log = (...args) => console.log(new Date().toLocaleTimeString('en-GB'), ...args);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -55,11 +57,11 @@ const tracker =
 const classify = makeClassifier(config.goodClasses, config.damagedClasses);
 const warnedEvent = new Set();
 
-// ---------------------------------------------------------------- MongoDB
-let mongoClient = null;
-let inspections = null;
-let statusCol = null;
-const pending = []; // events waiting to be written (DB down / not yet connected)
+// ---------------------------------------------------------------- storage
+// every counted box goes to the outbox on disk first, then to the sink (MongoDB or the ingest API)
+const outbox = createOutbox({ file: config.outboxFile, max: config.outboxMax, onWarn: (m) => log('⚠️ ', m) });
+let sink = null;
+const alerts = createAlerter({ ...config.alerts, lineId: config.lineId, log });
 
 function explainMongoError(err) {
   const msg = String((err && err.message) || err);
@@ -75,65 +77,59 @@ function explainMongoError(err) {
   return msg;
 }
 
-async function connectMongo() {
-  while (!inspections && !state.stopping) {
-    let client;
-    try {
-      client = new MongoClient(config.mongoUri, {
-        maxPoolSize: 5,
-        serverSelectionTimeoutMS: 8000,
-        appName: 'spdi-bridge',
-      });
-      await client.connect();
-      const db = client.db(config.dbName);
-      await db.command({ ping: 1 });
-      const insp = db.collection('inspections');
-      await insp.createIndex({ eventId: 1 }, { unique: true, name: 'eventId_unique' });
-      await insp.createIndex({ ts: -1 }, { name: 'ts_desc' });
-      mongoClient = client;
-      statusCol = db.collection('system_status');
-      inspections = insp;
-      log(`🍃 MongoDB connected (db="${config.dbName}", indexes ready)`);
-    } catch (err) {
-      log('❌ MongoDB connect failed:', explainMongoError(err));
-      if (client) await client.close().catch(() => {});
-      log('   retrying in 5 s ...');
-      await sleep(5000);
-    }
+function markDb(ok, err) {
+  if (ok && !state.dbHealthy) log(`🍃 saving works again${outbox.size ? ` — sending ${outbox.size} queued event(s)` : ''}`);
+  if (!ok && state.dbHealthy) log('⚠️  save failed — events are queued on disk and will be retried:', err);
+  state.dbHealthy = ok;
+  alerts.onStorage(ok);
+}
+
+async function connectSink() {
+  sink =
+    config.sink === 'http'
+      ? createHttpSink({ url: config.ingestUrl, token: config.ingestToken, log })
+      : createMongoSink({ uri: config.mongoUri, dbName: config.dbName, log, explain: explainMongoError });
+  if (outbox.size) log(`📥 ${outbox.size} queued event(s) loaded from ${config.outboxFile}`);
+  while (!state.stopping) {
+    if (await sink.connect()) break;
+    alerts.onStorage(false);
+    log('   retrying in 5 s ...');
+    await sleep(5000);
   }
   await flushPending();
 }
 
-function markDb(ok, err) {
-  if (ok && !state.dbHealthy) log(`🍃 MongoDB writes OK again${pending.length ? ` — flushing ${pending.length} queued event(s)` : ''}`);
-  if (!ok && state.dbHealthy) log('⚠️  MongoDB write failed — events are queued and will be retried:', explainMongoError(err));
-  state.dbHealthy = ok;
-}
-
-async function insertDoc(doc) {
-  try {
-    await inspections.insertOne(doc);
-    markDb(true);
-    return true;
-  } catch (err) {
-    if (err && err.code === 11000) {
-      log(`↩️  duplicate eventId skipped: ${doc.eventId}`);
-      return true;
-    }
-    markDb(false, err);
-    return false;
+/** Send one batch; a refused batch is retried one by one so a single bad event cannot block the queue. */
+async function sendBatch(batch) {
+  const r = await sink.insertMany(batch);
+  if (r.ok || !r.reject) return r;
+  if (batch.length === 1) {
+    log(`⚠️  event ${batch[0].eventId} refused by the server and dropped: ${r.error}`);
+    return { ok: true };
   }
+  for (let k = 0; k < batch.length; k++) {
+    const one = await sendBatch([batch[k]]);
+    if (!one.ok) return { ok: false, error: one.error, sent: k };
+  }
+  return { ok: true };
 }
 
 let flushing = false;
 async function flushPending() {
-  if (!inspections || flushing || pending.length === 0) return;
+  if (!sink || !sink.ready || flushing || outbox.size === 0) return;
   flushing = true;
   try {
-    while (pending.length) {
-      const ok = await insertDoc(pending[0]);
-      if (!ok) break;
-      pending.shift();
+    while (outbox.size) {
+      const batch = outbox.peek(BATCH);
+      const r = await sendBatch(batch);
+      if (r.ok) {
+        outbox.drop(batch.length);
+        markDb(true);
+        continue;
+      }
+      if (r.sent) outbox.drop(r.sent);
+      markDb(false, r.error);
+      break;
     }
   } finally {
     flushing = false;
@@ -166,16 +162,10 @@ async function saveEvent(ev) {
     mqttClient.publish(config.topics.counted, JSON.stringify({ ...ev, unitNo: state.sessionCount }), { qos: 0 });
   }
 
+  alerts.onEvent(ev);
   if (NO_DB) return;
-  const doc = { ...ev, ts: new Date(ev.ts), createdAt: new Date() };
-  if (!inspections || pending.length > 0) {
-    pending.push(doc);
-    if (pending.length > MAX_PENDING) pending.shift();
-    flushPending();
-    return;
-  }
-  const ok = await insertDoc(doc);
-  if (!ok) pending.push(doc);
+  outbox.push(ev);
+  await flushPending();
 }
 
 function handleFrame(payload) {
@@ -283,33 +273,30 @@ function currentFps() {
 let heartbeatBusy = false;
 async function heartbeat() {
   const fps = currentFps();
-  if (NO_DB || !statusCol || heartbeatBusy) return;
+  if (NO_DB || !sink || !sink.ready || heartbeatBusy) return;
   heartbeatBusy = true;
   try {
-    await statusCol.updateOne(
-      { _id: 'bridge' },
+    await sink.heartbeat(
       {
-        $set: {
-          mqttConnected: state.mqttConnected,
-          fps,
-          activeTracks: tracker.activeCount(),
-          inputMode: config.inputMode,
-          lastFrameAt: state.lastFrameAt ? new Date(state.lastFrameAt) : null,
-          lastEventAt: state.lastEventAt ? new Date(state.lastEventAt) : null,
-          lastDevice: state.lastDevice,
-          lastSource: state.lastSource,
-          line: config.lineId,
-          sessionCount: state.sessionCount,
-          pendingWrites: pending.length,
-          updatedAt: new Date(),
-        },
+        mqttConnected: state.mqttConnected,
+        fps,
+        activeTracks: tracker.activeCount(),
+        inputMode: config.inputMode,
+        sink: config.sink,
+        lastFrameAt: state.lastFrameAt ? new Date(state.lastFrameAt) : null,
+        lastEventAt: state.lastEventAt ? new Date(state.lastEventAt) : null,
+        lastDevice: state.lastDevice,
+        lastSource: state.lastSource,
+        line: config.lineId,
+        sessionCount: state.sessionCount,
+        pendingWrites: outbox.size,
       },
-      { upsert: true }
+      config.lineId
     );
     markDb(true);
     await flushPending();
   } catch (err) {
-    markDb(false, err);
+    markDb(false, err && err.message);
   } finally {
     heartbeatBusy = false;
   }
@@ -317,11 +304,11 @@ async function heartbeat() {
 
 function statusLine() {
   const fps = currentFps();
-  const db = NO_DB ? 'off' : !inspections ? 'connecting' : state.dbHealthy ? 'ok' : 'DOWN (queueing)';
+  const db = NO_DB ? 'off' : !sink || !sink.ready ? 'connecting' : state.dbHealthy ? 'ok' : 'DOWN (queueing on disk)';
   const idle = state.lastFrameAt ? Math.round((Date.now() - state.lastFrameAt) / 1000) : null;
   const frames = idle === null ? 'no frames yet' : idle > 5 ? `⏸️ no frames for ${idle}s` : `fps=${fps}`;
   log(
-    `📊 ${frames} tracks=${tracker.activeCount()} counted=${state.sessionCount} (PASS ${state.pass} / FAIL ${state.fail}) mqtt=${state.mqttConnected ? 'ok' : 'down'} db=${db}${pending.length ? ` pending=${pending.length}` : ''}`
+    `📊 ${frames} tracks=${tracker.activeCount()} counted=${state.sessionCount} (PASS ${state.pass} / FAIL ${state.fail}) mqtt=${state.mqttConnected ? 'ok' : 'down'} db=${db}${outbox.size ? ` queued=${outbox.size}` : ''}`
   );
 }
 
@@ -331,19 +318,16 @@ async function shutdown() {
   state.stopping = true;
   log(`👋 stopping... session total=${state.sessionCount} (PASS ${state.pass} / FAIL ${state.fail})`);
   const force = setTimeout(() => process.exit(0), 3000);
+  outbox.flushToDisk();
   try {
-    if (statusCol) {
-      await statusCol.updateOne(
-        { _id: 'bridge' },
-        { $set: { mqttConnected: false, fps: 0, activeTracks: 0, updatedAt: new Date(0) } },
-        { upsert: true }
-      );
+    if (sink && sink.ready) {
+      await sink.heartbeat({ mqttConnected: false, fps: 0, activeTracks: 0, offline: true, pendingWrites: outbox.size }, config.lineId);
     }
   } catch {
     /* ignore */
   }
   if (mqttClient) mqttClient.end(true);
-  if (mongoClient) await mongoClient.close().catch(() => {});
+  if (sink) await sink.close();
   clearTimeout(force);
   process.exit(0);
 }
@@ -359,7 +343,8 @@ async function main() {
   setInterval(statusLine, STATUS_LOG_MS);
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);
-  if (!NO_DB) await connectMongo();
+  if (alerts.enabled) log(`🔔 alerts on: ${alerts.targets.join(', ')}`);
+  if (!NO_DB) await connectSink();
 }
 
 main().catch((err) => {
