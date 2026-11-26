@@ -413,8 +413,8 @@ export function setOnline(s, online) {
  */
 export function addLiveBox(s, ev) {
   const fail = ev.result === 'FAIL';
-  const name = String(ev.className || '').toLowerCase();
-  const cls = fail ? (name === 'tear' || name === 'torn' ? 'tear' : 'dent') : 'box_good';
+  // the live line has one reject bin: every FAIL goes there (kept in the "dent" slot)
+  const cls = fail ? 'dent' : 'box_good';
   const conf = Number.isFinite(ev.confidence) ? ev.confidence : 0.9;
   if (s.liveQueue.length < 50) s.liveQueue.push({ truth: cls, forced: { result: fail ? 'FAIL' : 'PASS', cls, conf } });
 }
