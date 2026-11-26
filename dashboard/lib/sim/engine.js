@@ -38,6 +38,7 @@ const FRAME_W = 1920;
 const FRAME_H = 1080;
 
 const rand = (a, b) => a + Math.random() * (b - a);
+const clamp01 = (v) => Math.min(0.99, Math.max(0.05, v));
 const r3 = (v) => Math.round(v * 1000) / 1000;
 
 function trackingNo(id) {
@@ -61,9 +62,12 @@ function emptyStats() {
   };
 }
 
-export function createSim() {
+export function createSim(opts = {}) {
   const s = {
     running: true,
+    // live: boxes come only from real inspection events (addLiveBox), with their real result
+    live: !!opts.live,
+    liveQueue: [],
     simTime: 0,
     speed: 1,
     dentRate: 0.15, // share of crushed / dented boxes
@@ -175,6 +179,7 @@ function spawnBox(s, spec) {
     rejectT: 0,
     seed: Math.random(),
     acc: rand(AI_ACCURACY.min, AI_ACCURACY.max), // model accuracy for this box
+    forced: spec.forced || null, // live mode: { result, cls, conf } from the real event
   });
 }
 
@@ -195,9 +200,9 @@ function ciraFrame(s) {
       continue;
     }
     if (Math.random() < 0.03) continue; // missed frame
-    const ok = Math.random() < b.acc;
-    const cls = ok ? b.truth : wrongClass(b.truth);
-    const conf = ok ? rand(0.8, 0.98) : rand(0.5, 0.74);
+    const ok = b.forced ? true : Math.random() < b.acc;
+    const cls = b.forced ? b.forced.cls : ok ? b.truth : wrongClass(b.truth);
+    const conf = b.forced ? clamp01(b.forced.conf + rand(-0.03, 0.03)) : ok ? rand(0.8, 0.98) : rand(0.5, 0.74);
     b.votes[cls] += 1;
     b.confSum[cls] += conf;
     b.frames += 1;
@@ -224,9 +229,14 @@ function decide(s, b) {
   const total = b.votes.box_good + b.votes.dent + b.votes.tear;
   const bad = b.votes.dent + b.votes.tear;
   const failShare = total > 0 ? bad / total : 0;
-  const result = failShare >= s.failRatio ? 'REJECT' : 'PASS';
+  let result = failShare >= s.failRatio ? 'REJECT' : 'PASS';
   let predicted = 'box_good';
   if (result === 'REJECT') predicted = b.votes.dent >= b.votes.tear ? 'dent' : 'tear';
+  if (b.forced) {
+    // live mode: the real bridge already decided this box
+    result = b.forced.result === 'FAIL' ? 'REJECT' : 'PASS';
+    predicted = result === 'REJECT' ? (b.forced.cls === 'tear' ? 'tear' : 'dent') : 'box_good';
+  }
   const n = b.votes[predicted];
   const conf = n > 0 ? b.confSum[predicted] / n : 0;
 
@@ -320,7 +330,9 @@ export function step(s, dtReal) {
 
   // spawn (manual requests first)
   s.spawnTimer -= dt;
-  if (spaceAvailable(s)) {
+  if (spaceAvailable(s) && s.live) {
+    if (s.liveQueue.length) spawnBox(s, s.liveQueue.shift());
+  } else if (spaceAvailable(s)) {
     if (s.returning.length) spawnBox(s, s.returning.shift());
     else if (s.manual.length) spawnBox(s, s.manual.shift());
     else if (s.spawnTimer <= 0) {
@@ -393,6 +405,18 @@ export function setOnline(s, online) {
   } else {
     pushMessage(s, 'spdi/line1/sync', { status: 'offline', note: 'store-and-forward to local SQLite' }, 'offline');
   }
+}
+
+/**
+ * Live mode: put one real inspection event on the belt.
+ * ev: { result: 'PASS'|'FAIL', className, confidence } from MongoDB (/api/events)
+ */
+export function addLiveBox(s, ev) {
+  const fail = ev.result === 'FAIL';
+  const name = String(ev.className || '').toLowerCase();
+  const cls = fail ? (name === 'tear' || name === 'torn' ? 'tear' : 'dent') : 'box_good';
+  const conf = Number.isFinite(ev.confidence) ? ev.confidence : 0.9;
+  if (s.liveQueue.length < 50) s.liveQueue.push({ truth: cls, forced: { result: fail ? 'FAIL' : 'PASS', cls, conf } });
 }
 
 /** Control-panel settings that can be saved in the browser. */
