@@ -26,6 +26,7 @@ const DEFAULTS = {
   trackTtlMs: 1000, // drop a track not seen for this long
   minFrames: 5, // a track must be seen this many frames before it can be counted
   failRatio: 0.3, // FAIL if damaged votes / all votes >= failRatio (bias to FAIL)
+  countMode: 'line', // 'line': count when a box crosses the virtual line | 'presence': count once a box has been seen steadily
 };
 
 // Max believable speed: 3 frame-widths per second (normalized units per ms).
@@ -251,8 +252,10 @@ function createTracker(options = {}) {
 
   function maybeCount(t, ts) {
     if (t.counted) return null;
-    if (t.startSide !== 'before') return null; // born past the line -> never count (prevents re-counting)
-    if (sideOf(t.cx) !== 'after') return null;
+    if (o.countMode !== 'presence') {
+      if (t.startSide !== 'before') return null; // born past the line -> never count (prevents re-counting)
+      if (sideOf(t.cx) !== 'after') return null;
+    }
     if (t.frames < o.minFrames) return null;
     t.counted = true;
     const d = decide(t);
