@@ -155,7 +155,7 @@ function TowerLight({ light }) {
   );
 }
 
-export default function ConveyorScene({ sim }) {
+export default function ConveyorScene({ sim, live = false }) {
   const travel = sim.beltOffset * BW; // px the belt has moved (mod BW)
   const slatGap = 26;
   const slatShift = travel % slatGap;
@@ -172,7 +172,7 @@ export default function ConveyorScene({ sim }) {
   const divert = falling ? (falling.predicted === 'tear' ? 'tear' : 'dent') : 'dent';
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="block h-auto w-full" role="img" aria-label="Conveyor simulation">
+    <svg viewBox={`0 0 ${W} ${H}`} className="block h-auto w-full" role="img" aria-label={live ? 'Live conveyor driven by real inspections' : 'Conveyor simulation'}>
       <Defs />
       <BoxDefs />
 
@@ -333,12 +333,12 @@ export default function ConveyorScene({ sim }) {
           CiRA CORE
         </text>
         <text x={50} y={22} fontSize={11} fill="#8b949e">
-          camera · DeepDetect · 15 fps
+          {live ? 'live · results from the real bridge' : 'camera · DeepDetect · 15 fps'}
         </text>
       </g>
 
-      {/* ---------- IR breakbeam ---------- */}
-      <g>
+      {/* ---------- IR breakbeam (simulation only) ---------- */}
+      <g display={live ? 'none' : undefined}>
         <rect x={irX - 5} y={SURF_BACK - 30} width={10} height={24} rx={2} fill="#374151" stroke="#6b7280" />
         <rect x={irX - 7} y={SURF_FRONT - 2} width={14} height={20} rx={2} fill="#374151" stroke="#6b7280" />
         <line x1={irX} y1={SURF_BACK - 8} x2={irX} y2={SURF_FRONT} stroke="#ef4444" strokeWidth={sim.irBlocked ? 3 : 1.5} strokeDasharray={sim.irBlocked ? '0' : '3 5'} opacity={sim.irBlocked ? 1 : 0.7} />
@@ -359,7 +359,7 @@ export default function ConveyorScene({ sim }) {
         <rect x={armX - 4} y={150} width={8} height={18 + ext * 62} fill="#d1d5db" />
         <rect x={armX - 50} y={166 + ext * 62} width={100} height={14} rx={3} fill={ext > 0.05 ? '#ef4444' : '#9ca3af'} stroke="#374151" />
         <text x={armX} y={78} textAnchor="middle" fontSize={11} fill="#c9d1d9">
-          Pneumatic pusher
+          {live ? 'Servo pusher (ESP32)' : 'Pneumatic pusher'}
         </text>
       </g>
 
