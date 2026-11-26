@@ -108,13 +108,39 @@ flowchart LR
 
 `RELAY_TOPIC` สุ่มสร้างครั้งแรกและเก็บใน `bridge/.env` (ไม่ขึ้น git)
 
+## ส่งข้อมูล, คิวสำรอง, แจ้งเตือน
+
+**ส่งข้อมูลไปไหน** (`SINK` ใน `bridge/.env` หรือ Control Center → Bridge settings)
+- `mongo` (ค่าเริ่มต้น): Bridge ต่อ MongoDB Atlas ตรง (พอร์ต 27017)
+- `http`: Bridge ส่งผ่าน HTTPS (พอร์ต 443) ไปที่ `POST /api/ingest` ของ Dashboard ใช้ได้แม้ Wi-Fi บล็อกพอร์ต 27017
+  - ตั้ง `INGEST_URL` และ `INGEST_TOKEN` ใน `bridge/.env`
+  - ตั้ง `INGEST_TOKEN` ค่าเดียวกันใน Vercel (ยาวอย่างน้อย 24 ตัวอักษร) ถ้าไม่ตั้ง `/api/ingest` จะปิดอยู่ (403)
+  - Server รับเฉพาะ field ที่กำหนด ตรวจชนิดข้อมูลทุกตัว และข้าม `eventId` ที่ซ้ำ
+
+**คิวสำรองบนดิสก์**: ถ้าส่งไม่ได้ กล่องจะรอใน `bridge/data/outbox.jsonl` (สูงสุด 20,000) ปิดเครื่องหรือรีสตาร์ทก็ไม่หาย ส่งต่อเองเมื่อกลับมาต่อได้
+
+**แจ้งเตือน** (ไม่ตั้ง = ปิด)
+- Discord: `DISCORD_WEBHOOK_URL`
+- LINE Messaging API: `LINE_CHANNEL_TOKEN` + `LINE_TO`
+- แจ้งเมื่อ FAIL ติดกัน `ALERT_FAIL_STREAK` กล่อง (ค่าเริ่มต้น 3) และเมื่อบันทึกข้อมูลไม่ได้นานเกิน `ALERT_OFFLINE_S` วินาที (60)
+
+## Dashboard: หลายสาย, รายงาน, รหัสผ่าน
+
+- **หลายสายพาน**: รัน Bridge หลายตัวโดยตั้ง `LINE_ID` ต่างกัน (line1, line2, ...) แล้วเลือกสายได้ที่หน้า /live
+- **รายงาน CSV**: ปุ่ม Download CSV ที่หน้า /live (24 ชม. / 7 / 30 / 90 วัน) หรือเรียก `/api/export?days=7&line=line1&result=FAIL` เปิดใน Excel ได้
+- **รหัสผ่านหน้า /live** (ไม่ตั้ง = เปิดสาธารณะเหมือนเดิม)
+  1. รัน `node tools/hash-password.mjs` แล้วตั้งรหัส (อย่างน้อย 12 ตัวอักษร)
+  2. นำ `DASHBOARD_PASSWORD_HASH` และ `SESSION_SECRET` ที่ได้ไปใส่ใน `dashboard/.env.local` และ Vercel
+  3. หน้า Simulation (`/`) ยังเปิดได้โดยไม่ต้องมีรหัส
+- **Control Center → Bridge settings**: แก้ MIN_CONF, MIN_FRAMES, FAIL_RATIO, คลาส, SINK, ALERT_FAIL_STREAK ได้จากหน้าเว็บ กด Save แล้ว Bridge รีสตาร์ทเอง (แก้ค่าลับอย่าง `MONGODB_URI` จากหน้านี้ไม่ได้)
+
 ## Deploy Dashboard
 
 Broker, Bridge และ CiRA รันบนเครื่องหน้างาน ส่วนที่ขึ้นเว็บคือ `dashboard/` เท่านั้น
 
 **Vercel** (ใช้อยู่: boxdetections.vercel.app)
 - Framework = Next.js, Root Directory = `dashboard`
-- Environment Variables: `MONGODB_URI`, `DB_NAME` (ห้ามใช้ `NEXT_PUBLIC_`)
+- Environment Variables: `MONGODB_URI`, `DB_NAME` (ห้ามใช้ `NEXT_PUBLIC_`) และถ้าใช้: `INGEST_TOKEN`, `DASHBOARD_PASSWORD_HASH`, `SESSION_SECRET`, `ADMIN_TOKEN`
 
 **Cloudflare Workers** (ผ่าน [OpenNext](https://opennext.js.org/cloudflare), config อยู่ใน `dashboard/wrangler.jsonc`)
 1. Cloudflare Dashboard → Workers & Pages → Create → Import a repository → เลือก repo นี้
@@ -144,7 +170,9 @@ Broker, Bridge และ CiRA รันบนเครื่องหน้า�
 - ห้าม commit `.env`, `.env.local`, `.dev.vars` (อยู่ใน `.gitignore` แล้ว) ถ้าเผลอ push รหัส Atlas ให้เปลี่ยนรหัสทันที
 - Broker ในเครื่องเป็นแบบไม่มีรหัส ใช้เฉพาะ demo ใน LAN ที่ไว้ใจได้
 - ส่งไป HiveMQ เฉพาะผล PASS/FAIL แบบย่อ ไม่มีภาพหรือข้อมูลฐานข้อมูล และ topic มีส่วนสุ่ม
-- `/api/reset` ปิดอยู่จนกว่าจะตั้ง `ADMIN_TOKEN`
+- `/api/reset` ปิดอยู่จนกว่าจะตั้ง `ADMIN_TOKEN`, `/api/ingest` ปิดอยู่จนกว่าจะตั้ง `INGEST_TOKEN`
+- รหัสผ่าน Dashboard เก็บเป็น hash แบบ scrypt, session เป็น cookie แบบ httpOnly + sameSite=lax (secure บน https) อายุ 12 ชั่วโมง, login ผิด 10 ครั้งใน 15 นาทีจะถูกพัก, ตรวจ Origin กันการยิงข้ามเว็บ
+- ไฟล์ CSV ป้องกันสูตร Excel (ค่าที่ขึ้นต้นด้วย `=` `+` `-` `@` จะถูกเติม `'` ข้างหน้า)
 
 ## ทีมผู้จัดทำ
 
