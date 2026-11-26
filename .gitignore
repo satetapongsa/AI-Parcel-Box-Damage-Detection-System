@@ -45,3 +45,6 @@ esp32/wokwi/build/
 .open-next/
 .wrangler/
 .dev.vars
+
+# bridge queue on disk
+bridge/data/
