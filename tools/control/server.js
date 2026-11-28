@@ -4,8 +4,7 @@
  * the system, see the whole pipeline live and run the tools.
  *
  *   node tools/control/server.js            open the panel
- *   node tools/control/server.js --all      open the panel and start everything (simulator)
- *   node tools/control/server.js --all-cira open the panel and start everything for real CiRA
+ *   node tools/control/server.js --all-cira open the panel and start everything for real CiRA (--all does the same)
  *   add --no-open to skip opening the browser
  *
  * Listens on 127.0.0.1 only (this computer). Every log line is also printed in
@@ -36,14 +35,11 @@ try {
 const SERVICES = {
   broker:    { label: 'MQTT broker', hint: 'dev broker on :1883 (uses Mosquitto if it already runs)', cwd: BRIDGE, args: ['dev-broker.js'] },
   bridge:    { label: 'Bridge',      hint: 'tracks + counts boxes, saves to MongoDB',                 cwd: BRIDGE, args: ['index.js'] },
-  sim:       { label: 'Simulator',   hint: 'fake CiRA frames (box_good / dent / tear)',               cwd: BRIDGE, args: ['simulator.js', 'frames'] },
   dashboard: { label: 'Dashboard',   hint: 'Next.js web on http://localhost:3000',                    cwd: DASH,   args: [path.join(DASH, 'node_modules', 'next', 'dist', 'bin', 'next'), 'dev', '-p', '3000'] },
-  relay:     { label: 'ESP32 relay', hint: 'forwards real results to Wokwi',                          cwd: BRIDGE, args: ['relay.js'], conflicts: ['relaytest'] },
-  relaytest: { label: 'ESP32 test',  hint: 'fake PASS/FAIL every 3 s to Wokwi',                       cwd: BRIDGE, args: ['relay.js', '--test'], conflicts: ['relay'] },
+  relay:     { label: 'ESP32 relay', hint: 'forwards real results to Wokwi',                          cwd: BRIDGE, args: ['relay.js'] },
   sniff:     { label: 'MQTT sniff',  hint: 'prints every message on spdi/#',                          cwd: BRIDGE, args: ['sniff.js'] },
 };
 const PRESETS = {
-  all:     ['broker', 'bridge', 'sim', 'dashboard', 'relay'],
   allcira: ['broker', 'bridge', 'dashboard', 'relay'],
 };
 
@@ -172,7 +168,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 async function startPreset(name) {
   const ids = PRESETS[name];
   if (!ids) return { ok: false, error: 'unknown preset' };
-  // a preset is the whole line-up: stop what is not part of it (e.g. the simulator for CiRA)
+  // a preset is the whole line-up: stop what is not part of it
   for (const id of Object.keys(SERVICES)) if (!ids.includes(id) && id !== 'sniff') stopService(id);
   if (ids.includes('broker')) {
     startService('broker');
@@ -446,17 +442,13 @@ function pipeline() {
   const now = Date.now();
   const running = (id) => !!procs[id];
   const fpsOf = (src) => mon.frames.filter((f) => f[1] === src).length / 3;
-  const fpsSim = fpsOf('Simulator');
   const fpsCira = fpsOf('CiRA CORE');
   const st = health.status;
   const bridgeAge = st && st.updatedAt ? now - Date.parse(st.updatedAt) : Infinity;
   const espAge = mon.esp32Seen ? now - mon.esp32Seen : Infinity;
-  const relayOn = running('relay') || running('relaytest');
+  const relayOn = running('relay');
   const c = {};
 
-  c.sim = fpsSim > 0
-    ? { state: 'ok', detail: `${fpsSim.toFixed(0)} frames/s` }
-    : { state: running('sim') ? 'warn' : 'off', detail: running('sim') ? 'starting' : 'not running' };
   c.cira = fpsCira > 0
     ? { state: 'ok', detail: `${fpsCira.toFixed(0)} frames/s` }
     : { state: 'off', detail: 'open CiRA CORE and press Run' };
@@ -475,7 +467,7 @@ function pipeline() {
     ? { state: 'ok', detail: 'localhost:3000' }
     : { state: running('dashboard') ? 'warn' : 'off', detail: running('dashboard') ? 'starting' : 'not running' };
   c.relay = mon.relayStatus === 'online' && relayOn
-    ? { state: 'ok', detail: running('relaytest') ? 'TEST mode: fake boxes' : 'HiveMQ connected' }
+    ? { state: 'ok', detail: 'HiveMQ connected' }
     : { state: relayOn ? 'warn' : 'off', detail: relayOn ? 'connecting to HiveMQ' : 'not running' };
   c.esp32 = mon.esp32 === 'online' && espAge < 30_000
     ? { state: 'ok', detail: `online${mon.esp32Info ? ` · dent ${mon.esp32Info.dent ?? 0} · tear ${mon.esp32Info.tear ?? 0}` : ''}` }
@@ -483,9 +475,8 @@ function pipeline() {
 
   return {
     checks: c,
-    fps: { sim: fpsSim, cira: fpsCira },
-    mode: fpsCira > 0 && fpsSim > 0 ? 'both' : fpsCira > 0 ? 'cira' : fpsSim > 0 || running('sim') ? 'sim' : null,
-    conflict: fpsCira > 0 && fpsSim > 0,
+    fps: { cira: fpsCira },
+    mode: fpsCira > 0 ? 'cira' : null,
   };
 }
 
@@ -646,8 +637,7 @@ server.listen(PORT, '127.0.0.1', async () => {
   console.log('==========================================================');
   openBrowser(url);
   checkHealth();
-  if (process.argv.includes('--all')) await startPreset('all');
-  else if (process.argv.includes('--all-cira')) await startPreset('allcira');
+  if (process.argv.includes('--all') || process.argv.includes('--all-cira')) await startPreset('allcira');
 });
 
 let exiting = false;

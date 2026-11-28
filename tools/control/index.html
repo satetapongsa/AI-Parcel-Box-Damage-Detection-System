@@ -44,13 +44,12 @@
   .banner b { color: #ffd3cf; }
 
   /* the two modes */
-  .modes { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 18px; }
+  .modes { display: grid; grid-template-columns: 1fr; gap: 16px; margin-bottom: 18px; }
   .mode { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; display: flex; flex-direction: column; }
   .mode.active { border-color: #2ea04399; box-shadow: 0 0 0 1px #2ea04333 inset; }
   .mode.mixed { border-color: #f8514999; }
   .mhead { display: flex; gap: 12px; align-items: flex-start; }
   .micon { width: 42px; height: 42px; border-radius: 11px; display: grid; place-items: center; flex: none; }
-  .sim .micon { background: var(--blue-bg); color: var(--blue); }
   .real .micon { background: #241a35; color: var(--violet); }
   .mtitle { font-size: 16px; font-weight: 650; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .mdesc { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
@@ -203,33 +202,7 @@
 </header>
 
 <main>
-  <div class="banner" id="conflict">
-    <svg class="i lg"><use href="#i-alert"/></svg>
-    <div><b>Simulator and CiRA CORE are both sending boxes.</b> The counts will mix. Use one: press Stop in Simulation, or stop Run in CiRA CORE.</div>
-  </div>
-
   <div class="modes">
-    <section class="mode sim" id="panel-sim">
-      <div class="mhead">
-        <div class="micon"><svg class="i lg"><use href="#i-flask"/></svg></div>
-        <div>
-          <div class="mtitle">Simulation <span class="badge" id="badge-sim">OFF</span></div>
-          <div class="mdesc">Ready to use, no camera needed. Fake CiRA frames run through the real pipeline.</div>
-        </div>
-      </div>
-      <div class="progress"><div class="bar"><span id="bar-sim"></span></div><span><b id="prog-sim">0/5</b> connected</span></div>
-      <ul class="checks" id="checks-sim"></ul>
-      <div class="mfoot">
-        <button class="primary" data-run="all"><svg class="i sm"><use href="#i-play"/></svg>Run simulation</button>
-        <button data-fresh="all" title="Stop, empty the database, start again"><svg class="i sm"><use href="#i-refresh"/></svg>Fresh start</button>
-        <button class="danger" data-stop><svg class="i sm"><use href="#i-stop"/></svg>Stop</button>
-      </div>
-      <div class="mlinks">
-        <a href="http://localhost:3000/live" target="_blank" rel="noopener"><svg class="i sm"><use href="#i-external"/></svg>Live page</a>
-        <a href="http://localhost:3000" target="_blank" rel="noopener"><svg class="i sm"><use href="#i-external"/></svg>Digital twin (runs in the browser)</a>
-      </div>
-    </section>
-
     <section class="mode real" id="panel-real">
       <div class="mhead">
         <div class="micon"><svg class="i lg"><use href="#i-camera"/></svg></div>
@@ -254,8 +227,8 @@
         <button class="danger" data-stop><svg class="i sm"><use href="#i-stop"/></svg>Stop</button>
       </div>
       <div class="mlinks">
-        <a href="http://localhost:3000/live" target="_blank" rel="noopener"><svg class="i sm"><use href="#i-external"/></svg>Live page</a>
-        <a href="https://boxdetections.vercel.app/live" target="_blank" rel="noopener"><svg class="i sm"><use href="#i-external"/></svg>Live on Vercel</a>
+        <a href="http://localhost:3000/" target="_blank" rel="noopener"><svg class="i sm"><use href="#i-external"/></svg>Dashboard</a>
+        <a href="https://boxdetections.vercel.app/" target="_blank" rel="noopener"><svg class="i sm"><use href="#i-external"/></svg>Dashboard on Vercel</a>
       </div>
     </section>
   </div>
@@ -268,7 +241,6 @@
         <div class="row">
           <button id="copySketch"><svg class="i sm"><use href="#i-copy"/></svg>Copy ESP32 code</button>
           <a id="wokwi" href="#" target="_blank" rel="noopener" style="text-decoration:none"><button><svg class="i sm"><use href="#i-external"/></svg>Open Wokwi</button></a>
-          <button id="espTest"><svg class="i sm"><use href="#i-sparkle"/></svg>Send test boxes</button>
         </div>
         <div class="muted" style="font-size:12px;margin-top:8px">Copy puts the code with your topic in the clipboard: paste into sketch.ino in Wokwi, press Save, then Play.</div>
       </section>
@@ -360,7 +332,6 @@ const seenTabs = new Set();
 
 // what each panel needs, in order. optional = nice to have (ESP32)
 const PARTS = {
-  sim:    { name: 'Simulator',      sub: 'fake CiRA',  icon: 'flask' },
   cira:   { name: 'CiRA CORE',      sub: 'camera + AI', icon: 'camera' },
   broker: { name: 'MQTT broker',    sub: '',           icon: 'radio' },
   bridge: { name: 'Bridge',         sub: 'counts boxes', icon: 'flow' },
@@ -370,7 +341,6 @@ const PARTS = {
   esp32:  { name: 'ESP32 on Wokwi', sub: 'optional',   icon: 'chip' },
 };
 const PANEL = {
-  sim:  { list: ['sim', 'broker', 'bridge', 'db', 'dash', 'relay', 'esp32'], required: 5 },
   real: { list: ['cira', 'broker', 'bridge', 'db', 'dash', 'relay', 'esp32'], required: 5 },
 };
 const STATE_TEXT = { ok: 'Connected', warn: 'Starting', off: 'Off', error: 'Error' };
@@ -476,10 +446,9 @@ function renderPanel(key, p) {
 
 function renderPipeline(p) {
   state.pipe = p;
-  renderPanel('sim', p);
   renderPanel('real', p);
   const mode = p && p.mode;
-  for (const [key, m] of [['sim', 'sim'], ['real', 'cira']]) {
+  for (const [key, m] of [['real', 'cira']]) {
     const panel = $('#panel-' + key);
     const badge = $('#badge-' + key);
     const active = mode === m;
@@ -489,7 +458,6 @@ function renderPipeline(p) {
     badge.className = 'badge' + (mixed ? ' mixed' : active ? ' active' : '');
     badge.textContent = mixed ? 'MIXED' : active ? 'ACTIVE' : 'OFF';
   }
-  $('#conflict').classList.toggle('show', !!(p && p.conflict));
   const c = (p && p.health && p.health.counts) || {};
   $('#cTotal').textContent = c.total ?? '–';
   $('#cGood').textContent = c.good ?? '–';
@@ -676,7 +644,7 @@ document.querySelectorAll('[data-run]').forEach((b) => (b.onclick = () => post('
 document.querySelectorAll('[data-stop]').forEach((b) => (b.onclick = () => post('/api/stopall')));
 document.querySelectorAll('[data-fresh]').forEach((b) => {
   b.onclick = async () => {
-    const what = b.dataset.fresh === 'all' ? 'the simulation' : 'the real system';
+    const what = 'the real system';
     if (!confirm(`Fresh start for ${what}:\n\n1. stop everything\n2. DELETE all inspection records in MongoDB\n3. start ${what} again\n\nContinue?`)) return;
     const r = await post('/api/fresh/' + b.dataset.fresh, { confirm: true });
     if (r.ok) setView('tool:fresh');
@@ -706,7 +674,6 @@ $('#openCira').onclick = async () => {
   const r = await post('/api/cira/open');
   if (r.ok) setView('tool:cira');
 };
-$('#espTest').onclick =() => post('/api/start/relaytest');
 $('#copySketch').onclick = async () => {
   const b = $('#copySketch');
   try {
