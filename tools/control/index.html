@@ -364,12 +364,16 @@ async function loadSettings() {
       label.textContent = key;
       label.htmlFor = `set-${key}`;
       let input;
-      if (key === 'SINK') {
+      const choices = {
+        SINK: [['mongo', 'mongo (Atlas directly)'], ['http', 'http (HTTPS to dashboard)']],
+        CAMERA_VIEW: [['top', 'top (camera looks down)'], ['side', 'side (camera from the side)']],
+      }[key];
+      if (choices) {
         input = document.createElement('select');
-        for (const v of ['mongo', 'http']) {
+        for (const [v, text] of choices) {
           const o = document.createElement('option');
           o.value = v;
-          o.textContent = v === 'mongo' ? 'mongo (Atlas directly)' : 'http (HTTPS to dashboard)';
+          o.textContent = text;
           input.appendChild(o);
         }
       } else input = document.createElement('input');

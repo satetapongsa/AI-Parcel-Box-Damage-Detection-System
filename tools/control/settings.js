@@ -17,6 +17,10 @@ const SETTINGS = {
   DAMAGED_CLASSES: { check: classes, hint: 'comma separated, counted as FAIL' },
   SINK: { def: 'mongo', check: (v) => v === 'mongo' || v === 'http', hint: 'mongo = Atlas directly, http = dashboard /api/ingest' },
   ALERT_FAIL_STREAK: { def: '3', check: int(1, 50), hint: 'alert after this many FAIL in a row' },
+  CAMERA_VIEW: { def: 'top', check: (v) => v === 'top' || v === 'side', hint: 'top = camera looks down (length x width), side = from the side (length x height)' },
+  FRAME_WIDTH_CM: { def: '0', check: num(0, 1000), hint: 'cm of belt the camera sees left to right (0 = sizes in % of frame)' },
+  FRAME_HEIGHT_CM: { def: '0', check: num(0, 1000), hint: 'cm the camera sees top to bottom' },
+  BOX_FIXED_DIM_CM: { def: '0', check: num(0, 1000), hint: 'the dimension the camera cannot see (height for top, width for side), 0 = unknown' },
 };
 
 function readText(envFile) {
