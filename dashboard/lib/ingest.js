@@ -37,6 +37,22 @@ function toDate(v, now) {
   return new Date(t);
 }
 
+/** Box size from the bridge: normalized w/h and optional cm values. Invalid -> null. */
+export function cleanSize(s) {
+  if (!s || typeof s !== 'object' || Array.isArray(s)) return null;
+  const frac = (v) => typeof v === 'number' && v > 0 && v <= 1.5;
+  if (!frac(s.w) || !frac(s.h)) return null;
+  const cm = (v) => (typeof v === 'number' && v > 0 && v < 1000 ? Math.round(v * 10) / 10 : null);
+  return {
+    w: s.w,
+    h: s.h,
+    view: s.view === 'side' ? 'side' : 'top',
+    lengthCm: cm(s.lengthCm),
+    widthCm: cm(s.widthCm),
+    heightCm: cm(s.heightCm),
+  };
+}
+
 /** Returns { doc } or { error } for one inspection event. */
 export function cleanEvent(e, now = Date.now()) {
   if (!e || typeof e !== 'object' || Array.isArray(e)) return { error: 'not an object' };
@@ -62,6 +78,8 @@ export function cleanEvent(e, now = Date.now()) {
   if (e.votes && int(e.votes.pass) !== null && int(e.votes.fail) !== null) {
     doc.votes = { pass: e.votes.pass, fail: e.votes.fail };
   }
+  const size = cleanSize(e.size);
+  if (size) doc.size = size;
   return { doc };
 }
 

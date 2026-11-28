@@ -9,9 +9,19 @@ export function csvCell(v) {
   return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
-export const CSV_COLUMNS = ['ts', 'line', 'device', 'result', 'className', 'confidence', 'framesSeen', 'votesPass', 'votesFail', 'eventId'];
+export const CSV_COLUMNS = ['ts', 'line', 'device', 'result', 'className', 'confidence', 'lengthCm', 'widthCm', 'heightCm', 'boxW', 'boxH', 'framesSeen', 'votesPass', 'votesFail', 'eventId'];
 
 export function csvRow(d) {
-  const row = { ...d, votesPass: d.votes && d.votes.pass, votesFail: d.votes && d.votes.fail };
+  const s = d.size || {};
+  const row = {
+    ...d,
+    votesPass: d.votes && d.votes.pass,
+    votesFail: d.votes && d.votes.fail,
+    lengthCm: s.lengthCm,
+    widthCm: s.widthCm,
+    heightCm: s.heightCm,
+    boxW: s.w, // share of the camera frame
+    boxH: s.h,
+  };
   return CSV_COLUMNS.map((k) => csvCell(row[k])).join(',');
 }

@@ -36,6 +36,7 @@ export async function GET(request) {
           trackId: 1,
           framesSeen: 1,
           votes: 1,
+          size: 1,
           source: 1,
         },
       })

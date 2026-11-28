@@ -41,6 +41,12 @@ test('status keeps known fields and maps the line to its document id', () => {
   assert.equal(cleanStatus('x', NOW), null);
 });
 
+test('size is kept only with valid numbers', () => {
+  const { doc } = cleanEvent({ ...good, size: { w: 0.3, h: 0.4, view: 'side', lengthCm: 31.24, widthCm: null, heightCm: 'x', $set: 1 } }, NOW);
+  assert.deepEqual(doc.size, { w: 0.3, h: 0.4, view: 'side', lengthCm: 31.2, widthCm: null, heightCm: null });
+  assert.equal(cleanEvent({ ...good, size: { w: 9, h: 0.4 } }, NOW).doc.size, undefined);
+});
+
 test('token check', () => {
   assert.equal(bearer('Bearer abc'), 'abc');
   assert.equal(bearer('Basic abc'), '');
