@@ -69,6 +69,11 @@ const config = {
   trackTtlMs: num('TRACK_TTL_MS', 1000),
   minFrames: num('MIN_FRAMES', 5),
   failRatio: num('FAIL_RATIO', 0.3),
+  // box size: top = camera looks down (length x width), side = camera looks from the side (length x height)
+  cameraView: (process.env.CAMERA_VIEW || 'top').trim().toLowerCase() === 'side' ? 'side' : 'top',
+  frameWidthCm: num('FRAME_WIDTH_CM', 0), // what the camera sees at the belt, in cm (0 = sizes only in % of the frame)
+  frameHeightCm: num('FRAME_HEIGHT_CM', 0),
+  fixedDimCm: num('BOX_FIXED_DIM_CM', 0), // the dimension the camera cannot see (height for top, width for side)
   // video: boxes move across the virtual line (VideoFile / camera)
   // image: one still picture = one box (Image Slide)
   inputMode: inputModeOf(process.env.INPUT_MODE),
@@ -161,6 +166,7 @@ function summary() {
     `   Frame     ${config.frameW}x${config.frameH} px, box origin=${config.boxOrigin}`,
     `   Input     ${INPUT_LABELS[config.inputMode]}`,
     `   Line      x=${config.linePos} dir=${config.direction}  MIN_CONF=${config.minConf} MIN_FRAMES=${config.minFrames}`,
+    `   Size      camera=${config.cameraView} ${config.frameWidthCm > 0 && config.frameHeightCm > 0 ? `view=${config.frameWidthCm}x${config.frameHeightCm} cm` : 'not calibrated (sizes in % of frame)'}${config.fixedDimCm > 0 ? ` ${config.cameraView === 'side' ? 'width' : 'height'}=${config.fixedDimCm} cm` : ''}`,
     `   Tracking  MAX_DIST=${config.maxDist} TTL=${config.trackTtlMs}ms FAIL_RATIO=${config.failRatio}`,
   ].join('\n');
 }

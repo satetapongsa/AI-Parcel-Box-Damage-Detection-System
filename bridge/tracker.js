@@ -26,6 +26,10 @@ const DEFAULTS = {
   trackTtlMs: 1000, // drop a track not seen for this long
   minFrames: 5, // a track must be seen this many frames before it can be counted
   failRatio: 0.3, // FAIL if damaged votes / all votes >= failRatio (bias to FAIL)
+  cameraView: 'top', // 'top' = camera looks down (sees length x width), 'side' = looks from the side (length x height)
+  frameWidthCm: 0, // real width of the camera view at the belt, in cm (0 = not calibrated)
+  frameHeightCm: 0, // real height of the camera view at the belt, in cm
+  fixedDimCm: 0, // the dimension one camera cannot see (height for top, width for side), 0 = unknown
   countMode: 'line', // 'line': count when a box crosses the virtual line | 'presence': count once a box has been seen steadily
 };
 
@@ -162,6 +166,28 @@ function normalizeObject(obj, opts = {}) {
   return { name, conf, cx: nx, cy: ny, w: nw, h: nh };
 }
 
+/**
+ * Box size from the detection box (normalized w/h, x = along the belt).
+ * A single 2D camera sees two of the three dimensions; the third one comes from fixedDimCm (or stays null).
+ */
+function sizeOf(w, h, o) {
+  if (!(w > 0) || !(h > 0)) return null;
+  const cm = (v) => Math.round(v * 10) / 10;
+  const calibrated = o.frameWidthCm > 0 && o.frameHeightCm > 0;
+  const along = calibrated ? cm(w * o.frameWidthCm) : null; // along the belt = length
+  const across = calibrated ? cm(h * o.frameHeightCm) : null;
+  const fixed = o.fixedDimCm > 0 ? cm(o.fixedDimCm) : null;
+  const side = o.cameraView === 'side';
+  return {
+    w: round(w, 3),
+    h: round(h, 3),
+    view: side ? 'side' : 'top',
+    lengthCm: along,
+    widthCm: side ? fixed : across,
+    heightCm: side ? across : fixed,
+  };
+}
+
 /** Build a classifier: class name -> 'PASS' | 'FAIL' | null (unknown). Case-insensitive. */
 function makeClassifier(goodClasses, damagedClasses) {
   const good = new Set((goodClasses || []).map((s) => String(s).trim().toLowerCase()));
@@ -236,6 +262,11 @@ function createTracker(options = {}) {
     t.cy = det.cy;
     t.frames += 1;
     t.lastSeen = ts;
+    if (det.w > 0 && det.h > 0) {
+      t.sumW += det.w;
+      t.sumH += det.h;
+      t.sizeN += 1;
+    }
     if (meta.device) t.device = meta.device;
     if (meta.source) t.source = meta.source;
     if (det.vote === 'FAIL') {
@@ -270,6 +301,7 @@ function createTracker(options = {}) {
       trackId: t.id,
       framesSeen: t.frames,
       votes: { pass: t.passVotes, fail: t.failVotes },
+      size: t.sizeN ? sizeOf(t.sumW / t.sizeN, t.sumH / t.sizeN, o) : null,
       source: t.source,
     };
   }
@@ -327,6 +359,9 @@ function createTracker(options = {}) {
         confPass: 0,
         confFail: 0,
         names: {},
+        sumW: 0,
+        sumH: 0,
+        sizeN: 0,
         counted: false,
         device: meta.device || o.device,
         source: meta.source || o.source,
@@ -497,6 +532,7 @@ function createImageCounter(opts = {}) {
           trackId: null,
           framesSeen: 1,
           votes: { pass: dets.length - fails.length, fail: fails.length },
+          size: sizeOf(best.w, best.h, o),
           source: meta.source || o.source,
         },
       ],
@@ -519,6 +555,7 @@ module.exports = {
   extractObjects,
   normalizeObject,
   makeClassifier,
+  sizeOf,
   createTracker,
   createImageCounter,
   normalizeEvent,

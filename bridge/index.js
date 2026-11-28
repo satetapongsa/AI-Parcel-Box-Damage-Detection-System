@@ -137,6 +137,12 @@ async function flushPending() {
 }
 
 // ---------------------------------------------------------------- events
+/** "32x24x? cm" when calibrated, else "35%x48% of frame" */
+function sizeText(s) {
+  if (s.lengthCm !== null) return `${[s.lengthCm, s.widthCm, s.heightCm].map((v) => (v === null ? '?' : v)).join('x')} cm (LxWxH)`;
+  return `${Math.round(s.w * 100)}%x${Math.round(s.h * 100)}% of frame`;
+}
+
 async function saveEvent(ev) {
   if (state.recentIds.has(ev.eventId)) {
     log(`↩️  duplicate eventId skipped: ${ev.eventId}`);
@@ -155,7 +161,8 @@ async function saveEvent(ev) {
   const icon = ev.result === 'FAIL' ? '🟥' : '✅';
   const frames = ev.framesSeen !== null && ev.framesSeen !== undefined ? ` frames=${ev.framesSeen}` : '';
   const votes = ev.votes ? ` votes=${ev.votes.pass}/${ev.votes.fail}` : '';
-  log(`${icon} ${ev.result} #${state.sessionCount} ${ev.className} conf=${ev.confidence.toFixed(2)}${frames}${votes} [${ev.source}]`);
+  const size = ev.size ? ` size=${sizeText(ev.size)}` : '';
+  log(`${icon} ${ev.result} #${state.sessionCount} ${ev.className} conf=${ev.confidence.toFixed(2)}${frames}${votes}${size} [${ev.source}]`);
 
   if (mqttClient && mqttClient.connected) {
     // unitNo = the #number shown in this log, so the ESP32 shows the same number
