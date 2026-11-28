@@ -49,9 +49,9 @@ flowchart LR
 |---|---|
 | ![Dashboard](docs/screenshots/dashboard-live.png) | ![Control Center](docs/screenshots/control-center.png) |
 
-| Digital Twin บนเว็บ | ESP32 บน Wokwi |
-|---|---|
-| ![Digital twin](docs/screenshots/vercel.png) | ![ESP32 on Wokwi](docs/screenshots/wokwi-esp32.png) |
+| ESP32 บน Wokwi |
+|---|
+| ![ESP32 on Wokwi](docs/screenshots/wokwi-esp32.png) |
 
 ## เริ่มใช้งาน (Windows)
 
@@ -65,12 +65,18 @@ flowchart LR
 
 **CiRA input (ในแผง Real system):** เลือกได้ 2 แบบ
 - **Video:** VideoFile / กล้อง นับเมื่อกล่องวิ่งข้ามเส้นเสมือน (ค่าเริ่มต้น)
+- **Still:** กล่องวางนิ่งหน้ากล้อง นับเมื่อเห็นนิ่งครบ MIN_FRAMES เฟรม ไม่ต้องข้ามเส้น
 - **Images:** Image Slide **ภาพ 1 ใบ = กล่อง 1 กล่อง** ภาพเดิมที่ส่งซ้ำนับครั้งเดียว ถ้ามีคลาสชำรุดในภาพ → FAIL
 - กดสลับแล้ว Bridge รีสตาร์ทให้เอง (ตั้งค่าเริ่มต้นได้ที่ `INPUT_MODE` ใน `bridge/.env`)
 
-**Dashboard มี 2 หน้าแยกกันชัดเจน**
-- **Live · real data** (`/live`): ข้อมูลจริงจาก MongoDB และมี **Live conveyor** ทุกกล่องที่ CiRA ตรวจจับและ Bridge นับแล้ว จะออกมาที่หัวสายพานหลังจากนั้น 2–5 วินาที แล้ววิ่งไปตามผลจริง (PASS ออกปลายสาย, FAIL ถูกดันลงถัง DENT / TEAR)
-- **Simulation · demo only** (`/`): จำลองในเบราว์เซอร์อย่างเดียว กล่องสุ่มวิ่งตลอด ไม่เชื่อมกับ CiRA หรือฐานข้อมูล
+**Dashboard** (`/`, ลิงก์เก่า `/live` ยังใช้ได้) แสดงเฉพาะข้อมูลจริงจาก MongoDB
+- **Live conveyor**: ทุกกล่องที่ CiRA ตรวจจับและ Bridge นับแล้ว จะออกมาที่หัวสายพานหลังจากนั้น 2–5 วินาที ด้วย**ขนาดตามที่ CiRA ตรวจจับได้** แล้ววิ่งไปตามผลจริง (PASS ออกปลายสาย, FAIL ถูกดันลงถัง BAD)
+- ตาราง Latest inspections และไฟล์ CSV มีขนาดกล่องของแต่ละกล่อง
+
+**ขนาดกล่อง (กว้าง × ยาว × สูง)** มาจากกรอบที่ CiRA ตรวจจับ เฉลี่ยจากทุกเฟรมที่เห็นกล่องนั้น
+- กล้องตัวเดียวเห็นได้ 2 ด้าน: `CAMERA_VIEW=top` (มองลงมา) ได้ **ยาว × กว้าง**, `CAMERA_VIEW=side` (มองด้านข้าง) ได้ **ยาว × สูง**
+- ด้านที่ 3 ใส่เป็นค่าคงที่ได้ที่ `BOX_FIXED_DIM_CM` (เว้นไว้ = แสดง `?`) ถ้าต้องวัดครบ 3 ด้านจริง ต้องเพิ่มกล้องตัวที่ 2 หรือเซนเซอร์วัดระยะ
+- ให้เป็นหน่วย **cm**: วัดด้วยไม้บรรทัดว่ากล้องเห็นสายพานกว้างและยาวกี่ cm แล้วใส่ `FRAME_WIDTH_CM` และ `FRAME_HEIGHT_CM` ใน `bridge/.env` (ไม่ใส่ = แสดงเป็น % ของภาพ)
 
 ใน Control Center มี 2 แผงแยกกัน **Simulation** (รันได้ทันที ไม่ต้องมีกล้อง) กับ **Real system** (CiRA CORE) แต่ละแผงแสดงสถานะ 7 ขั้นแบบ real-time และมีปุ่ม Fresh start, Auto-restart, Copy ESP32 code
 
@@ -126,12 +132,11 @@ flowchart LR
 
 ## Dashboard: หลายสาย, รายงาน, รหัสผ่าน
 
-- **หลายสายพาน**: รัน Bridge หลายตัวโดยตั้ง `LINE_ID` ต่างกัน (line1, line2, ...) แล้วเลือกสายได้ที่หน้า /live
-- **รายงาน CSV**: ปุ่ม Download CSV ที่หน้า /live (24 ชม. / 7 / 30 / 90 วัน) หรือเรียก `/api/export?days=7&line=line1&result=FAIL` เปิดใน Excel ได้
-- **รหัสผ่านหน้า /live** (ไม่ตั้ง = เปิดสาธารณะเหมือนเดิม)
+- **หลายสายพาน**: รัน Bridge หลายตัวโดยตั้ง `LINE_ID` ต่างกัน (line1, line2, ...) แล้วเลือกสายได้ที่หน้า Dashboard
+- **รายงาน CSV**: ปุ่ม Download CSV ที่หน้า Dashboard (24 ชม. / 7 / 30 / 90 วัน) หรือเรียก `/api/export?days=7&line=line1&result=FAIL` เปิดใน Excel ได้
+- **รหัสผ่าน Dashboard** (ไม่ตั้ง = เปิดสาธารณะเหมือนเดิม)
   1. รัน `node tools/hash-password.mjs` แล้วตั้งรหัส (อย่างน้อย 12 ตัวอักษร)
   2. นำ `DASHBOARD_PASSWORD_HASH` และ `SESSION_SECRET` ที่ได้ไปใส่ใน `dashboard/.env.local` และ Vercel
-  3. หน้า Simulation (`/`) ยังเปิดได้โดยไม่ต้องมีรหัส
 - **Control Center → Bridge settings**: แก้ MIN_CONF, MIN_FRAMES, FAIL_RATIO, คลาส, SINK, ALERT_FAIL_STREAK ได้จากหน้าเว็บ กด Save แล้ว Bridge รีสตาร์ทเอง (แก้ค่าลับอย่าง `MONGODB_URI` จากหน้านี้ไม่ได้)
 
 ## Deploy Dashboard
@@ -157,7 +162,7 @@ Broker, Bridge และ CiRA รันบนเครื่องหน้า�
 | โฟลเดอร์ | คืออะไร |
 |---|---|
 | `bridge/` | Node.js: รับ MQTT → ติดตาม/นับ → MongoDB, simulator, relay, dev broker |
-| `dashboard/` | Next.js Dashboard + Digital Twin (deploy ได้ทั้ง Vercel และ Cloudflare) |
+| `dashboard/` | Next.js Dashboard ข้อมูลจริง + Live conveyor (deploy ได้ทั้ง Vercel และ Cloudflare) |
 | `esp32/` | Firmware ESP32 + วงจร Wokwi |
 | `cira/` + `project.npj` | ไฟล์งาน CiRA CORE และโค้ดสำหรับ JavaScript node |
 | `tools/` | Control Center, build ESP32, auto-label, ทำวิดีโอ |
