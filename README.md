@@ -18,10 +18,9 @@ CiRA CORE ตรวจกล่องพัสดุบนสายพาน แ
 flowchart LR
     CAM(["Camera / VideoFile"]) -->|"frames"| CIRA["CiRA CORE<br/>DeepDetect<br/>box_good / dent / tear"]
     CIRA -->|"spdi/line1/detections"| BROKER["MQTT broker<br/>:1883"]
-    SIM["simulator.js<br/>(demo mode)"] -.->|"same JSON"| BROKER
     BROKER --> BRIDGE["Node Bridge<br/>track + vote<br/>PASS / FAIL"]
     BRIDGE -->|"insert"| ATLAS[("MongoDB Atlas")]
-    BRIDGE <-->|"store-and-forward"| QUEUE[("queue<br/>max 2,000")]
+    BRIDGE <-->|"store-and-forward"| QUEUE[("disk queue<br/>max 20,000")]
     BRIDGE -->|"spdi/line1/counted"| RELAY["Relay"]
     RELAY -->|"cmd + status"| HIVE["HiveMQ"]
     HIVE --> ESP["ESP32 on Wokwi<br/>servo, tower light,<br/>buzzer, LCD, OLED"]
@@ -60,7 +59,7 @@ flowchart LR
 | ไฟล์ / ปุ่ม | ทำเมื่อไร | ทำอะไร |
 |---|---|---|
 | `1-SETUP.bat` | ครั้งแรกครั้งเดียว | ติดตั้งทุกอย่าง และถามให้วาง connection string |
-| **`runall.bat`** หรือไอคอน **SPDI** บน Desktop | ทุกครั้ง | เปิด Control Center และรันทุกส่วน (broker, bridge, simulator, dashboard, relay) · กด **C** = ใช้ CiRA จริง, **W** = เปิดเว็บอย่างเดียว |
+| **`runall.bat`** หรือไอคอน **SPDI** บน Desktop | ทุกครั้ง | เปิด Control Center และรันระบบจริง (broker, bridge, dashboard, relay) แล้วกด Run ใน CiRA CORE · กด **W** = เปิดเว็บอย่างเดียว |
 | ปุ่ม **Start real system** ใน Control Center | ใช้กล้องจริง | เปิด CiRA CORE พร้อม `project.npj` ให้เอง แล้วกด Run ใน CiRA |
 
 **CiRA input (ในแผง Real system):** เลือกได้ 2 แบบ
@@ -78,7 +77,7 @@ flowchart LR
 - ด้านที่ 3 ใส่เป็นค่าคงที่ได้ที่ `BOX_FIXED_DIM_CM` (เว้นไว้ = แสดง `?`) ถ้าต้องวัดครบ 3 ด้านจริง ต้องเพิ่มกล้องตัวที่ 2 หรือเซนเซอร์วัดระยะ
 - ให้เป็นหน่วย **cm**: วัดด้วยไม้บรรทัดว่ากล้องเห็นสายพานกว้างและยาวกี่ cm แล้วใส่ `FRAME_WIDTH_CM` และ `FRAME_HEIGHT_CM` ใน `bridge/.env` (ไม่ใส่ = แสดงเป็น % ของภาพ)
 
-ใน Control Center มี 2 แผงแยกกัน **Simulation** (รันได้ทันที ไม่ต้องมีกล้อง) กับ **Real system** (CiRA CORE) แต่ละแผงแสดงสถานะ 7 ขั้นแบบ real-time และมีปุ่ม Fresh start, Auto-restart, Copy ESP32 code
+Control Center มีแผง **Real system** (CiRA CORE) แผงเดียว แสดงสถานะ 7 ขั้นแบบ real-time และมีปุ่ม Fresh start, Auto-restart, Copy ESP32 code, Bridge settings
 
 ## ESP32 (Wokwi)
 
@@ -93,11 +92,9 @@ flowchart LR
 |---|---|
 | `npm run setup` | ติดตั้ง dependencies ของ root, bridge และ dashboard |
 | `npm run control` | เปิด Control Center |
-| `npm run all` | broker + bridge + simulator + dashboard + relay (ที่ `runall.bat` ใช้) |
-| `npm run all:cira` | เหมือนข้างบน แต่ใช้ CiRA จริงแทน simulator |
-| `npm run sim` | ส่งเฟรมจำลองแบบเดียวกับ CiRA |
+| `npm run all` / `all:cira` | broker + bridge + dashboard + relay สำหรับ CiRA จริง |
 | `npm run sniff` | ดูทุกข้อความ MQTT ใน `spdi/#` |
-| `npm run relay` / `relay:test` | ส่งผลไป ESP32 / ส่ง PASS-FAIL ทดสอบทุก 3 วินาที |
+| `npm run relay` | ส่งผลจริงไป ESP32 |
 | `npm run reset` | ลบข้อมูลการตรวจทั้งหมด (ถามยืนยันก่อน) |
 | `npm run esp32:build` | คอมไพล์ firmware ESP32 สำหรับ Wokwi ใน VS Code |
 | `npm test` | unit tests ของ tracker |
@@ -106,7 +103,7 @@ flowchart LR
 
 | Topic | จาก → ถึง | ข้อมูล |
 |---|---|---|
-| `spdi/line1/detections` | CiRA / simulator → Bridge | ผลทุกเฟรม `{objects:[{name,conf,x,y,w,h}]}` |
+| `spdi/line1/detections` | CiRA → Bridge | ผลทุกเฟรม `{objects:[{name,conf,x,y,w,h}]}` |
 | `spdi/line1/counted` | Bridge → Relay | กล่องที่นับแล้ว PASS / FAIL |
 | `<RELAY_TOPIC>/cmd` | Relay → ESP32 | `{"r":"FAIL","c":"tear","n":51}` |
 | `<RELAY_TOPIC>/status` | Relay → ESP32 | `online` / `offline` (retained, ส่งซ้ำทุก 10 วินาที) |
@@ -161,7 +158,7 @@ Broker, Bridge และ CiRA รันบนเครื่องหน้า�
 
 | โฟลเดอร์ | คืออะไร |
 |---|---|
-| `bridge/` | Node.js: รับ MQTT → ติดตาม/นับ → MongoDB, simulator, relay, dev broker |
+| `bridge/` | Node.js: รับ MQTT → ติดตาม/นับ → MongoDB, relay, dev broker |
 | `dashboard/` | Next.js Dashboard ข้อมูลจริง + Live conveyor (deploy ได้ทั้ง Vercel และ Cloudflare) |
 | `esp32/` | Firmware ESP32 + วงจร Wokwi |
 | `cira/` + `project.npj` | ไฟล์งาน CiRA CORE และโค้ดสำหรับ JavaScript node |
