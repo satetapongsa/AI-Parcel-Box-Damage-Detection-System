@@ -14,33 +14,24 @@ set "empties=0"
 set "choice=%~1"
 if not "%choice%"=="" goto dispatch
 
-rem double-click: open the web Control Center and start EVERYTHING
+rem double-click: open the web Control Center and start the real system (CiRA CORE)
 cls
 echo ==========================================================
 echo   SPDI - opening the Control Center in your browser
 echo     http://localhost:3100   (start / stop every part there)
-echo   and starting everything: broker + bridge + simulator
+echo   and starting the real system: broker + bridge
 echo                            + dashboard + ESP32 relay
+echo   then press Run in CiRA CORE
 echo ==========================================================
 echo.
-echo   [R] Control Center + start everything (auto in 6 s)
-echo   [C] Control Center + everything with real CiRA CORE
+echo   [R] Control Center + real system with CiRA CORE (auto in 6 s)
 echo   [W] Control Center only, start things yourself
 echo   [M] old terminal menu
 echo.
-choice /c RCWM /t 6 /d R /n /m "Your choice [R/C/W/M]: "
-if errorlevel 4 goto menu
-if errorlevel 3 goto panel
-if errorlevel 2 goto panel_cira
-goto panel_all
-
-:panel_all
-call :need_env || goto menu
-call :need_port || goto menu
-title SPDI - Control Center
-node tools\control\server.js --all
-pause
-exit /b 0
+choice /c RWM /t 6 /d R /n /m "Your choice [R/W/M]: "
+if errorlevel 3 goto menu
+if errorlevel 2 goto panel
+goto panel_cira
 
 :panel_cira
 call :need_env || goto menu
@@ -64,23 +55,20 @@ echo ==========================================================
 echo.
 echo   W  Web Control Center (browser)
 echo.
-echo   DEMO
-echo    1  EVERYTHING: simulator + dashboard + ESP32 relay
-echo    2  Demo with SIMULATOR only        (2-DEMO-SIM)
-echo    3  Demo with real CiRA CORE        (3-DEMO-CIRA)
-echo    4  EVERYTHING with real CiRA CORE
+echo   REAL SYSTEM (CiRA CORE)
+echo    1  EVERYTHING: bridge + dashboard + ESP32 relay
+echo    2  Bridge + dashboard only        (3-DEMO-CIRA)
 echo.
 echo   ESP32 (Wokwi)
-echo    5  ESP32 test: send fake PASS/FAIL every 3 s
-echo    6  ESP32 relay: forward real results
+echo    3  ESP32 relay: forward real results
 echo.
 echo   TOOLS
-echo    7  Watch MQTT messages            (sniff)
-echo    8  Reset database before a demo   (reset)
-echo    9  Auto-label images for CiRA     (auto_label)
-echo    10 Convert text .gt to CiRA format
-echo    11 Mix damaged boxes into a video (make_video)
-echo    12 Run unit tests
+echo    4  Watch MQTT messages            (sniff)
+echo    5  Reset database                 (reset)
+echo    6  Auto-label images for CiRA     (auto_label)
+echo    7  Convert text .gt to CiRA format
+echo    8  Mix damaged boxes into a video (make_video)
+echo    9  Run unit tests
 echo.
 echo    S  Setup / reinstall               (1-SETUP)
 echo    0  Exit
@@ -91,18 +79,15 @@ if "%choice%"=="" goto empty
 set "empties=0"
 
 :dispatch
-if "%choice%"=="1"  goto everything
-if "%choice%"=="2"  goto sim
-if "%choice%"=="3"  goto cira
-if "%choice%"=="4"  goto everything_cira
-if "%choice%"=="5"  goto relay_test
-if "%choice%"=="6"  goto relay
-if "%choice%"=="7"  goto sniff
-if "%choice%"=="8"  goto reset
-if "%choice%"=="9"  goto label
-if "%choice%"=="10" goto convert
-if "%choice%"=="11" goto video
-if "%choice%"=="12" goto tests
+if "%choice%"=="1"  goto everything_cira
+if "%choice%"=="2"  goto cira
+if "%choice%"=="3"  goto relay
+if "%choice%"=="4"  goto sniff
+if "%choice%"=="5"  goto reset
+if "%choice%"=="6"  goto label
+if "%choice%"=="7"  goto convert
+if "%choice%"=="8"  goto video
+if "%choice%"=="9"  goto tests
 if /i "%choice%"=="S" goto setup
 if /i "%choice%"=="W" goto panel
 if "%choice%"=="0"  exit /b 0
@@ -116,19 +101,7 @@ set /a empties+=1
 if %empties% GEQ 3 exit /b 0
 goto menu
 
-rem ---------------------------------------------------------------- demos
-:everything
-call :need_env || goto menu
-call :need_port || goto menu
-call :open_browsers
-title SPDI - EVERYTHING (simulator)
-echo Starting broker, bridge, simulator, dashboard and ESP32 relay ...
-echo Close this window or press Ctrl+C to stop everything.
-echo.
-call npm run all
-pause
-goto menu
-
+rem ---------------------------------------------------------------- real system
 :everything_cira
 call :need_env || goto menu
 call :need_port || goto menu
@@ -141,24 +114,13 @@ call npm run all:cira
 pause
 goto menu
 
-:sim
-call :need_env || goto menu
-call :need_port || goto menu
-start "SPDI demo (simulator)" cmd /c "2-DEMO-SIM.bat"
-goto menu
-
 :cira
 call :need_env || goto menu
 call :need_port || goto menu
-start "SPDI demo (CiRA)" cmd /c "3-DEMO-CIRA.bat"
+start "SPDI (CiRA)" cmd /c "3-DEMO-CIRA.bat"
 goto menu
 
 rem ---------------------------------------------------------------- ESP32
-:relay_test
-start "SPDI ESP32 test relay" cmd /k "npm run relay:test"
-call :wokwi_hint
-goto menu
-
 :relay
 start "SPDI ESP32 relay" cmd /k "npm run relay"
 call :wokwi_hint
@@ -290,7 +252,7 @@ exit /b 0
 
 :open_browsers
 rem the dashboard needs about 20 s to compile on the first start
-start "" /min cmd /c "timeout /t 20 >nul & start http://localhost:3000 & start http://localhost:3000/live & start https://wokwi.com/projects/479947280939592705"
+start "" /min cmd /c "timeout /t 20 >nul & start http://localhost:3000 & start https://wokwi.com/projects/479947280939592705"
 echo The browser opens in about 20 s. In Wokwi press the green Play button.
 exit /b 0
 

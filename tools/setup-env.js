@@ -127,7 +127,7 @@ async function main() {
   console.log(`   ${path.relative(root, DASH_ENV)}`);
   console.log('   (2 ไฟล์นี้มีรหัสผ่าน ห้ามส่งให้ใคร / ห้าม push ขึ้น GitHub)');
   console.log('');
-  console.log('ต่อไป: ดับเบิลคลิก 2-DEMO-SIM.bat เพื่อลองระบบ');
+  console.log('ต่อไป: ดับเบิลคลิก runall.bat แล้วกด Run ใน CiRA CORE');
 }
 
 main().catch((err) => {
