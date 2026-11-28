@@ -9,6 +9,8 @@ const FILTERS = [
 const time = (iso) =>
   new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
 
+import { liveDims } from '@/lib/belt/engine';
+
 export default function EventsTable({ events, filter, onFilter, freshIds, error }) {
   return (
     <div className="rounded-lg border border-edge bg-panel">
@@ -42,6 +44,7 @@ export default function EventsTable({ events, filter, onFilter, freshIds, error 
               <th className="px-2 py-2 font-medium">Result</th>
               <th className="px-2 py-2 font-medium">Class</th>
               <th className="px-2 py-2 text-right font-medium">Conf</th>
+              <th className="px-2 py-2 font-medium">Size</th>
               <th className="hidden px-2 py-2 text-right font-medium sm:table-cell">Frames</th>
               <th className="hidden px-4 py-2 font-medium md:table-cell">Device</th>
             </tr>
@@ -49,7 +52,7 @@ export default function EventsTable({ events, filter, onFilter, freshIds, error 
           <tbody>
             {events.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
+                <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
                   No inspections yet
                 </td>
               </tr>
@@ -76,12 +79,12 @@ export default function EventsTable({ events, filter, onFilter, freshIds, error 
                     <td className="px-2 py-2 text-right font-mono text-slate-300">
                       {typeof e.confidence === 'number' ? `${(e.confidence * 100).toFixed(0)}%` : '—'}
                     </td>
+                    <td className="px-2 py-2 font-mono text-xs text-slate-300">{liveDims(e.size).label || '—'}</td>
                     <td className="hidden px-2 py-2 text-right font-mono text-slate-400 sm:table-cell">
                       {e.framesSeen ?? '—'}
                     </td>
                     <td className="hidden px-4 py-2 text-slate-400 md:table-cell">
                       {e.device}
-                      {e.source === 'simulator' ? <span className="ml-1 text-muted">(sim)</span> : null}
                     </td>
                   </tr>
                 );

@@ -20,7 +20,7 @@ export function useLiveBelt(line = 'line1') {
   const [frame, setFrame] = useState(0);
   const [info, setInfo] = useState({ received: 0, waiting: 0, lastAt: null, error: null });
 
-  // engine + drawing loop (same timing approach as the simulation page)
+  // engine + drawing loop
   useEffect(() => {
     let last = performance.now();
     const timer = setInterval(() => {

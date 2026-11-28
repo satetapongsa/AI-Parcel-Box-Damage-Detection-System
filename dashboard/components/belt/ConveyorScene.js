@@ -1,7 +1,7 @@
 'use client';
 
 import BoxGlyph, { BoxDefs } from './BoxGlyph';
-import { CLASSES, ZONE, lightOf } from '@/lib/sim/engine';
+import { CLASSES, ZONE, lightOf } from '@/lib/belt/engine';
 
 // Scene geometry (SVG user units). 3/4 view: belt top surface + front frame face.
 const W = 1200;
@@ -155,7 +155,7 @@ function TowerLight({ light }) {
   );
 }
 
-export default function ConveyorScene({ sim, live = false }) {
+export default function ConveyorScene({ sim, live = true }) {
   const travel = sim.beltOffset * BW; // px the belt has moved (mod BW)
   const slatGap = 26;
   const slatShift = travel % slatGap;
@@ -272,7 +272,7 @@ export default function ConveyorScene({ sim, live = false }) {
       {sim.boxes.map((b) => {
         const w = 84 * (b.dims ? b.dims.w : 1);
         const h = 62 * (b.dims ? b.dims.h : 1);
-        const d = Math.min(w, h) * 0.45;
+        const d = Math.min(w, h) * 0.45 * (b.dims && b.dims.d ? b.dims.d : 1);
         let x = px(b.x) - w / 2;
         let y = BOX_BASE - h + b.lane * 0.6;
         let rot = 0;
@@ -300,7 +300,7 @@ export default function ConveyorScene({ sim, live = false }) {
         return (
           <g key={b.id} opacity={opacity}>
             <g transform={`translate(${x} ${y}) rotate(${rot} ${bw / 2} ${bh})`} style={{ filter: COLOR_FILTER[b.color] }}>
-              <BoxGlyph w={bw} h={bh} truth={b.truth} seed={b.seed} reworked={b.reworked > 0} />
+              <BoxGlyph w={bw} h={bh} depth={d * (bw / w)} truth={b.truth} seed={b.seed} reworked={b.reworked > 0} />
               {/* unit number sticker */}
               <rect x={bw * 0.54} y={bh * 0.5} width={bw * 0.4} height={bh * 0.24} rx={2} fill={b.reworked ? '#bfdbfe' : '#f8fafc'} stroke="#1f2937" strokeWidth={0.6} />
               <text x={bw * 0.74} y={bh * 0.68} textAnchor="middle" fontSize={bh * 0.19} fontWeight={800} fill="#111827" fontFamily="Consolas, monospace">
@@ -310,9 +310,10 @@ export default function ConveyorScene({ sim, live = false }) {
             {inCam ? (
               <g>
                 <rect x={x - 5} y={top - 5} width={w + d * 0.55 + 10} height={h + d * 0.45 + 10} fill="none" stroke={cls.color} strokeWidth={2.5} />
-                <rect x={x - 5} y={top - 25} width={Math.max(92, w + 12)} height={20} fill={cls.color} />
+                <rect x={x - 5} y={top - 25} width={Math.max(92, w + 12, b.sizeLabel ? 84 + b.sizeLabel.length * 7.4 : 0)} height={20} fill={cls.color} />
                 <text x={x} y={top - 10} fontSize={13} fill="#0b0f14" fontWeight={700} fontFamily="Consolas, monospace">
                   {live ? (cls.defect ? 'bad' : 'good') : b.seen.cls} {b.seen.conf.toFixed(2)}
+                  {b.sizeLabel ? ` · ${b.sizeLabel}` : ''}
                 </text>
               </g>
             ) : null}

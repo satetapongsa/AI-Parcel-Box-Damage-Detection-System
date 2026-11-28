@@ -138,8 +138,8 @@ function TornBox({ w, h, dx, dy, tx, tapeW, seed }) {
   );
 }
 
-export default function BoxGlyph({ w = 90, h = 70, truth = 'box_good', seed = 0.5, shadow = true, reworked = false }) {
-  const d = Math.min(w, h) * 0.45;
+export default function BoxGlyph({ w = 90, h = 70, depth, truth = 'box_good', seed = 0.5, shadow = true, reworked = false }) {
+  const d = depth > 0 ? depth : Math.min(w, h) * 0.45; // depth = the box's third dimension, drawn in perspective
   const dx = d * 0.55;
   const dy = d * 0.45;
   const tapeW = w * 0.14;

@@ -1,10 +1,10 @@
 /**
- * SPDI digital twin — pure simulation engine (no React, no DOM).
+ * SPDI live conveyor engine (no React, no DOM).
  *
- * Models the whole line:
- *   conveyor → camera → CiRA CORE (per-frame detections) → bridge tracker (majority vote,
- *   counted once at the decision line) → ESP32 + IR breakbeam → reject pusher
- *   → local SQLite queue (store-and-forward, max 500) → cloud sync → dashboard
+ * Draws the real line from real inspection results: every event from MongoDB (addLiveBox)
+ * puts one box on the belt, at the size CiRA CORE measured, with the result the bridge decided.
+ * The box passes the camera, the decision line and the pusher, then goes to the exit (PASS)
+ * or the BAD bin (FAIL). Nothing here is random about the result.
  *
  * Positions on the belt are normalized: 0 = belt start, 1 = belt end.
  */
@@ -66,7 +66,7 @@ export function createSim(opts = {}) {
   const s = {
     running: true,
     // live: boxes come only from real inspection events (addLiveBox), with their real result
-    live: !!opts.live,
+    live: true,
     liveQueue: [],
     simTime: 0,
     speed: 1,
@@ -111,13 +111,6 @@ function pushMessage(s, topic, payload, kind = 'info') {
 }
 
 /* ------------------------------------------------------------------ spawning */
-function pickTruth(s) {
-  const r = Math.random();
-  if (r < s.dentRate) return 'dent';
-  if (r < s.dentRate + s.tearRate) return 'tear';
-  return 'box_good';
-}
-
 /** Carton colours seen on a real parcel line (weights = how common). */
 export const BOX_COLORS = [
   { key: 'kraft', weight: 5 },
@@ -166,6 +159,7 @@ function spawnBox(s, spec) {
     lane: rand(-6, 6), // small sideways offset in px for realism
     size: 1,
     dims: spec.dims || pickDims(),
+    sizeLabel: spec.sizeLabel || null,
     color: spec.color || pickColor(),
     weight: r3(truth === 'box_good' ? rand(0.8, 3.2) : rand(0.6, 3.0)),
     votes: { box_good: 0, dent: 0, tear: 0 },
@@ -328,18 +322,8 @@ export function step(s, dtReal) {
   const v = BASE_SPEED;
   s.beltOffset = (s.beltOffset + v * dt) % 1;
 
-  // spawn (manual requests first)
-  s.spawnTimer -= dt;
-  if (spaceAvailable(s) && s.live) {
-    if (s.liveQueue.length) spawnBox(s, s.liveQueue.shift());
-  } else if (spaceAvailable(s)) {
-    if (s.returning.length) spawnBox(s, s.returning.shift());
-    else if (s.manual.length) spawnBox(s, s.manual.shift());
-    else if (s.spawnTimer <= 0) {
-      spawnBox(s, { truth: pickTruth(s) });
-      s.spawnTimer = rand(1.4, 2.6);
-    }
-  }
+  // boxes come only from real inspections (addLiveBox)
+  if (spaceAvailable(s) && s.liveQueue.length) spawnBox(s, s.liveQueue.shift());
 
   // move boxes
   for (const b of s.boxes) {
@@ -396,17 +380,6 @@ export function step(s, dtReal) {
   syncStep(s);
 }
 
-export function setOnline(s, online) {
-  if (s.online === online) return;
-  s.online = online;
-  if (online) {
-    const n = s.queue.length;
-    pushMessage(s, 'spdi/line1/sync', { status: 'online', resync: n }, 'sync');
-  } else {
-    pushMessage(s, 'spdi/line1/sync', { status: 'offline', note: 'store-and-forward to local SQLite' }, 'offline');
-  }
-}
-
 /**
  * Live mode: put one real inspection event on the belt.
  * ev: { result: 'PASS'|'FAIL', className, confidence } from MongoDB (/api/events)
@@ -416,109 +389,44 @@ export function addLiveBox(s, ev) {
   // the live line has one reject bin: every FAIL goes there (kept in the "dent" slot)
   const cls = fail ? 'dent' : 'box_good';
   const conf = Number.isFinite(ev.confidence) ? ev.confidence : 0.9;
-  if (s.liveQueue.length < 50) s.liveQueue.push({ truth: cls, forced: { result: fail ? 'FAIL' : 'PASS', cls, conf } });
+  const { dims, label } = liveDims(ev.size);
+  if (s.liveQueue.length < 50) s.liveQueue.push({ truth: cls, dims, sizeLabel: label, forced: { result: fail ? 'FAIL' : 'PASS', cls, conf } });
+}
+
+const REF_CM = { length: 30, width: 25, height: 20 }; // drawn at the normal box size
+const REF_FRAME = { w: 0.3, h: 0.35 }; // share of the camera frame drawn at the normal size
+const scale = (v, ref) => Math.min(1.7, Math.max(0.5, v / ref));
+
+/**
+ * Real box size from the bridge -> drawing scale { w: length, h: height, d: width } and a short label.
+ * Calibrated: cm values (a missing one stays normal size, shown as "?").
+ * Not calibrated: share of the camera frame (top camera: length x width, side camera: length x height).
+ */
+export function liveDims(size) {
+  if (!size || !(size.w > 0) || !(size.h > 0)) return { dims: { w: 1, h: 1, d: 1 }, label: null };
+  if (size.lengthCm > 0) {
+    const show = (v) => (v > 0 ? Math.round(v) : '?');
+    return {
+      dims: {
+        w: scale(size.lengthCm, REF_CM.length),
+        h: size.heightCm > 0 ? scale(size.heightCm, REF_CM.height) : 1,
+        d: size.widthCm > 0 ? scale(size.widthCm, REF_CM.width) : 1,
+      },
+      label: `${show(size.lengthCm)}×${show(size.widthCm)}×${show(size.heightCm)} cm`,
+    };
+  }
+  const pct = (v) => `${Math.round(v * 100)}%`;
+  const side = size.view === 'side';
+  return {
+    dims: { w: scale(size.w, REF_FRAME.w), h: side ? scale(size.h, REF_FRAME.h) : 1, d: side ? 1 : scale(size.h, REF_FRAME.h) },
+    label: `${pct(size.w)}×${pct(size.h)} of frame`,
+  };
 }
 
 /** Control-panel settings that can be saved in the browser. */
-export const DEFAULT_SETTINGS = { speed: 1, dentRate: 0.15, tearRate: 0.15 };
-
-export function getSettings(s) {
-  return { speed: s.speed, dentRate: s.dentRate, tearRate: s.tearRate };
-}
-
-export function applySettings(s, obj) {
-  if (!obj || typeof obj !== 'object') return;
-  const num = (v, lo, hi, d) => (typeof v === 'number' && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d);
-  s.speed = num(obj.speed, 0.5, 4, s.speed);
-  s.dentRate = num(obj.dentRate, 0, 0.5, s.dentRate);
-  s.tearRate = num(obj.tearRate, 0, 0.5, s.tearRate);
-}
-
-export function addBox(s, truth) {
-  if (s.manual.length < 5) s.manual.push({ truth });
-}
-
-/**
- * Operator handles a reject bin: dented boxes are fixed, torn boxes are repacked into a new carton.
- * Every unit keeps its number, becomes a normal box and goes back to the start of the belt
- * to be inspected again. Returns how many boxes were sent back.
- */
-export function reworkBin(s, kind) {
-  const items = s.bins[kind].splice(0);
-  for (const it of items) {
-    s.returning.push({ truth: 'box_good', no: it.no, tracking: it.tracking, reworked: (it.reworked || 0) + 1, dims: it.dims, color: it.color });
-  }
-  s.stats.reworked += items.length;
-  if (items.length) {
-    pushMessage(
-      s,
-      'spdi/line1/rework',
-      { bin: kind, action: kind === 'tear' ? 'repack' : 'fix', count: items.length, units: items.map((i) => i.no) },
-      'sync'
-    );
-  }
-  return items.length;
-}
-
-export function resetSim(s) {
-  const fresh = createSim();
-  const keep = { speed: s.speed, dentRate: s.dentRate, tearRate: s.tearRate, online: s.online };
-  Object.assign(s, fresh, keep);
-}
-
-/** Light-weight copy for React panels (charts, KPIs, logs). */
-export function snapshot(s) {
-  const st = s.stats;
-  const perMin = (() => {
-    const from = s.simTime - 60;
-    let n = 0;
-    for (const e of s.events) {
-      if (e.simTime >= from) n += 1;
-      else break;
-    }
-    return s.simTime >= 60 ? n : Math.round((n / Math.max(s.simTime, 1)) * 60);
-  })();
-  return {
-    running: s.running,
-    simTime: s.simTime,
-    speed: s.speed,
-    dentRate: s.dentRate,
-    tearRate: s.tearRate,
-    online: s.online,
-    stats: { ...st, byClass: { ...st.byClass } },
-    yieldPct: st.total ? Math.round((st.pass / st.total) * 1000) / 10 : 0,
-    rejectPct: st.total ? Math.round((st.reject / st.total) * 1000) / 10 : 0,
-    accuracyPct: st.total ? Math.round((st.correct / st.total) * 1000) / 10 : 0,
-    avgConf: st.total ? st.confSum / st.total : null,
-    perMin,
-    framesTotal: s.framesTotal,
-    events: s.events.slice(0, 30),
-    messages: s.messages.slice(0, 25),
-    queue: s.queue.length,
-    synced: s.synced,
-    dropped: s.dropped,
-    esp32Cmds: s.esp32Cmds,
-    unitsIn: s.unitsIn,
-    shipped: st.accepted,
-    shippedRecent: s.shipped.slice(0, 6),
-    bins: { dent: s.bins.dent.length, tear: s.bins.tear.length },
-    returning: s.returning.length,
-    onBelt: s.boxes.length,
-    // every unit is in exactly one place: shipped, in a bin, on the belt or waiting to re-enter
-    balanceOk: s.unitsIn === st.accepted + s.bins.dent.length + s.bins.tear.length + s.boxes.length + s.returning.length,
-    timeline: [...s.timeline.values()].map((r) => ({ ...r })),
-    light: lightOf(s),
-  };
-}
 
 export function lightOf(s) {
   if (!s.running) return 'red';
   if (s.simTime < s.lightUntil) return 'yellow';
   return 'green';
-}
-
-export function formatSimTime(sec) {
-  const m = Math.floor(sec / 60);
-  const ss = Math.floor(sec % 60);
-  return `${String(m).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
 }

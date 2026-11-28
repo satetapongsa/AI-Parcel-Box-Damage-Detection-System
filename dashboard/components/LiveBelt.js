@@ -1,7 +1,7 @@
 'use client';
 
-import ConveyorScene from '@/components/sim/ConveyorScene';
-import { useLiveBelt } from '@/lib/sim/useLiveBelt';
+import ConveyorScene from '@/components/belt/ConveyorScene';
+import { useLiveBelt } from '@/lib/belt/useLiveBelt';
 
 /** Conveyor view on the Live page: one box per real inspection saved in MongoDB. */
 export default function LiveBelt({ line = 'line1' }) {
