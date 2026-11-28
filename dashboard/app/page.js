@@ -1,60 +1,47 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import dynamic from 'next/dynamic';
-import NavTabs from '@/components/NavTabs';
-import ModeBanner from '@/components/ModeBanner';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import Pipeline from '@/components/Pipeline';
+import LiveBelt from '@/components/LiveBelt';
 import KpiCard from '@/components/KpiCard';
-import ConveyorScene from '@/components/sim/ConveyorScene';
-import ControlPanel from '@/components/sim/ControlPanel';
-import SystemFlow from '@/components/sim/SystemFlow';
-import EventLog from '@/components/sim/EventLog';
-import MessageFeed from '@/components/sim/MessageFeed';
-import { ThroughputChart, ClassDonut } from '@/components/sim/SimCharts';
-import { BoxThumb } from '@/components/sim/BoxGlyph';
-import { CLASSES, formatSimTime } from '@/lib/sim/engine';
-import { useSim } from '@/lib/sim/useSim';
+import { PerMinuteChart, PassFailDonut } from '@/components/Charts';
+import EventsTable from '@/components/EventsTable';
+import ReportBar from '@/components/ReportBar';
+import HourlyTable from '@/components/HourlyTable';
 
-// the 3D camera view is heavy (WebGL): load it only in the browser, only when chosen
-const CameraView3D = dynamic(() => import('@/components/sim/CameraView3D'), {
-  ssr: false,
-  loading: () => <div className="aspect-video w-full animate-pulse bg-[#1a1f26]" />,
-});
+const POLL_MS = 2000;
+const CIRA_FRESH_MS = 5000;
+const BRIDGE_FRESH_MS = 10000;
 
-const VIEW_KEY = 'spdi.sim.view';
-const VIEWS = [
-  { key: 'schematic', label: 'Schematic' },
-  { key: 'camera', label: 'Camera · 3D' },
-];
+const STAGE_NAMES = { cira: 'CiRA', mqtt: 'MQTT', bridge: 'Bridge', db: 'Database' };
 
-function useViewMode() {
-  const [view, setView] = useState('schematic');
-  useEffect(() => {
-    try {
-      const v = window.localStorage.getItem(VIEW_KEY);
-      if (v === 'camera' || v === 'schematic') setView(v);
-    } catch {
-      /* storage blocked: keep default */
-    }
-  }, []);
-  const choose = (v) => {
-    setView(v);
-    try {
-      window.localStorage.setItem(VIEW_KEY, v);
-    } catch {
-      /* ignore */
-    }
-  };
-  return [view, choose];
+function ageMs(iso, now) {
+  if (!iso) return Infinity;
+  const t = Date.parse(iso);
+  return Number.isNaN(t) ? Infinity : now - t;
 }
 
-const LIGHT_TEXT = {
-  green: { text: '● Line running', cls: 'bg-green-600/20 text-green-300' },
-  yellow: { text: '● Damaged box — rejecting', cls: 'bg-amber-500/20 text-amber-300' },
-  red: { text: '● Line stopped', cls: 'bg-red-600/20 text-red-300' },
-};
+function computeHealth(stats, statsError) {
+  const dbOk = !!stats && !statsError;
+  const st = stats && stats.status;
+  if (!st || !dbOk) {
+    return { cira: false, mqtt: false, bridge: false, db: dbOk, ciraDetail: '' };
+  }
+  const now = stats.serverTime;
+  const bridge = ageMs(st.updatedAt, now) < BRIDGE_FRESH_MS;
+  const cira = bridge && ageMs(st.lastFrameAt, now) < CIRA_FRESH_MS;
+  return {
+    cira,
+    mqtt: bridge && st.mqttConnected,
+    bridge,
+    db: dbOk,
+    ciraDetail: cira && st.lastSource === 'simulator' ? 'SIM' : '',
+  };
+}
 
-function Clock() {
+const clock = (iso) => new Date(iso).toLocaleTimeString('en-GB', { hour12: false });
+
+function LiveClock() {
   const [now, setNow] = useState(null);
   useEffect(() => {
     setNow(new Date());
@@ -62,219 +49,324 @@ function Clock() {
     return () => clearInterval(id);
   }, []);
   return (
-    <span className="font-mono text-xl tabular-nums text-slate-200 sm:text-2xl">
+    <span className="font-mono text-2xl tabular-nums text-slate-200">
       {now ? now.toLocaleTimeString('en-GB', { hour12: false }) : '--:--:--'}
     </span>
   );
 }
 
-function LastDecision({ ev }) {
-  if (!ev) {
+/** Big "last box" tile — the first thing an operator looks at. */
+function LatestBox({ event }) {
+  if (!event) {
     return (
-      <div className="col-span-2 flex h-full flex-col justify-center rounded-lg border border-edge bg-panel px-4 py-3 xl:col-span-1">
+      <div className="flex h-full flex-col justify-center rounded-lg border border-edge bg-panel px-4 py-3">
         <div className="text-base font-semibold text-slate-300">Last box</div>
-        <div className="mt-1 font-mono text-4xl font-bold text-muted sm:text-5xl">—</div>
-        <div className="mt-1 text-sm text-muted">Waiting for a box to reach the decision line</div>
+        <div className="mt-1 font-mono text-5xl font-bold text-muted sm:text-6xl">—</div>
+        <div className="mt-1 text-sm text-muted">No data yet</div>
       </div>
     );
   }
-  const reject = ev.result === 'REJECT';
+  const fail = event.result === 'FAIL';
   return (
     <div
-      className={`col-span-2 flex h-full items-center gap-3 rounded-lg px-4 py-3 text-white xl:col-span-1 ${
-        reject ? 'bg-red-600' : 'bg-green-600'
-      }`}
+      className={`flex h-full flex-col justify-center rounded-lg px-4 py-3 text-white ${fail ? 'bg-red-600' : 'bg-green-600'}`}
     >
-      <div className="min-w-0 flex-1">
-        <div className="text-base font-semibold opacity-90">Last box</div>
-        <div className="mt-1 text-4xl font-bold leading-tight sm:text-5xl">{reject ? '✖ REJECT' : '✔ PASS'}</div>
-        <div className="mt-1 truncate text-sm opacity-90">
-          #{ev.no} · {CLASSES[ev.predicted].label} · {Math.round(ev.conf * 100)}%{ev.reworked ? ' · reworked' : ''}
-        </div>
-      </div>
-      <div className="shrink-0 rounded-md bg-white/15 p-1">
-        <BoxThumb truth={ev.truth} seed={ev.seed} size={60} reworked={ev.reworked > 0} />
+      <div className="text-base font-semibold opacity-90">Last box</div>
+      <div className="mt-1 text-5xl font-bold leading-tight sm:text-6xl">{fail ? '✖ FAIL' : '✔ PASS'}</div>
+      <div className="mt-1 text-sm opacity-90">
+        {fail ? 'Damaged' : 'Good'} · {Math.round((event.confidence || 0) * 100)}% · {clock(event.ts)}
       </div>
     </div>
   );
 }
 
-export default function SimulationPage() {
-  const { sim, snap, refresh } = useSim();
-  const [view, setView] = useViewMode();
-  const st = snap.stats;
-  const light = LIGHT_TEXT[snap.light];
+export default function LiveDashboardPage() {
+  const [stats, setStats] = useState(null);
+  const [statsError, setStatsError] = useState(null);
+  const [events, setEvents] = useState([]);
+  const [eventsError, setEventsError] = useState(null);
+  const [filter, setFilter] = useState('ALL');
+  const [freshIds, setFreshIds] = useState(() => new Set());
+  const [alert, setAlert] = useState(null);
+  const [line, setLine] = useState('line1');
+
+  const seenIds = useRef(new Set());
+  const baseline = useRef(true); // first load (or filter change) -> no highlight
+  const lastFailId = useRef(undefined); // undefined = not loaded yet
+  const alertTimer = useRef(null);
+  const filterRef = useRef(filter);
+  const lineRef = useRef(line);
+
+  const changeFilter = useCallback((f) => {
+    filterRef.current = f;
+    baseline.current = true;
+    setFilter(f);
+  }, []);
+
+  const changeLine = useCallback((l) => {
+    lineRef.current = l;
+    baseline.current = true;
+    lastFailId.current = undefined; // no red alert for the other line's old FAIL
+    setStats(null);
+    setLine(l);
+  }, []);
+
+  const loadStats = useCallback(async (signal) => {
+    const l = lineRef.current;
+    try {
+      const res = await fetch(`/api/stats?line=${encodeURIComponent(l)}`, { cache: 'no-store', signal });
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      if (l !== lineRef.current) return; // line changed while loading
+      setStats(data);
+      setStatsError(null);
+
+      // Red alert when a NEW FAIL arrives (independent of the table filter)
+      const failId = data.lastFail ? data.lastFail.eventId : null;
+      if (lastFailId.current !== undefined && failId && failId !== lastFailId.current) {
+        setAlert(data.lastFail);
+        clearTimeout(alertTimer.current);
+        alertTimer.current = setTimeout(() => setAlert(null), 6000);
+      }
+      lastFailId.current = failId;
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      setStatsError(err.message || 'Network error');
+    }
+  }, []);
+
+  const loadEvents = useCallback(async (signal) => {
+    const f = filterRef.current;
+    try {
+      const q = f === 'ALL' ? '' : `&result=${f}`;
+      const l = lineRef.current;
+      const res = await fetch(`/api/events?limit=20${q}&line=${encodeURIComponent(l)}`, { cache: 'no-store', signal });
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      if (f !== filterRef.current || l !== lineRef.current) return; // filter or line changed while loading
+
+      const list = data.events || [];
+      if (baseline.current) {
+        list.forEach((e) => seenIds.current.add(e.eventId));
+        baseline.current = false;
+        setFreshIds(new Set());
+      } else {
+        const fresh = list.filter((e) => !seenIds.current.has(e.eventId)).map((e) => e.eventId);
+        fresh.forEach((id) => seenIds.current.add(id));
+        if (fresh.length) setFreshIds(new Set(fresh));
+      }
+      if (seenIds.current.size > 2000) seenIds.current = new Set(list.map((e) => e.eventId));
+      setEvents(list);
+      setEventsError(null);
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      setEventsError(err.message || 'Network error');
+    }
+  }, []);
+
+  useEffect(() => {
+    let stopped = false;
+    let busy = false;
+    let controller = null;
+    const tick = async () => {
+      if (busy || stopped) return;
+      busy = true;
+      controller = new AbortController();
+      await Promise.all([loadStats(controller.signal), loadEvents(controller.signal)]);
+      busy = false;
+    };
+    tick();
+    const id = setInterval(tick, POLL_MS);
+    return () => {
+      stopped = true;
+      clearInterval(id);
+      if (controller) controller.abort();
+    };
+  }, [loadStats, loadEvents]);
+
+  // reload the table immediately when the filter changes
+  useEffect(() => {
+    const c = new AbortController();
+    loadEvents(c.signal);
+    return () => c.abort();
+  }, [filter, line, loadEvents]);
+
+  useEffect(() => () => clearTimeout(alertTimer.current), []);
+
+  const health = computeHealth(stats, statsError);
+  const down = Object.keys(STAGE_NAMES).filter((k) => !health[k]);
+  const allOk = down.length === 0;
+  const c = stats ? stats.counts : null;
+  const st = stats ? stats.status : null;
+  const empty = c && c.total === 0;
 
   return (
-    <main className="mx-auto max-w-7xl space-y-3 px-3 py-3 sm:space-y-4 sm:px-6 sm:py-4">
+    <main className="mx-auto max-w-7xl space-y-4 px-4 py-4 sm:px-6">
       {/* ---------- header ---------- */}
       <header className="rounded-lg border border-edge bg-panel px-4 py-3">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="min-w-0">
-            <h1 className="text-lg font-bold text-slate-50 sm:text-xl">SPDI · Parcel Defect Inspection</h1>
-            <p className="text-sm text-muted">Edge AI (CiRA CORE) + IoT · digital twin</p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="text-xl font-bold text-slate-50">SPDI · Parcel Defect Inspection</h1>
+            <p className="text-sm text-muted">Live data from CiRA CORE · Line {line}</p>
           </div>
-          <NavTabs />
-          <div className="flex items-center justify-between gap-3 sm:justify-start sm:gap-4">
-            <span className={`rounded-md px-3 py-1.5 text-sm font-semibold ${light.cls}`}>{light.text}</span>
-            <Clock />
+          <div className="flex items-center gap-4">
+            <span
+              className={`rounded-md px-3 py-1.5 text-sm font-semibold ${
+                allOk ? 'bg-green-600/20 text-green-300' : 'bg-red-600/20 text-red-300'
+              }`}
+            >
+              {allOk ? '● All systems running' : `● ${down.map((k) => STAGE_NAMES[k]).join(', ')} down`}
+            </span>
+            <LiveClock />
           </div>
         </div>
         <div className="mt-3 border-t border-edge pt-3">
-          <SystemFlow snap={snap} />
+          <Pipeline health={health} />
         </div>
       </header>
 
-      <ModeBanner mode="sim" />
+      <ReportBar line={line} onLine={changeLine} />
 
-      {!snap.online ? (
-        <div className="rounded-lg border border-amber-500/50 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
-          <b>Internet offline.</b> The line keeps sorting at the edge. Results are stored in SQLite ({snap.queue}/500) and
-          sync to the cloud automatically when the connection is back.
+      <LiveBelt line={line} />
+
+      {/* ---------- FAIL alert ---------- */}
+      {alert ? (
+        <div
+          role="alert"
+          className="fixed left-1/2 top-4 z-50 w-[92%] max-w-xl -translate-x-1/2 rounded-lg bg-red-600 px-4 py-3 text-white shadow-2xl"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-lg font-bold">Damaged parcel detected</div>
+              <div className="text-sm opacity-90">
+                {alert.className} · {Math.round((alert.confidence || 0) * 100)}% · {alert.ts ? clock(alert.ts) : ''}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setAlert(null)}
+              className="rounded px-2 text-xl leading-none hover:bg-white/20"
+              aria-label="Close alert"
+            >
+              ×
+            </button>
+          </div>
         </div>
       ) : null}
 
-      {/* ---------- conveyor + controls ---------- */}
-      <section className="grid gap-3 lg:grid-cols-4">
-        <div className="min-w-0 overflow-hidden rounded-lg border border-edge bg-panel lg:col-span-3">
-          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-edge px-4 py-2 text-sm">
-            <span className="font-semibold text-slate-200">Conveyor · Line 1</span>
-            <div className="flex rounded-md bg-slate-800 p-0.5" role="tablist" aria-label="View">
-              {VIEWS.map((v) => (
-                <button
-                  key={v.key}
-                  type="button"
-                  role="tab"
-                  aria-selected={view === v.key}
-                  onClick={() => setView(v.key)}
-                  className={`rounded px-3 py-1 text-xs font-semibold sm:text-sm ${
-                    view === v.key ? 'bg-slate-200 text-slate-900' : 'text-slate-300 hover:text-white'
-                  }`}
-                >
-                  {v.label}
-                </button>
-              ))}
+      {/* ---------- error state ---------- */}
+      {statsError ? (
+        <div className="rounded-lg border border-red-500/50 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+          <b>Cannot reach the database</b> · {statsError}
+          <div className="mt-1 text-xs text-red-300/80">
+            Check MONGODB_URI and Atlas Network Access · retrying every 2 s
+            {stats ? ' · numbers below are the last data loaded' : ''}
+          </div>
+        </div>
+      ) : null}
+
+      {/* ---------- loading ---------- */}
+      {!stats && !statsError ? (
+        <div className="rounded-lg border border-edge bg-panel p-10 text-center text-muted">Loading…</div>
+      ) : null}
+
+      {c ? (
+        <>
+          {empty ? (
+            <div className="rounded-lg border border-edge bg-panel px-4 py-3 text-sm text-slate-300">
+              No inspections yet — start CiRA CORE or run <code className="font-mono">npm run demo:sim</code>
             </div>
-            <span className="font-mono text-xs text-muted sm:text-sm">
-              {formatSimTime(snap.simTime)} · {snap.speed}x · {snap.framesTotal.toLocaleString()} frames
-            </span>
-          </div>
-          {/* on phones the scene keeps a readable size and scrolls sideways */}
-          <div className="overflow-x-auto overscroll-x-contain">
-            <div className="min-w-[760px] sm:min-w-0">
-              {view === 'camera' ? <CameraView3D sim={sim} /> : <ConveyorScene sim={sim} />}
+          ) : null}
+
+          {/* ---------- main counters ---------- */}
+          <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <LatestBox event={stats.lastEvent} />
+            <KpiCard
+              size="lg"
+              title="Inspected"
+              subtitle="Total"
+              value={c.total.toLocaleString()}
+              note={stats.invariantOk ? 'good + damaged = total ✔' : 'totals do not match ✖'}
+              noteTone={stats.invariantOk ? undefined : 'bad'}
+            />
+            <KpiCard
+              size="lg"
+              title="Good"
+              subtitle="PASS"
+              value={c.good.toLocaleString()}
+              tone="ok"
+              note={`${c.passRate}% of total`}
+            />
+            <KpiCard
+              size="lg"
+              title="Damaged"
+              subtitle="FAIL"
+              value={c.damaged.toLocaleString()}
+              tone="bad"
+              note={`${c.failRate}% of total`}
+            />
+          </section>
+
+          {/* ---------- secondary figures ---------- */}
+          <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            <KpiCard title="Yield" value={c.passRate} unit="%" />
+            <KpiCard title="Throughput" subtitle="last minute" value={c.perMin} unit="boxes/min" />
+            <KpiCard
+              title="Avg confidence"
+              subtitle="AI"
+              value={c.avgConf === null ? '—' : (c.avgConf * 100).toFixed(1)}
+              unit={c.avgConf === null ? '' : '%'}
+            />
+            <KpiCard
+              title="CiRA"
+              subtitle="frames/s"
+              value={health.cira && st ? st.fps : 0}
+              unit="fps"
+              tone={health.cira ? 'neutral' : 'bad'}
+              note={health.cira ? null : 'no frames coming in'}
+              noteTone="bad"
+            />
+          </section>
+
+          {/* ---------- charts ---------- */}
+          <section className="grid gap-3 lg:grid-cols-3">
+            <div className="rounded-lg border border-edge bg-panel p-4 lg:col-span-2">
+              <h2 className="mb-2 text-base font-semibold text-slate-200">
+                Boxes per minute <span className="text-sm font-normal text-muted">· last 60 min</span>
+              </h2>
+              <PerMinuteChart data={stats.timeline} />
             </div>
-          </div>
-          <div className="px-4 pt-1 text-xs text-muted sm:hidden">← swipe to see the whole line →</div>
-          <div className="flex flex-wrap gap-x-4 gap-y-1 border-t border-edge px-4 py-2 text-xs text-muted">
-            <span>
-              <span className="text-ok">■</span> box_good
-            </span>
-            <span>
-              <span className="text-amber-400">■</span> dent (crushed)
-            </span>
-            <span>
-              <span className="text-bad">■</span> tear (torn)
-            </span>
-            <span className="hidden sm:inline">Box colour frame = CiRA CORE result per frame · decided once at the line by multi-frame vote</span>
-          </div>
-        </div>
-        <ControlPanel sim={sim} snap={snap} refresh={refresh} />
-      </section>
+            <div className="rounded-lg border border-edge bg-panel p-4">
+              <h2 className="mb-2 text-base font-semibold text-slate-200">
+                Good vs damaged <span className="text-sm font-normal text-muted">· PASS vs FAIL</span>
+              </h2>
+              <PassFailDonut good={c.good} damaged={c.damaged} passRate={c.passRate} />
+              <div className="mt-2 flex justify-center gap-4 text-sm">
+                <span className="text-ok">● good {c.good}</span>
+                <span className="text-bad">● damaged {c.damaged}</span>
+              </div>
+            </div>
+          </section>
 
-      {/* ---------- main counters ---------- */}
-      <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-        <LastDecision ev={snap.events[0]} />
-        <KpiCard size="lg" title="Inspections" subtitle="incl. re-checks" value={st.total} note={`PASS + REJECT = ${st.pass + st.reject} ✔`} />
-        <KpiCard size="lg" title="Passed" subtitle="PASS" value={st.pass} tone="ok" note={`yield ${snap.yieldPct}%`} />
-        <KpiCard
-          size="lg"
-          title="Rejected"
-          subtitle="REJECT"
-          value={st.reject}
-          tone="bad"
-          note={`dent ${st.byClass.dent} · tear ${st.byClass.tear} · ${snap.rejectPct}%`}
-        />
-      </section>
-
-      {/* ---------- line balance: where every physical unit is right now ---------- */}
-      <section className="rounded-lg border border-edge bg-panel p-4">
-        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="text-base font-semibold text-slate-200">
-            Line balance <span className="text-sm font-normal text-muted">· every numbered box is in exactly one place</span>
-          </h2>
-          <span className={`rounded-md px-2.5 py-1 text-sm font-semibold ${snap.balanceOk ? 'bg-green-600/20 text-green-300' : 'bg-red-600/20 text-red-300'}`}>
-            {snap.balanceOk ? '✔ balanced' : '✖ mismatch'}
-          </span>
-        </div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          <KpiCard title="Boxes in" subtitle="new units" value={snap.unitsIn} />
-          <KpiCard
-            title="Shipped"
-            value={snap.shipped}
-            tone="ok"
-            note={snap.shippedRecent.length ? `last #${snap.shippedRecent[0].no}${snap.shippedRecent[0].reworked ? ' (reworked)' : ''}` : 'none yet'}
-          />
-          <KpiCard title="Dented bin" value={snap.bins.dent} tone={snap.bins.dent ? 'bad' : 'neutral'} note="waiting to be fixed" />
-          <KpiCard title="Torn bin" value={snap.bins.tear} tone={snap.bins.tear ? 'bad' : 'neutral'} note="waiting to be repacked" />
-          <KpiCard title="On the belt" value={snap.onBelt + snap.returning} note={snap.returning ? `${snap.returning} reworked queued` : 'in transit'} />
-          <KpiCard title="Reworked" subtitle="sent back" value={snap.stats.reworked} />
-        </div>
-        <p className="mt-3 font-mono text-xs text-muted">
-          {snap.unitsIn} in = {snap.shipped} shipped + {snap.bins.dent} dented + {snap.bins.tear} torn + {snap.onBelt + snap.returning} on belt
-        </p>
-      </section>
-
-      <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <KpiCard title="Throughput" value={snap.perMin} unit="boxes/min" />
-        <KpiCard title="Pusher strokes" subtitle="ESP32" value={snap.esp32Cmds} />
-        <KpiCard
-          title="Avg confidence"
-          value={snap.avgConf === null ? '—' : (snap.avgConf * 100).toFixed(1)}
-          unit={snap.avgConf === null ? '' : '%'}
-        />
-        <KpiCard
-          title="Cloud sync"
-          subtitle={snap.online ? 'online' : 'offline'}
-          value={snap.synced}
-          unit="records"
-          tone={snap.online ? 'neutral' : 'bad'}
-          note={snap.queue ? `${snap.queue} waiting in SQLite` : 'all synced'}
-          noteTone={snap.queue && !snap.online ? 'bad' : undefined}
-        />
-      </section>
-
-      {/* ---------- charts ---------- */}
-      <section className="grid gap-3 lg:grid-cols-3">
-        <div className="min-w-0 rounded-lg border border-edge bg-panel p-4 lg:col-span-2">
-          <h2 className="mb-2 text-base font-semibold text-slate-200">
-            Results every 10 s <span className="text-sm font-normal text-muted">· sim time</span>
-          </h2>
-          <ThroughputChart data={snap.timeline} />
-        </div>
-        <div className="min-w-0 rounded-lg border border-edge bg-panel p-4">
-          <h2 className="mb-2 text-base font-semibold text-slate-200">
-            By class <span className="text-sm font-normal text-muted">· CiRA</span>
-          </h2>
-          <ClassDonut byClass={st.byClass} total={st.total} yieldPct={snap.yieldPct} />
-          <div className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-1 text-sm">
-            <span className="text-ok">● good {st.byClass.box_good}</span>
-            <span className="text-amber-400">● dent {st.byClass.dent}</span>
-            <span className="text-bad">● tear {st.byClass.tear}</span>
-          </div>
-        </div>
-      </section>
-
-      {/* ---------- logs ---------- */}
-      <section className="grid gap-3 lg:grid-cols-3">
-        <div className="min-w-0 lg:col-span-2">
-          <EventLog events={snap.events} />
-        </div>
-        <MessageFeed messages={snap.messages} />
-      </section>
+          {/* ---------- tables ---------- */}
+          <section className="grid gap-3 lg:grid-cols-3">
+            <div className="lg:col-span-2">
+              <EventsTable
+                events={events}
+                filter={filter}
+                onFilter={changeFilter}
+                freshIds={freshIds}
+                error={eventsError}
+              />
+            </div>
+            <HourlyTable hourly={stats.hourly} />
+          </section>
+        </>
+      ) : null}
 
       <footer className="pb-4 pt-1 text-center text-xs text-muted">
-        The simulation runs entirely in your browser (no database needed) · real CiRA data is on the “Live” tab
+        Auto-refresh every {POLL_MS / 1000} s
+        {st && st.pendingWrites > 0 ? ` · ${st.pendingWrites} writes pending` : ''}
       </footer>
     </main>
   );

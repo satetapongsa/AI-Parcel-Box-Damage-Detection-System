@@ -4,8 +4,8 @@ import { useState } from 'react';
 
 /** Only same-site paths are allowed after login (no open redirect). */
 function safeNext() {
-  const n = new URLSearchParams(window.location.search).get('next') || '/live';
-  return n.startsWith('/') && !n.startsWith('//') && !n.startsWith('/\\') ? n : '/live';
+  const n = new URLSearchParams(window.location.search).get('next') || '/';
+  return n.startsWith('/') && !n.startsWith('//') && !n.startsWith('/\\') ? n : '/';
 }
 
 export default function LoginPage() {
@@ -37,7 +37,7 @@ export default function LoginPage() {
       <form onSubmit={submit} className="w-full space-y-4 rounded-lg border border-edge bg-panel p-6">
         <div>
           <h1 className="text-xl font-bold text-slate-50">SPDI · Live dashboard</h1>
-          <p className="text-sm text-muted">Enter the dashboard password to see real inspection data.</p>
+          <p className="text-sm text-muted">Enter the dashboard password to see the inspection data.</p>
         </div>
         <label className="block text-sm text-slate-300">
           Password
@@ -56,9 +56,6 @@ export default function LoginPage() {
         <button type="submit" disabled={busy} className="w-full rounded bg-sky-700 px-3 py-2 font-semibold text-white hover:bg-sky-600 disabled:opacity-60">
           {busy ? 'Checking…' : 'Log in'}
         </button>
-        <p className="text-xs text-muted">
-          The <a href="/" className="underline">Simulation</a> page needs no password.
-        </p>
       </form>
     </main>
   );

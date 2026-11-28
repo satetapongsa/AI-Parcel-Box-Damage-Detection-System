@@ -2,7 +2,7 @@ import './globals.css';
 
 export const metadata = {
   title: 'SPDI — Smart Parcel Defect Inspection',
-  description: 'Edge AI (CiRA CORE) + IoT parcel defect inspection — digital twin and live dashboard',
+  description: 'Edge AI (CiRA CORE) + IoT parcel defect inspection — live dashboard',
 };
 
 export const viewport = {
